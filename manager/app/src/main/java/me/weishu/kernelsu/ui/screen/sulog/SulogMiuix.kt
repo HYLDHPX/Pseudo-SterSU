@@ -369,6 +369,15 @@ private fun SulogStatusSection(
     state: SulogScreenState,
     actions: SulogActions,
 ) {
+    // Skip entirely when no banner is shown; an empty Row would still take up
+    // its bottom padding above the file selector.
+    val showBanner = when (state.sulogStatus) {
+        "unsupported", "managed", "forced" -> true
+        "supported" -> !state.isSulogEnabled
+        else -> false
+    }
+    if (!showBanner) return
+
     Row(
         modifier = Modifier
             .padding(horizontal = 12.dp)
@@ -384,6 +393,12 @@ private fun SulogStatusSection(
             "managed" -> {
                 WarningCard(
                     message = stringResource(R.string.feature_status_managed_summary),
+                )
+            }
+
+            "forced" -> {
+                WarningCard(
+                    message = stringResource(R.string.feature_status_forced_summary),
                 )
             }
 

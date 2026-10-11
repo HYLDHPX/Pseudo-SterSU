@@ -195,6 +195,8 @@ int __init kernelsu_init(void)
         ksu_avc_spoof_handle_boot_completed();
 #endif
 
+        ksu_feature_apply_forced();
+
         if (!getenforce()) {
             pr_info("Permissive SELinux, enforcing\n");
             setenforce(true);

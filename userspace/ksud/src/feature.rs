@@ -7,146 +7,38 @@ use std::io::{Read, Write};
 use std::path::Path;
 
 use crate::defs;
+use crate::feature_id::{FeatureId, parse_feature_id};
+use crate::ksucalls::FeatureState;
 
 const FEATURE_CONFIG_PATH: &str = concatcp!(defs::WORKING_DIR, ".feature_config");
 #[allow(clippy::unreadable_literal)]
 const FEATURE_MAGIC: u32 = 0x7f4b5355;
 const FEATURE_VERSION: u32 = 1;
-const AVC_SPOOF_LEGACY_ID: u32 = 10003;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u32)]
-pub enum FeatureId {
-    SuCompat = 0,
-    KernelUmount = 1,
-    Sulog = 2,
-    AdbRoot = 3,
-    SelinuxHide = 4,
-    AvcSpoof = 5,
-    WebviewZygoteUmount = 7,
-    SeccompHookStatus = 8,
-    SeccompHookLastError = 9,
-    SeccompHookCallCount = 10,
-    SeccompHookReleaseCount = 11,
-    SeccompHookFailureCount = 12,
-}
-
-impl FeatureId {
-    pub const fn from_u32(id: u32) -> Option<Self> {
-        match id {
-            0 => Some(Self::SuCompat),
-            1 => Some(Self::KernelUmount),
-            2 => Some(Self::Sulog),
-            3 => Some(Self::AdbRoot),
-            4 => Some(Self::SelinuxHide),
-            5 | AVC_SPOOF_LEGACY_ID => Some(Self::AvcSpoof),
-            7 => Some(Self::WebviewZygoteUmount),
-            8 => Some(Self::SeccompHookStatus),
-            9 => Some(Self::SeccompHookLastError),
-            10 => Some(Self::SeccompHookCallCount),
-            11 => Some(Self::SeccompHookReleaseCount),
-            12 => Some(Self::SeccompHookFailureCount),
-            _ => None,
-        }
-    }
-
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::SuCompat => "su_compat",
-            Self::KernelUmount => "kernel_umount",
-            Self::Sulog => "sulog",
-            Self::AdbRoot => "adb_root",
-            Self::SelinuxHide => "selinux_hide",
-            Self::AvcSpoof => "avc_spoof",
-            Self::WebviewZygoteUmount => "webview_zygote_umount",
-            Self::SeccompHookStatus => "seccomp_hook_status",
-            Self::SeccompHookLastError => "seccomp_hook_last_error",
-            Self::SeccompHookCallCount => "seccomp_hook_call_count",
-            Self::SeccompHookReleaseCount => "seccomp_hook_release_count",
-            Self::SeccompHookFailureCount => "seccomp_hook_failure_count",
-        }
-    }
-
-    pub const fn canonical_id(self) -> u32 {
-        self as u32
-    }
-
-    pub const fn legacy_id(self) -> Option<u32> {
-        match self {
-            Self::AvcSpoof => Some(AVC_SPOOF_LEGACY_ID),
-            _ => None,
-        }
-    }
-
-    pub const fn is_read_only(self) -> bool {
-        matches!(
-            self,
-            Self::SeccompHookStatus
-                | Self::SeccompHookLastError
-                | Self::SeccompHookCallCount
-                | Self::SeccompHookReleaseCount
-                | Self::SeccompHookFailureCount
-        )
-    }
-
-    pub const fn description(self) -> &'static str {
-        match self {
-            Self::SuCompat => {
-                "SU Compatibility Mode - allows authorized apps to gain root via traditional 'su' command"
-            }
-            Self::KernelUmount => {
-                "Kernel Umount - controls whether kernel automatically unmounts modules when not needed"
-            }
-            Self::Sulog => {
-                "SU Log - streams kernel sulog events to userspace and persists them to disk"
-            }
-            Self::AdbRoot => "ADB Root - Enable adbd root",
-            Self::SelinuxHide => {
-                "SELinux Hide - sanitize /sys/fs/selinux access results for app UIDs"
-            }
-            Self::AvcSpoof => "AVC Spoof - hide KernelSU SELinux domains in AVC audit logs",
-            Self::WebviewZygoteUmount => {
-                "WebView Zygote Umount - unmount modules from WebView zygote and its isolated children"
-            }
-            Self::SeccompHookStatus => "GKI Seccomp hook capability and runtime status flags",
-            Self::SeccompHookLastError => "GKI Seccomp hook most recent errno",
-            Self::SeccompHookCallCount => "GKI Seccomp hook invocation count",
-            Self::SeccompHookReleaseCount => "GKI Seccomp filter release count",
-            Self::SeccompHookFailureCount => "GKI Seccomp hook failure count",
-        }
+fn on_feature_applied(feature_id: FeatureId, value: u64) {
+    if feature_id == FeatureId::Sulog
+        && value != 0
+        && let Err(err) = sulog::ensure_sulogd_running()
+    {
+        log::warn!("failed to ensure sulogd is running after feature init: {err:#}");
     }
 }
 
-fn parse_feature_id(name: &str) -> Result<FeatureId> {
-    match name {
-        "su_compat" | "0" => Ok(FeatureId::SuCompat),
-        "kernel_umount" | "1" => Ok(FeatureId::KernelUmount),
-        "sulog" | "2" => Ok(FeatureId::Sulog),
-        "adb_root" | "3" => Ok(FeatureId::AdbRoot),
-        "selinux_hide" | "4" => Ok(FeatureId::SelinuxHide),
-        "avc_spoof" | "5" | "10003" => Ok(FeatureId::AvcSpoof),
-        "webview_zygote_umount" | "7" => Ok(FeatureId::WebviewZygoteUmount),
-        "seccomp_hook_status" | "8" => Ok(FeatureId::SeccompHookStatus),
-        "seccomp_hook_last_error" | "9" => Ok(FeatureId::SeccompHookLastError),
-        "seccomp_hook_call_count" | "10" => Ok(FeatureId::SeccompHookCallCount),
-        "seccomp_hook_release_count" | "11" => Ok(FeatureId::SeccompHookReleaseCount),
-        "seccomp_hook_failure_count" | "12" => Ok(FeatureId::SeccompHookFailureCount),
-        _ => bail!("Unknown feature: {name}"),
-    }
-}
-
-fn get_kernel_feature(feature_id: FeatureId) -> Result<(u64, bool)> {
+fn get_kernel_feature(feature_id: FeatureId) -> Result<FeatureState> {
     let id = feature_id.canonical_id();
     match crate::ksucalls::get_feature(id) {
-        Ok(result) if result.1 => Ok(result),
+        Ok(result) if result.supported => Ok(result),
         Ok(result) => feature_id.legacy_id().map_or_else(
             || Ok(result),
             |legacy_id| Ok(crate::ksucalls::get_feature(legacy_id).unwrap_or(result)),
         ),
-        Err(err) => feature_id.legacy_id().map_or_else(
-            || Err(err).with_context(|| format!("Failed to get feature {}", feature_id.name())),
-            |legacy_id| Ok(crate::ksucalls::get_feature(legacy_id).unwrap_or((0, false))),
-        ),
+        Err(err) => {
+            if let Some(legacy_id) = feature_id.legacy_id() {
+                crate::ksucalls::get_feature(legacy_id).or(Err(err))
+            } else {
+                Err(err).with_context(|| format!("Failed to get feature {}", feature_id.name()))
+            }
+        }
     }
 }
 
@@ -173,14 +65,16 @@ fn set_kernel_feature(feature_id: FeatureId, value: u64) -> Result<()> {
         }
     }
 
-    if feature_id == FeatureId::Sulog
-        && value != 0
-        && let Err(err) = sulog::ensure_sulogd_running()
-    {
-        log::warn!("failed to ensure sulogd is running after feature init: {err:#}");
-    }
+    on_feature_applied(feature_id, value);
 
     Ok(())
+}
+
+fn is_forced(id: u32) -> bool {
+    FeatureId::from_u32(id).map_or_else(
+        || crate::ksucalls::get_feature(id).is_ok_and(|state| state.forced),
+        |feature_id| get_kernel_feature(feature_id).is_ok_and(|state| state.forced),
+    )
 }
 
 pub fn load_binary_config() -> Result<HashMap<u32, u64>> {
@@ -274,6 +168,13 @@ pub fn apply_config(features: &HashMap<u32, u64>) {
 
     let mut applied = 0;
     for (&id, &value) in features {
+        if FeatureId::from_u32(id).is_some_and(FeatureId::is_read_only) {
+            continue;
+        }
+        if is_forced(id) {
+            log::info!("Skip feature {id}: forced by boot config");
+            continue;
+        }
         match FeatureId::from_u32(id) {
             Some(feature_id) => match set_kernel_feature(feature_id, value) {
                 Ok(()) => {
@@ -301,23 +202,30 @@ pub fn apply_config(features: &HashMap<u32, u64>) {
 
 pub fn get_feature(id: &str) -> Result<()> {
     let feature_id = parse_feature_id(id)?;
-    let (value, supported) = get_kernel_feature(feature_id)?;
+    let state = get_kernel_feature(feature_id)?;
 
-    if !supported {
+    if !state.supported {
         println!("Feature '{id}' is not supported by kernel");
         return Ok(());
     }
 
     println!("Feature: {} ({})", feature_id.name(), feature_id as u32);
     println!("Description: {}", feature_id.description());
-    println!("Value: {value}");
+    println!("Value: {}", state.value);
     if feature_id.is_read_only() {
         println!("Status: read-only");
     } else {
         println!(
             "Status: {}",
-            if value != 0 { "enabled" } else { "disabled" }
+            if state.value != 0 {
+                "enabled"
+            } else {
+                "disabled"
+            }
         );
+    }
+    if state.forced {
+        println!("Forced: by boot config");
     }
 
     Ok(())
@@ -349,6 +257,16 @@ pub fn set_feature(id: &str, value: u64) -> Result<()> {
     let feature_id = parse_feature_id(id)?;
     if feature_id.is_read_only() {
         bail!("Feature '{}' is read-only", feature_id.name());
+    }
+
+    if let Ok(state) = get_kernel_feature(feature_id)
+        && state.forced
+    {
+        bail!(
+            "Feature '{}' is forced to {} by boot config. Direct modification is not allowed.",
+            feature_id.name(),
+            state.value
+        );
     }
 
     // Check if this feature is managed by any module
@@ -398,9 +316,9 @@ pub fn set_feature(id: &str, value: u64) -> Result<()> {
 /// The final flag reports whether an active module owns the feature.
 pub fn feature_state(id: &str) -> Result<(u64, bool, bool)> {
     let feature_id = parse_feature_id(id)?;
-    let (value, supported) = get_kernel_feature(feature_id)?;
+    let state = get_kernel_feature(feature_id)?;
     let managed = managed_feature_ids().contains(&feature_id.canonical_id());
-    Ok((value, supported, managed))
+    Ok((state.value, state.supported, managed))
 }
 
 /// Apply a writable feature and persist the complete supported feature snapshot
@@ -428,37 +346,24 @@ pub fn list_features() {
         }
     }
 
-    let all_features = [
-        FeatureId::SuCompat,
-        FeatureId::KernelUmount,
-        FeatureId::Sulog,
-        FeatureId::AdbRoot,
-        FeatureId::SelinuxHide,
-        FeatureId::AvcSpoof,
-        FeatureId::WebviewZygoteUmount,
-        FeatureId::SeccompHookStatus,
-        FeatureId::SeccompHookLastError,
-        FeatureId::SeccompHookCallCount,
-        FeatureId::SeccompHookReleaseCount,
-        FeatureId::SeccompHookFailureCount,
-    ];
-
-    for feature_id in &all_features {
+    for feature_id in &FeatureId::ALL {
         let id = feature_id.canonical_id();
-        let (value, supported) = get_kernel_feature(*feature_id).unwrap_or((0, false));
+        let state = get_kernel_feature(*feature_id).unwrap_or_default();
 
-        let status = if !supported {
+        let status = if !state.supported {
             "NOT_SUPPORTED".to_string()
         } else if feature_id.is_read_only() {
-            format!("READ_ONLY ({value})")
-        } else if value != 0 {
-            format!("ENABLED ({value})")
+            format!("READ_ONLY ({})", state.value)
+        } else if state.value != 0 {
+            format!("ENABLED ({})", state.value)
         } else {
             "DISABLED".to_string()
         };
 
         let managed_by = feature_to_modules.get(feature_id.name());
-        let managed_mark = if managed_by.is_some() {
+        let managed_mark = if state.forced {
+            " [FORCED]"
+        } else if managed_by.is_some() {
             " [MODULE_MANAGED]"
         } else {
             ""
@@ -498,25 +403,21 @@ pub fn load_config_and_apply() -> Result<()> {
 }
 
 pub fn save_config() -> Result<()> {
-    let mut features = HashMap::new();
+    // Keep persisted values of forced features, they are in effect again once
+    // the boot config no longer forces them.
+    let mut features = load_binary_config().unwrap_or_default();
 
-    let all_features = [
-        FeatureId::SuCompat,
-        FeatureId::KernelUmount,
-        FeatureId::Sulog,
-        FeatureId::AdbRoot,
-        FeatureId::SelinuxHide,
-        FeatureId::AvcSpoof,
-        FeatureId::WebviewZygoteUmount,
-    ];
-
-    for feature_id in &all_features {
+    for feature_id in &FeatureId::ALL {
+        if feature_id.is_read_only() {
+            continue;
+        }
         let id = feature_id.canonical_id();
-        if let Ok((value, supported)) = get_kernel_feature(*feature_id)
-            && supported
+        if let Ok(state) = get_kernel_feature(*feature_id)
+            && state.supported
+            && !state.forced
         {
-            features.insert(id, value);
-            log::info!("Saved feature {} = {value}", feature_id.name());
+            features.insert(id, state.value);
+            log::info!("Saved feature {} = {}", feature_id.name(), state.value);
         }
     }
 
@@ -531,6 +432,12 @@ pub fn save_config() -> Result<()> {
 pub fn check_feature(id: &str) -> Result<()> {
     let feature_id = parse_feature_id(id)?;
 
+    // Forced by boot config takes precedence over module management
+    if get_kernel_feature(feature_id).is_ok_and(|state| state.forced) {
+        println!("forced");
+        return Ok(());
+    }
+
     // Check if this feature is managed by any module
     let managed_features_map = crate::module::get_managed_features().unwrap_or_default();
     let is_managed = managed_features_map
@@ -543,9 +450,9 @@ pub fn check_feature(id: &str) -> Result<()> {
     }
 
     // Check if the feature is supported by kernel
-    let (_value, supported) = get_kernel_feature(feature_id)?;
+    let state = get_kernel_feature(feature_id)?;
 
-    if supported {
+    if state.supported {
         println!("supported");
     } else {
         println!("unsupported");
@@ -612,8 +519,15 @@ pub fn reapply_configured_features() -> Result<()> {
         let Some(feature_id) = FeatureId::from_u32(id) else {
             continue;
         };
+        if feature_id.is_read_only() {
+            continue;
+        }
         match get_kernel_feature(feature_id) {
-            Ok((current, true)) if should_reapply_feature(feature_id, value, current) => {
+            Ok(state)
+                if state.supported
+                    && !state.forced
+                    && should_reapply_feature(feature_id, value, state.value) =>
+            {
                 pending.insert(id, value);
             }
             Ok(_) => {}
@@ -666,6 +580,27 @@ mod tests {
         assert!(FeatureId::SeccompHookReleaseCount.is_read_only());
         assert!(FeatureId::SeccompHookFailureCount.is_read_only());
         assert!(!FeatureId::KernelUmount.is_read_only());
+    }
+}
+
+/// Forced features are applied by the kernel itself, only do the userspace part.
+/// Runs regardless of safe mode and the persisted config, as the kernel applies
+/// them in both cases.
+pub fn init_forced_features() {
+    for feature_id in FeatureId::ALL {
+        if feature_id.is_read_only() {
+            continue;
+        }
+        if let Ok(state) = get_kernel_feature(feature_id)
+            && state.forced
+        {
+            log::info!(
+                "Feature '{}' is forced to {} by boot config, skip loading",
+                feature_id.name(),
+                state.value
+            );
+            on_feature_applied(feature_id, state.value);
+        }
     }
 }
 

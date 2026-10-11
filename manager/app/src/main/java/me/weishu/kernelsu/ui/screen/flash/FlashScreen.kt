@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -15,6 +16,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,7 +32,7 @@ import me.weishu.kernelsu.ui.util.KernelStatusEvents
 import me.weishu.kernelsu.ui.util.reboot
 
 @Composable
-fun FlashScreen(flashIt: FlashIt) {
+fun FlashScreen(flashIt: FlashIt, onBackEnabledChange: (Boolean) -> Unit) {
     val navigator = LocalNavigator.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -71,6 +75,12 @@ fun FlashScreen(flashIt: FlashIt) {
 
     val flashInProgress = executionState.started &&
         executionState.status == FlashingStatus.FLASHING
+    SideEffect { onBackEnabledChange(!flashInProgress) }
+    NavigationBackHandler(
+        state = rememberNavigationEventState(NavigationEventInfo.None),
+        isBackEnabled = flashInProgress,
+        onBackCompleted = {},
+    )
     BackHandler(enabled = flashInProgress) {
         // A partition write may continue after its UI coroutine is cancelled.
     }

@@ -1095,6 +1095,7 @@
     <string name="tab_info">信息</string>
     <string name="feature_status_unsupported_summary">内核不支持此特性</string>
     <string name="feature_status_managed_summary">此功能由一个模块管理</string>
+    <string name="feature_status_forced_summary">此功能已被启动配置强制指定</string>
     <string name="module_shortcut_title">创建快捷方式</string>
     <string name="module_action_shortcut">创建执行快捷方式</string>
     <string name="module_webui_shortcut">创建 WebUI 快捷方式</string>

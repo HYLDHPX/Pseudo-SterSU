@@ -17,6 +17,7 @@ use memmap2::{Mmap, MmapOptions};
 use regex_lite::Regex;
 
 use crate::assets;
+use crate::feature_id::{FeatureId, parse_feature_id};
 
 const MANAGER_CERT_HASH: &[u8] =
     b"1c89980c03432844cfe195dab90bfaecbcd987d19309da648014164be78007d1";
@@ -719,9 +720,8 @@ pub struct BootPatchArgs {
     #[arg(long, default_value = None)]
     pub cmdline: Option<String>,
 
-    /// Always allow shell to get root permission
-    #[arg(long, default_value = "false")]
-    allow_shell: bool,
+    #[command(flatten)]
+    config: KsuConfigArgs,
 
     /// Force enable adbd and disable adbd auth
     #[arg(long, default_value = "false")]
@@ -734,10 +734,6 @@ pub struct BootPatchArgs {
     /// Do not (re-)install kernelsu, only modify configs (allow_shell, etc.)
     #[arg(long, default_value = "false")]
     no_install: bool,
-
-    /// Do not load custom rc
-    #[arg(long, default_value = "false")]
-    no_custom_rc: bool,
 
     /// Add built-in pathmask LKM for hidden path patching
     #[arg(long, default_value = "false")]
@@ -752,6 +748,68 @@ pub struct BootPatchArgs {
     ramdisk: bool,
 }
 
+/// KernelSU module params, stored in ramdisk `/ksu_config` (boot-patch) or the
+/// injected capsule (boot-patch-v2).
+#[derive(clap::Args, Debug, Default)]
+pub struct KsuConfigArgs {
+    /// Always allow shell to get root permission
+    #[arg(long, default_value = "false")]
+    allow_shell: bool,
+
+    /// Do not load custom rc
+    #[arg(long, default_value = "false")]
+    no_custom_rc: bool,
+
+    /// Force a kernel feature to a value at boot, e.g. `su_compat=0`.
+    /// Forced features can not be changed or loaded by userspace. Can be repeated.
+    #[arg(long, value_name = "FEATURE=VALUE", value_parser = parse_force_feature)]
+    force_feature: Vec<(FeatureId, u64)>,
+}
+
+impl KsuConfigArgs {
+    /// Set the full state of these options in `config`, other entries are kept.
+    pub fn apply(&self, config: &mut Vec<String>) {
+        set_config_flag(config, "no custom rc", "norc=1", self.no_custom_rc);
+        set_config_flag(config, "allow shell", "allow_shell=1", self.allow_shell);
+
+        config.retain(|v| !v.starts_with("force_feature="));
+        if !self.force_feature.is_empty() {
+            let mut entries = Vec::with_capacity(self.force_feature.len());
+            for (feature_id, value) in &self.force_feature {
+                println!("- Forcing feature {} to {value}", feature_id.name());
+                entries.push(format!("{}:{value}", feature_id.name()));
+            }
+            config.push(format!("force_feature={}", entries.join(",")));
+        }
+    }
+}
+
+fn set_config_flag(config: &mut Vec<String>, name: &str, value: &str, add: bool) {
+    let has_value = config.iter().any(|v| v == value);
+
+    if add {
+        println!("- Adding {name} config");
+        if !has_value {
+            config.push(value.to_owned());
+        }
+    } else if has_value {
+        println!("- Removing {name} config");
+        config.retain(|v| v != value);
+    }
+}
+
+fn parse_force_feature(s: &str) -> Result<(FeatureId, u64)> {
+    let (name, value) = s
+        .split_once('=')
+        .context("expected FEATURE=VALUE, e.g. su_compat=0")?;
+    let feature_id = parse_feature_id(name)?;
+    ensure!(!feature_id.is_read_only(), "feature {name} is read-only");
+    let value = value
+        .parse()
+        .with_context(|| format!("invalid value for feature {name}: {value}"))?;
+    Ok((feature_id, value))
+}
+
 pub fn patch(args: BootPatchArgs) -> Result<()> {
     let inner = move || {
         let BootPatchArgs {
@@ -763,7 +821,7 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
             kmi,
             out_name,
             cmdline,
-            allow_shell,
+            config,
             enable_adbd,
             adb_debug_prop,
             no_install,
@@ -776,7 +834,6 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
             backup,
             #[cfg(target_os = "android")]
             partition,
-            no_custom_rc,
             #[cfg(not(target_os = "android"))]
             arch,
             ramdisk,
@@ -814,6 +871,9 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
             !(pathmask_lkm && no_install),
             "pathmask LKM patch cannot be used with no-install"
         );
+
+        // None means --no-install: preserve the marker for the existing LKM.
+        let bundled_lkm = (!no_install).then_some(kmod.is_none());
 
         let kmi = kmi.map_or_else(
             || -> Result<_> {
@@ -982,22 +1042,10 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
             .map(|v| v.split(' ').map(std::borrow::ToOwned::to_owned).collect())
             .unwrap_or_default();
 
-        let mut apply_config = |name: &str, value: &str, add: bool| {
-            let has_value = ksu_config.iter().any(|v| v == value);
-
-            if add {
-                println!("- Adding {name} config");
-                if !has_value {
-                    ksu_config.push(value.to_owned());
-                }
-            } else if has_value {
-                println!("- Removing {name} config");
-                ksu_config.retain(|v| v != value);
-            }
-        };
-
-        apply_config("no custom rc", "norc=1", no_custom_rc);
-        apply_config("allow shell", "allow_shell=1", allow_shell);
+        config.apply(&mut ksu_config);
+        if let Some(bundled) = bundled_lkm {
+            set_config_flag(&mut ksu_config, "bundled LKM", "bundled=1", bundled);
+        }
         if ksu_config.is_empty() {
             cpio.rm("ksu_config", false);
         } else {

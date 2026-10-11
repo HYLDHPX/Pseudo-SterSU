@@ -596,6 +596,8 @@ class MainActivity : ComponentActivity() {
                         restoredDestination = selectedMainDestination,
                         initialStealthModeEnabled = uiState.stealthModeEnabled,
                     )
+                    val flashRoute = navigator.current() as? Route.Flash
+                    var flashBackEnabled by remember(flashRoute) { mutableStateOf(false) }
                     val mainScreenEntry = @Composable {
                         MainScreen(
                             onDestinationChanged = viewModel::setSelectedMainDestination,
@@ -624,16 +626,18 @@ class MainActivity : ComponentActivity() {
                                 rememberViewModelStoreNavEntryDecorator()
                             ),
                             onBack = {
-                                when (val top = navigator.current()) {
-                                    is Route.TemplateEditor -> {
-                                        if (!top.readOnly) {
-                                            navigator.setResult("template_edit", true)
-                                        } else {
-                                            navigator.pop()
+                                if (flashRoute == null || flashBackEnabled) {
+                                    when (val top = navigator.current()) {
+                                        is Route.TemplateEditor -> {
+                                            if (!top.readOnly) {
+                                                navigator.setResult("template_edit", true)
+                                            } else {
+                                                navigator.pop()
+                                            }
                                         }
-                                    }
 
-                                    else -> navigator.pop()
+                                        else -> navigator.pop()
+                                    }
                                 }
                             },
                             entryProvider = entryProvider {
@@ -738,7 +742,14 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.ModuleRepo> { ModuleRepoScreen() }
                                 entry<Route.ModuleRepoDetail> { key -> ModuleRepoDetailScreen(key.module) }
                                 entry<Route.Install> { InstallScreen() }
-                                entry<Route.Flash> { key -> FlashScreen(key.flashIt) }
+                                entry<Route.Flash> { key ->
+                                    FlashScreen(
+                                        key.flashIt,
+                                        onBackEnabledChange = { enabled ->
+                                            if (navigator.current() == key) flashBackEnabled = enabled
+                                        },
+                                    )
+                                }
                                 entry<Route.ExecuteModuleAction> { key -> ExecuteModuleActionScreen(key.moduleId, key.fromShortcut) }
                                 entry<Route.Home> { mainScreenEntry() }
                                 entry<Route.SuperUser> { mainScreenEntry() }
