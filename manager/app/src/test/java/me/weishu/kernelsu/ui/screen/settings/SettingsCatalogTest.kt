@@ -9,11 +9,11 @@ class SettingsCatalogTest {
     @Test
     fun pluginCountTracksInstalledAndEnabledEntries() {
         val base = SettingsUiState(uiMode = InterfaceStyle.Material.value)
-        assertEquals(0, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, base))
+        assertEquals(1, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, base))
         val installed = base.copy(installedPluginIds = ManagerPlugin.entries.map { it.id }.toSet())
-        assertEquals(12, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, installed))
+        assertEquals(13, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, installed))
         assertEquals(
-            13,
+            14,
             SettingsCatalog.visibleEntryCount(
                 SettingsCategory.Plugins,
                 installed.copy(graphicsRendererFeatureEnabled = true),
@@ -26,7 +26,7 @@ class SettingsCatalogTest {
             isKpmManagementAvailable = true,
             isKpmCapabilityResolved = true,
         )
-        assertEquals(0, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, kpm))
+        assertEquals(1, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, kpm))
         assertEquals(true, SettingsCatalog.entriesFor(SettingsCategory.MountAndHide, kpm).any { it.key == "kpm" })
     }
 
@@ -74,9 +74,9 @@ class SettingsCatalogTest {
     @Test
     fun webAndStealthEntriesFollowPluginAvailability() {
         val base = SettingsUiState()
-        assertEquals(emptyList<String>(), SettingsCatalog.entriesFor(SettingsCategory.Plugins, base).map { it.key })
+        assertEquals(listOf("plugin_store"), SettingsCatalog.entriesFor(SettingsCategory.Plugins, base).map { it.key })
         val installed = base.copy(installedPluginIds = setOf(ManagerPlugin.RemoteManagementSuite.id))
-        assertEquals(4, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, installed))
+        assertEquals(5, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, installed))
         assertEquals(
             listOf("web_debugging"),
             SettingsCatalog.entriesFor(SettingsCategory.AppAndMaintenance, installed)
@@ -99,6 +99,21 @@ class SettingsCatalogTest {
             SettingsCatalog.entriesFor(SettingsCategory.Appearance, base)
                 .single { it.key == "store" }.category,
         )
+    }
+
+    @Test
+    fun pluginStoreIsAlwaysDiscoverableFromPlugins() {
+        for (style in InterfaceStyle.entries) {
+            val state = SettingsUiState(uiMode = style.value)
+            assertEquals(
+                listOf("plugin_store"),
+                SettingsCatalog.entriesFor(SettingsCategory.Plugins, state).map { it.key },
+            )
+            assertEquals(
+                0,
+                SettingsCatalog.entriesFor(SettingsCategory.Appearance, state).count { it.key == "plugin_store" },
+            )
+        }
     }
 
     @Test

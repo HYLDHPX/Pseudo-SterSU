@@ -62,7 +62,6 @@ fun SettingPager(
                 bottomInnerPadding = bottomInnerPadding,
                 onOpenCategory = onOpenCategory,
                 onPageModeChange = onPageModeChange,
-                onOpenSidebarDesign = { navigator.push(Route.SidebarWidgetSettings) },
             )
             return
         }

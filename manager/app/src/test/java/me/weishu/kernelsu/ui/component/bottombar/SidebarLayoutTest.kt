@@ -29,10 +29,10 @@ class SidebarLayoutTest {
 
     @Test
     fun avatarAndTextWidgetsHaveRoomAtLargeFontSizes() {
-        assertEquals(420.dp, sidebarMinimumWidgetHeight(SidebarWidgetType.Clock, false, 2f))
+        assertEquals(484.dp, sidebarMinimumWidgetHeight(SidebarWidgetType.Clock, false, 2f))
         assertEquals(404.dp, sidebarMinimumWidgetHeight(SidebarWidgetType.Alarm, true, 2f))
         assertEquals(484.dp, sidebarMinimumWidgetHeight(SidebarWidgetType.Weather, false, 2f))
-        assertEquals(260.dp, sidebarMinimumWidgetHeight(SidebarWidgetType.Clock, false, 0.8f))
+        assertEquals(292.dp, sidebarMinimumWidgetHeight(SidebarWidgetType.Clock, false, 0.8f))
     }
 
     @Test
@@ -43,6 +43,14 @@ class SidebarLayoutTest {
             assertEquals(176.dp, sizing.widgetHeight)
             assertTrue(sizing.contentHeight - sizing.widgetHeight >= 320.dp)
         }
+    }
+
+    @Test
+    fun shortOrLargeTextRailsPrioritizeNavigationBeforeWidgets() {
+        assertTrue(sidebarUseCompactNavigation(240.dp, 260.dp, 5, 1f))
+        assertTrue(sidebarUseCompactNavigation(600.dp, 420.dp, 5, 2f))
+        assertTrue(sidebarUseCompactNavigation(200.dp, 0.dp, 5, 1f))
+        assertEquals(false, sidebarUseCompactNavigation(800.dp, 260.dp, 5, 1f))
     }
 
     @Test

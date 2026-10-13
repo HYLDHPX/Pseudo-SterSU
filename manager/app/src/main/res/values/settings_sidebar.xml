@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_sidebar_intro">Your device. Your workspace.</string>
-    <string name="settings_sidebar_version">Sidebar widgets · Manager %1$s</string>
+    <string name="settings_sidebar_version">miuix (Enhanced) · Manager %1$s</string>
     <string name="settings_sidebar_appearance">Appearance and themes</string>
     <string name="settings_sidebar_appearance_summary">Interface styles, colors and sidebar design</string>
     <string name="settings_sidebar_more">More settings</string>
-    <string name="settings_sidebar_more_summary">All categories, permissions and tools</string>
+    <string name="settings_sidebar_more_summary">Additional categories, permissions and tools</string>
     <string name="settings_device_unknown">Not reported</string>
     <string name="settings_device_android">Android %1$s</string>
     <string name="settings_device_model">Device model</string>

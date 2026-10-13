@@ -378,6 +378,10 @@
     <string name="susfs_discard_title">Discard changes?</string>
     <string name="susfs_discard_message">There are unapplied SUSFS changes. Leave without saving?</string>
     <string name="susfs_discard_confirm">Discard</string>
+    <string name="susfs_draft_restore_title">Restore unsaved SUSFS edits?</string>
+    <string name="susfs_draft_restore_message">A draft from the previous session was found. Restoring it will not change the device until you tap Save and apply.</string>
+    <string name="susfs_draft_restore">Restore draft</string>
+    <string name="susfs_draft_save_failed">Could not save the edit draft. Keep this page open or export the configuration before leaving.</string>
     <string name="susfs_nav_runtime">Runtime</string>
     <string name="susfs_nav_paths">Path masking</string>
     <string name="susfs_nav_kernel">Kernel spoofing</string>
@@ -915,7 +919,7 @@
     <string name="settings_key_color_default">Default</string>
     <string name="settings_ui_mode">UI Style</string>
     <string name="settings_ui_mode_summary">Choose the interface style.</string>
-    <string name="interface_style_miuix">Miuix</string>
+    <string name="interface_style_miuix">miuix</string>
     <string name="interface_style_material">Material</string>
     <string name="settings_miuix_classic_home_layout">Classic Miuix home layout</string>
     <string name="settings_miuix_classic_home_layout_summary">Place the Root status card on the left and stack Superuser and Modules on the right. A custom home layout still takes priority.</string>
@@ -974,13 +978,13 @@
     <string name="interface_style_skrootpro">SKRoot(Pro)</string>
     <string name="interface_style_alpha">Alpha / Delta</string>
     <string name="interface_style_delta">Delta</string>
-    <string name="interface_style_sidebar_widget">Sidebar widgets</string>
+    <string name="interface_style_sidebar_widget">miuix (Enhanced)</string>
     <string name="sidebar_widget_settings_title">Sidebar design</string>
     <string name="sidebar_design_entry_summary">Avatar, widget, home layout and navigation</string>
     <string name="sidebar_design_widgets_tab">Widgets</string>
     <string name="sidebar_avatar_title">Top avatar</string>
     <string name="sidebar_avatar_summary">Choose an image and shape for the top of the sidebar. The clock, weather or alarm stays below it.</string>
-    <string name="sidebar_avatar_choose">Choose avatar</string>
+    <string name="sidebar_avatar_choose">Open gallery</string>
     <string name="sidebar_avatar_shape">Avatar shape</string>
     <string name="sidebar_design_appearance_tab">Style</string>
     <string name="sidebar_design_navigation_tab">Nav</string>
@@ -988,10 +992,10 @@
     <string name="sidebar_home_layout_title">Home layout</string>
     <string name="sidebar_home_layout_material">Material</string>
     <string name="sidebar_home_layout_cards">Status cards</string>
-    <string name="sidebar_home_layout_summary">Switch only the Sidebar widget home page. The existing Material layout remains the default.</string>
+    <string name="sidebar_home_layout_summary">Switch only the miuix (Enhanced) home page. The existing Material layout remains the default.</string>
     <string name="sidebar_design_preview_show">Show live preview</string>
     <string name="sidebar_design_preview_hide">Hide preview</string>
-    <string name="sidebar_design_saved_hint">Changes save automatically and affect only the Sidebar widget style.</string>
+    <string name="sidebar_design_saved_hint">Changes save automatically and affect only the miuix (Enhanced) style.</string>
     <string name="sidebar_design_icons">Customize navigation icons and labels</string>
     <string name="sidebar_widget_settings_summary">A monochrome sidebar with a custom avatar, clock or weather, navigation icons and a bottom power menu. Supports either side and light or dark mode.</string>
     <string name="sidebar_widget_glass_title">Liquid glass sidebar</string>
@@ -1196,6 +1200,14 @@
     <string name="settings_app_icon_picker_selected">Selected</string>
     <string name="settings_app_icon_restore">Restore home screen icon</string>
     <string name="settings_app_icon_restore_summary">Switch back to the default launcher icon.</string>
+    <string name="settings_app_icon_custom">Custom shortcut icon</string>
+    <string name="settings_app_icon_custom_pick">Choose an image</string>
+    <string name="settings_app_icon_custom_crop">Crop custom icon</string>
+    <string name="settings_app_icon_custom_empty">No image selected</string>
+    <string name="settings_app_icon_custom_created">Custom app icon shortcut created on desktop</string>
+    <string name="settings_app_icon_custom_updated">Custom app icon shortcut updated</string>
+    <string name="settings_app_icon_custom_failed">Failed to create custom icon</string>
+    <string name="settings_app_icon_only_builtin">Built-in icons replace the launcher icon. A custom image creates a separate desktop shortcut.</string>
     <string name="settings_navigation_icons">Navigation icons</string>
     <string name="settings_navigation_icons_summary">Customize the navigation icons for Home, KPM, Superuser, Modules, and Settings.</string>
     <string name="settings_navigation_icon_home">主页导航图标</string>
@@ -1203,7 +1215,7 @@
     <string name="settings_navigation_icon_superuser">超级用户导航图标</string>
     <string name="settings_navigation_icon_module">模块导航图标</string>
     <string name="settings_navigation_icon_settings">设置导航图标</string>
-    <string name="settings_navigation_icon_summary">Choose a square image as the icon for this navigation item.</string>
+    <string name="settings_navigation_icon_summary">Choose an image; crop it or display it as a circle.</string>
     <string name="settings_navigation_icon_selected_summary">Custom icon selected. Tap to choose another image.</string>
     <string name="settings_navigation_icon_not_selected">未选择导航图标</string>
     <string name="settings_navigation_icon_home_crop">裁剪主页导航图标</string>
@@ -2865,7 +2877,7 @@
     <string name="language_korean" translatable="false">한국어</string>
     <string name="language_spanish" translatable="false">Español</string>
     <string name="app_font_title">App fonts</string>
-    <string name="app_font_summary">Choose one font for Material and MIUI-style pages. Custom fonts are validated before they are applied.</string>
+    <string name="app_font_summary">Choose one font for Material and miuix pages. Custom fonts are validated before they are applied.</string>
     <string name="app_font_current">Current font</string>
     <string name="app_font_preview_text">SterSU · Theme Aa 123</string>
     <string name="app_font_presets_title">Built-in fonts</string>
@@ -3105,8 +3117,11 @@
     <string name="settings_navigation_icon_vertical">Vertical position</string>
     <string name="settings_navigation_icon_opacity">Icon opacity</string>
     <string name="settings_navigation_icon_mask">Icon mask</string>
+    <string name="settings_navigation_icon_mask_requires_image">Choose a custom image to use an icon mask. Size, position, opacity, and tint also work with built-in icons.</string>
     <string name="settings_navigation_icon_mask_original">Original</string>
     <string name="settings_navigation_icon_mask_circle">Circle</string>
+    <string name="settings_navigation_icon_make_circle">Make circular</string>
+    <string name="settings_navigation_icon_restore_shape">Restore original shape</string>
     <string name="settings_navigation_icon_mask_square">Square</string>
     <string name="settings_navigation_icon_mask_rounded">Rounded square</string>
     <string name="settings_navigation_icon_tint">Icon tint</string>
@@ -3437,10 +3452,10 @@
     <string name="susfs_apps_pending">Unfinished or interrupted · refresh to verify</string>
     <string name="susfs_apps_failed">Failed · review the reason</string>
     <string name="settings_hub_plugins">Plugins</string>
-    <string name="settings_hub_plugins_summary">All downloaded plugin features in one place</string>
+    <string name="settings_hub_plugins_summary">Download plugins and manage installed features</string>
     <string name="settings_plugins_store_summary">Download, update, and manage optional features</string>
     <string name="settings_plugins_installed">Installed plugins</string>
-    <string name="settings_plugins_empty">No installed plugins are available. Open Store under Appearance &amp; themes to download plugins.</string>
+    <string name="settings_plugins_empty">No installed plugin features yet. Use Plugin store above to download them.</string>
     <string name="settings_plugin_app_id_summary">View and change application Android IDs</string>
     <string name="settings_plugin_app_freeze_summary">Freeze or restore applications while preserving their data</string>
     <string name="settings_group_kernel_modules">Kernel modules</string>

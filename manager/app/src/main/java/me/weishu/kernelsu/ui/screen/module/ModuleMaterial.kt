@@ -134,8 +134,6 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.data.model.Module
 import me.weishu.kernelsu.data.model.ModuleUpdateInfo
 import me.weishu.kernelsu.data.repository.isSoftRebootPreferred
-import me.weishu.kernelsu.ui.InterfaceStyle
-import me.weishu.kernelsu.ui.LocalInterfaceStyle
 import me.weishu.kernelsu.ui.component.ObserveAsEvents
 import me.weishu.kernelsu.ui.component.ScrollToTopOnChange
 import me.weishu.kernelsu.ui.component.dialog.rememberConfirmDialog
@@ -203,8 +201,7 @@ fun ModulePagerMaterial(
             expanded
         }
     }
-    val showInstallFab = uiState.installButtonVisible &&
-        LocalInterfaceStyle.current != InterfaceStyle.SidebarWidget.value
+    val showInstallFab = uiState.installButtonVisible
 
     val shortcutState = rememberModuleShortcutState(context)
     val showShortcutDialog = remember { mutableStateOf(false) }
@@ -734,19 +731,18 @@ private fun ModuleItem(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 val moduleVersion = stringResource(id = R.string.module_version)
                 val moduleAuthor = stringResource(id = R.string.module_author)
 
                 Column(
-                    modifier = Modifier.fillMaxWidth(0.8f)
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text(
                         text = module.name,
                         fontWeight = FontWeight.SemiBold,
                         style = MaterialTheme.typography.titleMedium,
-                        lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
                         textDecoration = textDecoration,
                     )
 
@@ -765,11 +761,8 @@ private fun ModuleItem(
                     )
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
-
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onEditWallpaper) {
                         Icon(

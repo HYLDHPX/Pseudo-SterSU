@@ -15,10 +15,19 @@ internal data class SidebarRailSizing(val contentHeight: Dp, val widgetHeight: D
 internal fun sidebarNavigationItemHeight(fontScale: Float): Dp =
     64.dp + 16.dp * (fontScale.coerceAtLeast(1f) - 1f)
 
+/** Keep navigation at the top when the widget would push it below the viewport. */
+internal fun sidebarUseCompactNavigation(
+    availableHeight: Dp,
+    minimumWidgetHeight: Dp,
+    navigationCount: Int,
+    fontScale: Float,
+): Boolean = availableHeight < minimumWidgetHeight +
+    sidebarNavigationItemHeight(fontScale) * navigationCount.coerceAtLeast(0) + 0.5.dp
+
 internal fun sidebarMinimumWidgetHeight(type: SidebarWidgetType, tablet: Boolean, fontScale: Float): Dp {
     val base = when (type) {
         SidebarWidgetType.Weather -> if (tablet) 208.dp else 192.dp
-        SidebarWidgetType.Clock -> if (tablet) 192.dp else 160.dp
+        SidebarWidgetType.Clock -> if (tablet) 208.dp else 192.dp
         SidebarWidgetType.Alarm -> if (tablet) 144.dp else 112.dp
     }
     // Avatar and padding stay fixed; text widgets grow with the system font size.

@@ -71,6 +71,7 @@ internal object SettingsCatalog {
             it.isKpmSettingsEntryVisible
         },
 
+        entry("plugin_store", SettingsCategory.Plugins, R.string.plugin_store_title, R.string.settings_plugins_store_summary),
         pluginEntry("rescue", ManagerPlugin.RescueProtection, R.string.rescue_protection, R.string.rescue_protection_summary),
         pluginEntry("image_tool", ManagerPlugin.ImageTools, R.string.image_tool_title, R.string.image_tool_settings_summary),
         pluginEntry("cpu_spoof", ManagerPlugin.CpuSpoof, R.string.settings_cpu_spoof, R.string.settings_cpu_spoof_summary),

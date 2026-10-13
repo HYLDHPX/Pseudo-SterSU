@@ -1,6 +1,7 @@
 package me.weishu.kernelsu.ui.screen.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
@@ -36,7 +37,6 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.ImageSearch
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Security
@@ -54,6 +54,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
@@ -75,6 +76,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -93,9 +96,10 @@ import me.weishu.kernelsu.ui.component.bottombar.rememberSidebarGlassBackdrop
 import me.weishu.kernelsu.ui.component.bottombar.sidebarGlassUnderlay
 import me.weishu.kernelsu.ui.component.bottombar.MainDestination
 import me.weishu.kernelsu.ui.component.bottombar.NavigationDestinationIcon
-import me.weishu.kernelsu.ui.component.bottombar.mainDestinations
 import me.weishu.kernelsu.ui.component.bottombar.labelFor
 import me.weishu.kernelsu.ui.component.bottombar.orderSidebarDestinations
+import me.weishu.kernelsu.ui.component.bottombar.sidebarMinimumWidgetHeight
+import me.weishu.kernelsu.ui.component.bottombar.sidebarNavigationItemHeight
 import me.weishu.kernelsu.ui.component.bottombar.stateFor
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.util.LocalCustomNavigationIcons
@@ -126,12 +130,13 @@ import me.weishu.kernelsu.ui.util.writeSidebarWidgetConfig
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SidebarWidgetSettingsScreen() {
+fun SidebarWidgetSettingsScreen(destinations: List<MainDestination>) {
     val context = LocalContext.current
     val navigator = LocalNavigator.current
     var config by remember { mutableStateOf(readSidebarWidgetConfig(context)) }
     var selectedSection by rememberSaveable { mutableStateOf(0) }
     val systemDark = isInDarkTheme()
+    val tablet = LocalConfiguration.current.smallestScreenWidthDp >= 600
     var editingDark by rememberSaveable { mutableStateOf(systemDark) }
     var previewExpanded by rememberSaveable { mutableStateOf(false) }
     val previewDark = if (selectedSection == 0) editingDark else systemDark
@@ -145,7 +150,7 @@ fun SidebarWidgetSettingsScreen() {
         writeSidebarWidgetConfig(context, normalized)
     }
 
-    val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
         val previous = config.imageUriString
         val stored = persistCustomImageReference(
@@ -198,7 +203,9 @@ fun SidebarWidgetSettingsScreen() {
                             editingDark = editingDark,
                             onEditingDarkChange = { editingDark = it },
                             onEditNavigationIcons = { navigator.push(Route.NavigationIcons) },
-                            onPickImage = { imageLauncher.launch(arrayOf("image/*")) },
+                            onPickImage = {
+                                imageLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            },
                             onClearImage = {
                                 releaseCustomImageReference(context, config.imageUriString)
                                 update(config.copy(imageUriString = null))
@@ -209,6 +216,7 @@ fun SidebarWidgetSettingsScreen() {
                     MaterialTheme(colorScheme = if (previewDark) darkColorScheme() else lightColorScheme()) {
                         SidebarWidgetPreview(
                             config = config,
+                            destinations = destinations,
                             dark = previewDark,
                             modifier = Modifier
                                 .width(320.dp)
@@ -237,14 +245,19 @@ fun SidebarWidgetSettingsScreen() {
                             MaterialTheme(colorScheme = if (previewDark) darkColorScheme() else lightColorScheme()) {
                                 SidebarWidgetPreview(
                                     config = config,
+                                    destinations = destinations,
                                     dark = previewDark,
-                                    compact = selectedSection == 0,
-                                    modifier = Modifier.fillMaxWidth().height(if (selectedSection == 0) 248.dp else 320.dp),
+                                    modifier = Modifier.fillMaxWidth().height(
+                                        sidebarMinimumWidgetHeight(config.widgetType, tablet, LocalDensity.current.fontScale) +
+                                            sidebarNavigationItemHeight(LocalDensity.current.fontScale) * destinations.size + 80.dp,
+                                    ),
                                 )
                             }
                         },
                         onEditNavigationIcons = { navigator.push(Route.NavigationIcons) },
-                        onPickImage = { imageLauncher.launch(arrayOf("image/*")) },
+                        onPickImage = {
+                            imageLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        },
                         onClearImage = {
                             releaseCustomImageReference(context, config.imageUriString)
                             update(config.copy(imageUriString = null))
@@ -265,12 +278,30 @@ private fun SidebarDesignTabs(selectedSection: Int, onSelectSection: (Int) -> Un
         R.string.sidebar_design_navigation_tab,
         R.string.sidebar_design_home_tab,
     )
-    PrimaryTabRow(selectedTabIndex = selectedSection, containerColor = Color.Transparent) {
-        labels.forEachIndexed { index, label ->
-            Tab(
-                selected = selectedSection == index,
-                onClick = { onSelectSection(index) },
-                text = { Text(stringResource(label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+    val fontScale = LocalDensity.current.fontScale
+    BoxWithConstraints {
+        val tabs: @Composable () -> Unit = {
+            labels.forEachIndexed { index, label ->
+                Tab(
+                    selected = selectedSection == index,
+                    onClick = { onSelectSection(index) },
+                    text = { Text(stringResource(label), maxLines = 2) },
+                )
+            }
+        }
+        if (maxWidth < 440.dp * fontScale.coerceAtLeast(1f)) {
+            PrimaryScrollableTabRow(
+                selectedTabIndex = selectedSection,
+                edgePadding = 8.dp,
+                minTabWidth = 104.dp * fontScale.coerceAtLeast(1f),
+                containerColor = Color.Transparent,
+                tabs = tabs,
+            )
+        } else {
+            PrimaryTabRow(
+                selectedTabIndex = selectedSection,
+                containerColor = Color.Transparent,
+                tabs = tabs,
             )
         }
     }
@@ -514,7 +545,7 @@ private fun AvatarOptions(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilledTonalButton(onClick = onPickImage) {
-                Icon(Icons.Rounded.ImageSearch, contentDescription = null)
+                Icon(Icons.Rounded.Image, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.sidebar_avatar_choose))
             }
@@ -561,9 +592,9 @@ private fun SettingsSection(
 @Composable
 internal fun SidebarWidgetPreview(
     config: SidebarWidgetConfig,
+    destinations: List<MainDestination>,
     modifier: Modifier = Modifier,
     dark: Boolean = isInDarkTheme(),
-    compact: Boolean = false,
 ) {
     val railAtStart = config.side.isAtStart(LocalLayoutDirection.current)
     val backdrop = rememberSidebarGlassBackdrop(config.material != SidebarMaterial.Flat)
@@ -575,28 +606,33 @@ internal fun SidebarWidgetPreview(
         Box {
             Box(Modifier.fillMaxSize().then(backdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier).sidebarGlassUnderlay(dark))
             CompositionLocalProvider(LocalSidebarGlassBackdrop provides backdrop) {
-                SidebarWidgetPreviewPanes(config, railAtStart, dark, compact)
+                SidebarWidgetPreviewPanes(config, destinations, railAtStart, dark)
             }
         }
     }
 }
 
 @Composable
-private fun SidebarWidgetPreviewPanes(config: SidebarWidgetConfig, railAtStart: Boolean, dark: Boolean, compact: Boolean) {
+private fun SidebarWidgetPreviewPanes(
+    config: SidebarWidgetConfig,
+    destinations: List<MainDestination>,
+    railAtStart: Boolean,
+    dark: Boolean,
+) {
     val customIcons = LocalCustomNavigationIcons.current
-    val destinations = orderSidebarDestinations(config.navigationOrder, mainDestinations(kpmActive = true))
-        .filter { !compact || it == MainDestination.Home || it == MainDestination.SuperUser || it == MainDestination.Settings }
+    val tablet = LocalConfiguration.current.smallestScreenWidthDp >= 600
+    val orderedDestinations = orderSidebarDestinations(config.navigationOrder, destinations)
     Row(modifier = Modifier.fillMaxSize()) {
         val panes = if (railAtStart) listOf(true, false) else listOf(false, true)
         panes.forEach { isRail ->
             if (isRail) {
                 SidebarRailLayout(
                     config = config,
-                    navigationCount = destinations.size,
+                    navigationCount = orderedDestinations.size,
+                    tablet = tablet,
                     dark = dark,
-                    showWidgets = !compact,
                 ) {
-                    destinations.forEach { destination ->
+                    orderedDestinations.forEach { destination ->
                         SidebarRailItem(
                             selected = destination == MainDestination.Home,
                             label = customIcons.labelFor(destination, stringResource(destination.label)),

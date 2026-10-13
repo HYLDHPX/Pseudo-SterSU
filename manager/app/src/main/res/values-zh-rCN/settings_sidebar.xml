@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_sidebar_intro">你的设备，你的使用方式</string>
-    <string name="settings_sidebar_version">侧栏组件 · 管理器 %1$s</string>
+    <string name="settings_sidebar_version">miuix（美化版）· 管理器 %1$s</string>
     <string name="settings_sidebar_appearance">外观和主题</string>
     <string name="settings_sidebar_appearance_summary">界面风格、配色与侧栏设计</string>
     <string name="settings_sidebar_more">更多设置</string>
-    <string name="settings_sidebar_more_summary">全部分类、权限与实用工具</string>
+    <string name="settings_sidebar_more_summary">其他分类、权限与实用工具</string>
     <string name="settings_device_unknown">设备未提供</string>
     <string name="settings_device_android">Android %1$s</string>
     <string name="settings_device_model">机型</string>

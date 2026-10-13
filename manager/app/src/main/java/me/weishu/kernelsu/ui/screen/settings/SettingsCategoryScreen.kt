@@ -670,6 +670,14 @@ private fun PluginSettingsContent(
 ) {
     val entries = SettingsCatalog.entriesFor(SettingsCategory.Plugins, uiState)
         .filter { it.plugin != null }
+    SettingsGroup(stringResource(R.string.settings_hub_plugins)) {
+        SettingsActionRow(
+            title = stringResource(R.string.plugin_store_title),
+            summary = stringResource(R.string.settings_plugins_store_summary),
+            icon = Icons.Rounded.Storefront,
+            onClick = { onOpen(Route.PluginStore) },
+        )
+    }
     if (entries.isEmpty()) {
         Text(
             text = stringResource(R.string.settings_plugins_empty),

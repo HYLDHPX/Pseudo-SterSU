@@ -43,6 +43,7 @@ fun ModulePager(
     val viewModel = viewModel<ModuleViewModel>()
     val scope = rememberCoroutineScope()
     val rawUiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var wallpaperEditorRequest by remember { mutableStateOf<Route.ModuleWallpaperEditor?>(null) }
 
     val webUILauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -130,14 +131,12 @@ fun ModulePager(
         onOpenRepo = { navigator.push(Route.ModuleRepo) },
         onOpenTools = { navigator.push(Route.ModuleTools) },
         onOpenWallpaperEditor = { module ->
-            navigator.push(
-                Route.ModuleWallpaperEditor(
-                    moduleId = module.id,
-                    displayName = module.name,
-                    displayAuthor = module.author,
-                    displayVersion = module.version,
-                    displayDescription = module.description,
-                )
+            wallpaperEditorRequest = Route.ModuleWallpaperEditor(
+                moduleId = module.id,
+                displayName = module.name,
+                displayAuthor = module.author,
+                displayVersion = module.version,
+                displayDescription = module.description,
             )
         },
         onToggleSortActionFirst = {
@@ -173,6 +172,13 @@ fun ModulePager(
             viewModel.markNeedRefresh()
         },
     )
+
+    wallpaperEditorRequest?.let { request ->
+        ModuleWallpaperEditorDialog(
+            request = request,
+            onDismissRequest = { wallpaperEditorRequest = null },
+        )
+    }
 
     when (LocalInterfaceStyle.current) {
         InterfaceStyle.Material.value,

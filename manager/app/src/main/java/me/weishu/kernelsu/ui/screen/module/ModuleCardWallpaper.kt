@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -285,6 +286,25 @@ internal fun rememberModuleCardWallpaperState(
     }
     val collection = snapshot.collection(variant)
     var selectedIndex by remember(moduleId, variant) { mutableIntStateOf(collection.selectedIndex) }
+
+    // The editor can now stay over the module list as a dialog, so the page
+    // does not receive an activity resume when its wallpaper changes.
+    DisposableEffect(prefs, moduleId, requestedVariant) {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == moduleWallpaperEntriesKey(moduleId)) {
+                scope.launch {
+                    val refreshed = readModuleCardWallpaperSnapshot(prefs, moduleId)
+                    snapshot = refreshed
+                    val activeVariant = if (
+                        requestedVariant == ModuleWallpaperVariant.Night && refreshed.nightEntries.isNotEmpty()
+                    ) ModuleWallpaperVariant.Night else ModuleWallpaperVariant.Day
+                    selectedIndex = refreshed.collection(activeVariant).selectedIndex
+                }
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
 
     LifecycleResumeEffect(moduleId) {
         val refreshed = readModuleCardWallpaperSnapshot(context, moduleId)

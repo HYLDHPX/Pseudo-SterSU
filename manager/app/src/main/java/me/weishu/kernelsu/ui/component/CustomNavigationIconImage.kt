@@ -1,14 +1,19 @@
 package me.weishu.kernelsu.ui.component
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -31,13 +36,13 @@ fun CustomNavigationIconImage(
         crop = value.crop,
     )
 
+    val maskModifier = when (value.mask) {
+        CustomNavigationIconMask.Original -> Modifier
+        CustomNavigationIconMask.Circle -> Modifier.clip(CircleShape)
+        CustomNavigationIconMask.Square -> Modifier.clip(RoundedCornerShape(0.dp))
+        CustomNavigationIconMask.RoundedSquare -> Modifier.clip(RoundedCornerShape(7.dp))
+    }
     if (imageBitmap != null) {
-        val maskModifier = when (value.mask) {
-            CustomNavigationIconMask.Original -> Modifier
-            CustomNavigationIconMask.Circle -> Modifier.clip(CircleShape)
-            CustomNavigationIconMask.Square -> Modifier.clip(RoundedCornerShape(0.dp))
-            CustomNavigationIconMask.RoundedSquare -> Modifier.clip(RoundedCornerShape(7.dp))
-        }
         Image(
             modifier = modifier
                 .graphicsLayer {
@@ -54,6 +59,25 @@ fun CustomNavigationIconImage(
             colorFilter = value.tintArgb?.let { ColorFilter.tint(Color(it.toInt())) },
         )
     } else {
-        fallback()
+        val tint = value.tintArgb?.let { Color(it.toInt()) }
+        Box(
+            modifier = modifier
+                .graphicsLayer {
+                    scaleX = value.sizeScale
+                    scaleY = value.sizeScale
+                    translationY = value.verticalOffsetDp.dp.toPx()
+                    this.alpha = (alpha * value.opacity).coerceIn(0f, 1f)
+                    if (tint != null) compositingStrategy = CompositingStrategy.Offscreen
+                }
+                .padding(value.innerPaddingDp.dp)
+                .then(maskModifier)
+                .drawWithContent {
+                    drawContent()
+                    tint?.let { drawRect(it, blendMode = BlendMode.SrcIn) }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            fallback()
+        }
     }
 }

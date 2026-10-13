@@ -19,6 +19,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,7 +46,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PowerSettingsNew
@@ -56,12 +57,11 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -107,9 +107,6 @@ import me.weishu.kernelsu.ui.component.rememberCustomImageBitmap
 import me.weishu.kernelsu.ui.component.rebootlistpopup.SidebarRebootPopup
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.navigation3.Route
-import me.weishu.kernelsu.ui.screen.flash.FlashIt
-import me.weishu.kernelsu.ui.screen.module.rememberModuleZipPicker
-import me.weishu.kernelsu.ui.viewmodel.ModuleViewModel
 import me.weishu.kernelsu.ui.util.LocalCustomNavigationIcons
 import me.weishu.kernelsu.ui.util.SIDEBAR_NAV_HOME
 import me.weishu.kernelsu.ui.util.SIDEBAR_NAV_KPM
@@ -128,6 +125,7 @@ import me.weishu.kernelsu.ui.util.rememberSidebarWidgetConfig
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 private data class SidebarAppearance(
     val colors: SidebarColors = sidebarColors(dark = false),
@@ -136,12 +134,15 @@ private data class SidebarAppearance(
 )
 
 private val LocalSidebarAppearance = staticCompositionLocalOf { SidebarAppearance() }
+private val LocalSidebarCompactNavigation = staticCompositionLocalOf { false }
 
 @Composable
 fun SidebarWidgetRail(
     navigationBadge: NavigationBadgeState,
     destinations: List<MainDestination>,
     modifier: Modifier = Modifier,
+    selectedDestination: MainDestination? = null,
+    onDestinationSelected: ((MainDestination) -> Unit)? = null,
 ) {
     val configuration = LocalConfiguration.current
     val tablet = configuration.smallestScreenWidthDp >= 600
@@ -150,22 +151,12 @@ fun SidebarWidgetRail(
     val customIcons = LocalCustomNavigationIcons.current
     val config = rememberSidebarWidgetConfig()
     val navigator = LocalNavigator.current
-    val moduleViewModel = viewModel<ModuleViewModel>()
-    val moduleUiState by moduleViewModel.uiState.collectAsStateWithLifecycle()
-    val showModuleInstall = mainPagerState.destinationForPage() == MainDestination.Module &&
-        moduleUiState.installButtonVisible
-    val openModuleZipPicker = rememberModuleZipPicker { uris ->
-        if (uris.isNotEmpty()) {
-            navigator.push(Route.Flash(FlashIt.FlashModules(uris)))
-            moduleViewModel.markNeedRefresh()
-        }
-    }
     val orderedDestinations = remember(config.navigationOrder, destinations) {
         orderSidebarDestinations(config.navigationOrder, destinations)
     }
     SidebarRailLayout(
         config = config,
-        navigationCount = orderedDestinations.size + if (showModuleInstall) 1 else 0,
+        navigationCount = orderedDestinations.size,
         tablet = tablet,
         modifier = modifier,
         onAvatarClick = { navigator.push(Route.SidebarWidgetSettings) },
@@ -176,7 +167,7 @@ fun SidebarWidgetRail(
         ),
     ) {
         orderedDestinations.forEach { destination ->
-            val selected = mainPagerState.destinationForPage() == destination
+            val selected = (selectedDestination ?: mainPagerState.destinationForPage()) == destination
             val label = customIcons.labelFor(destination, stringResource(destination.label))
             val badge = badgeFor(destination, navigationBadge)
             val contentColor = LocalContentColor.current
@@ -184,7 +175,10 @@ fun SidebarWidgetRail(
                 selected = selected,
                 label = label,
                 badgeCount = badge?.count,
-                onClick = { mainPagerState.animateTo(destination) },
+                onClick = {
+                    if (onDestinationSelected == null) mainPagerState.animateTo(destination)
+                    else onDestinationSelected(destination)
+                },
             ) {
                 BadgedBox(badge = {
                     if (badge != null) {
@@ -202,16 +196,6 @@ fun SidebarWidgetRail(
                         contentDescription = null,
                         tint = contentColor,
                     )
-                }
-            }
-            if (destination == MainDestination.Module && showModuleInstall) {
-                SidebarRailItem(
-                    selected = false,
-                    label = stringResource(R.string.module_install),
-                    onClick = openModuleZipPicker,
-                    role = Role.Button,
-                ) {
-                    Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(28.dp))
                 }
             }
         }
@@ -255,6 +239,7 @@ internal fun SidebarRailLayout(
                 .clip(SidebarPaneShape)
                 .sidebarMaterialSurface(colors, config.material, mode, backdrop, edgeOnRight = config.side == SidebarSide.Left)
                 .windowInsetsPadding(windowInsets)
+                .padding(vertical = 12.dp)
                 .width(railWidth)
                 .fillMaxHeight(),
         ) {
@@ -262,38 +247,52 @@ internal fun SidebarRailLayout(
                 val minimumWidgetHeight = if (showWidgets) sidebarMinimumWidgetHeight(
                     config.widgetType, tablet, LocalDensity.current.fontScale,
                 ) else 0.dp
+                val compactNavigation = sidebarUseCompactNavigation(
+                    maxHeight, minimumWidgetHeight, navigationCount, LocalDensity.current.fontScale,
+                )
                 val (contentHeight, widgetHeight) = sidebarRailSizing(
                     maxHeight, minimumWidgetHeight, navigationCount, config.navigationPosition,
                     fontScale = LocalDensity.current.fontScale,
                 )
-                // The body scrolls on short windows; the power button stays reachable below it.
-                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().height(contentHeight),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        if (showWidgets) Column(
-                            Modifier.fillMaxWidth().height(widgetHeight).padding(top = 16.dp, bottom = 12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            SidebarAvatar(config, compact = !tablet, onClick = onAvatarClick)
-                            Spacer(Modifier.height(12.dp))
-                            SidebarHeaderWidget(config, modifier = Modifier.weight(1f).padding(horizontal = 6.dp), compact = !tablet)
-                        }
-                        HorizontalDivider(thickness = 0.5.dp, color = contentColor.copy(alpha = 0.22f))
+                if (compactNavigation) {
+                    // On short windows, the optional header cannot precede the navigation.
+                    CompositionLocalProvider(LocalSidebarCompactNavigation provides true) {
                         Column(
-                            modifier = Modifier.weight(1f).fillMaxWidth().selectableGroup(),
+                            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).selectableGroup(),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = when (config.navigationPosition) {
-                                SidebarNavigationPosition.Top -> Arrangement.Top
-                                SidebarNavigationPosition.Center -> Arrangement.SpaceEvenly
-                                SidebarNavigationPosition.Bottom -> Arrangement.Bottom
-                            },
                             content = navigation,
                         )
                     }
+                } else {
+                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().height(contentHeight),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            if (showWidgets) Column(
+                                Modifier.fillMaxWidth().height(widgetHeight).padding(top = 16.dp, bottom = 12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                SidebarAvatar(config, compact = !tablet, onClick = onAvatarClick)
+                                Spacer(Modifier.height(12.dp))
+                                SidebarHeaderWidget(config, modifier = Modifier.weight(1f).padding(horizontal = 6.dp), compact = !tablet)
+                            }
+                            HorizontalDivider(thickness = 0.5.dp, color = contentColor.copy(alpha = 0.22f))
+                            Column(
+                                modifier = Modifier.weight(1f).fillMaxWidth().selectableGroup(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = when (config.navigationPosition) {
+                                    SidebarNavigationPosition.Top -> Arrangement.Top
+                                    SidebarNavigationPosition.Center -> Arrangement.SpaceEvenly
+                                    SidebarNavigationPosition.Bottom -> Arrangement.Bottom
+                                },
+                                content = navigation,
+                            )
+                        }
+                    }
                 }
             }
+            Spacer(Modifier.height(16.dp))
             HorizontalDivider(thickness = 0.5.dp, color = contentColor.copy(alpha = 0.22f))
             Box(
                 modifier = Modifier.fillMaxWidth().height(76.dp),
@@ -313,6 +312,11 @@ internal fun SidebarRailItem(
     content: @Composable () -> Unit,
 ) {
     val appearance = LocalSidebarAppearance.current
+    val compactNavigation = LocalSidebarCompactNavigation.current
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(selected, compactNavigation) {
+        if (selected && compactNavigation) bringIntoViewRequester.bringIntoView()
+    }
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsFocusedAsState()
@@ -330,21 +334,13 @@ internal fun SidebarRailItem(
     )
     Box(
         modifier = Modifier
+            .bringIntoViewRequester(bringIntoViewRequester)
             .padding(horizontal = 8.dp, vertical = 2.dp)
             .fillMaxWidth()
             .height(sidebarNavigationItemHeight(LocalDensity.current.fontScale) - 4.dp)
-            .clip(SidebarPaneShape)
-            .sidebarSelectionSurface(appearance.colors, appearance.material, selection)
             .semantics(mergeDescendants = true) {
                 contentDescription = if (badgeCount != null) "$label, $badgeCount" else label
             }
-            .then(
-                if (focused) Modifier.border(
-                    1.5.dp,
-                    appearance.colors.content,
-                    SidebarPaneShape,
-                ) else Modifier
-            )
             .then(
                 when {
                     onClick == null -> Modifier
@@ -370,7 +366,19 @@ internal fun SidebarRailItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
-            content()
+            Box(Modifier.size(42.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .clip(CircleShape)
+                        .sidebarSelectionSurface(appearance.colors, appearance.material, selection.coerceAtLeast(0.1f))
+                        .then(
+                            if (focused) Modifier.border(1.5.dp, appearance.colors.content, CircleShape)
+                            else Modifier
+                        ),
+                )
+                content()
+            }
             Text(
                 text = label,
                 fontSize = 11.sp,
@@ -421,10 +429,11 @@ private fun SidebarClockWidget(config: SidebarWidgetConfig, now: Long, compact: 
     val numberBrush = remember(config.clockStyle, colors) {
         Brush.linearGradient(sidebarClockGradientStops(config.clockStyle, colors))
     }
-    val timePattern = if (DateFormat.is24HourFormat(LocalContext.current)) "HH:mm" else "h:mm"
-    val time = remember(now / 1_000L, locale, timePattern) {
-        SimpleDateFormat(timePattern, locale).format(Date(now))
+    val use24HourTime = DateFormat.is24HourFormat(context)
+    val clockTime = remember(now / 1_000L, locale, use24HourTime) {
+        sidebarTimeText(now, locale, use24HourTime)
     }
+    val time = clockTime.time
     val date = remember(now / 60_000L, locale) {
         SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, "MMMd"), locale).format(Date(now))
     }
@@ -565,6 +574,9 @@ private fun SidebarClockWidget(config: SidebarWidgetConfig, now: Long, compact: 
                 }
             }
         }
+        clockTime.period?.let { period ->
+            Text(period, fontSize = if (compact) 10.sp else 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium)
+        }
         if (config.clockWeatherEnabled) SidebarWeatherSummary(config, compact)
         if (battery != null) Text("$battery%", fontSize = if (compact) 11.sp else 12.sp, lineHeight = if (compact) 14.sp else 16.sp, fontWeight = FontWeight.SemiBold)
     }
@@ -629,18 +641,21 @@ private fun SidebarAlarmWidget(context: Context, now: Long, compact: Boolean) {
         context.getSystemService(AlarmManager::class.java)?.nextAlarmClock?.triggerTime
     }
     val locale = Locale.getDefault()
-    val formatted = nextAlarm?.let { trigger ->
-        val pattern = if (DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm"
-        remember(trigger, locale, pattern) { SimpleDateFormat(pattern, locale).format(Date(trigger)) }
+    val use24HourTime = DateFormat.is24HourFormat(context)
+    val alarmTime = remember(nextAlarm, locale, use24HourTime) {
+        nextAlarm?.let { sidebarTimeText(it, locale, use24HourTime) }
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(Icons.Rounded.Alarm, contentDescription = null, modifier = Modifier.size(if (compact) 26.dp else 32.dp))
         Text(
-            text = formatted ?: "--:--",
+            text = alarmTime?.time ?: "--:--",
             fontSize = if (compact) 19.sp else 24.sp,
             lineHeight = if (compact) 24.sp else 28.sp,
             fontWeight = FontWeight.SemiBold,
         )
+        alarmTime?.period?.let { period ->
+            Text(period, fontSize = if (compact) 10.sp else 12.sp, lineHeight = 14.sp)
+        }
         Text(
             text = stringResource(
                 if (nextAlarm == null) R.string.sidebar_widget_alarm_none
@@ -652,6 +667,22 @@ private fun SidebarAlarmWidget(context: Context, now: Long, compact: Boolean) {
             maxLines = 2,
         )
     }
+}
+
+internal data class SidebarTimeText(val time: String, val period: String?)
+
+internal fun sidebarTimeText(
+    timestamp: Long,
+    locale: Locale,
+    use24HourTime: Boolean,
+    timeZone: TimeZone = TimeZone.getDefault(),
+): SidebarTimeText {
+    val date = Date(timestamp)
+    fun format(pattern: String) = SimpleDateFormat(pattern, locale).apply { this.timeZone = timeZone }.format(date)
+    return SidebarTimeText(
+        time = format(if (use24HourTime) "HH:mm" else "h:mm"),
+        period = if (use24HourTime) null else format("a"),
+    )
 }
 
 @Composable

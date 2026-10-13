@@ -160,6 +160,22 @@ class MainLayoutTest {
     }
 
     @Test
+    fun settingsDetailsKeepSidebarButStoreFlowDoesNot() {
+        assertTrue(shouldShowSettingsSidebar(Route.SettingsCategory("appearance"), settingsAncestor = true))
+        assertTrue(shouldShowSettingsSidebar(Route.SidebarWidgetSettings, settingsAncestor = false))
+        assertTrue(shouldShowSettingsSidebar(Route.About, settingsAncestor = false))
+        assertTrue(shouldShowSettingsSidebar(Route.NavigationIcons, settingsAncestor = true))
+        assertFalse(shouldShowSettingsSidebar(Route.NavigationIcons, settingsAncestor = false))
+        assertFalse(shouldShowSettingsSidebar(Route.ThemeStore, settingsAncestor = true))
+        assertFalse(shouldShowSettingsSidebar(Route.ThemeStoreFonts, settingsAncestor = true))
+        assertFalse(shouldShowSettingsSidebar(Route.PluginStore, settingsAncestor = true))
+        assertFalse(shouldShowSettingsSidebar(Route.CloudThemeDetail("theme"), settingsAncestor = true))
+        assertFalse(shouldShowSettingsSidebar(Route.NavigationIcons, settingsAncestor = true, storeAncestor = true))
+        assertFalse(shouldShowSettingsSidebar(Route.SidebarWidgetSettings, settingsAncestor = true, storeAncestor = true))
+        assertFalse(shouldShowSettingsSidebar(Route.Install, settingsAncestor = true))
+    }
+
+    @Test
     fun kpmDestinationInsertionKeepsOtherPagesStable() {
         assertEquals(
             MainDestination.SuperUser,

@@ -11,10 +11,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -32,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DragIndicator
@@ -52,10 +56,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -78,6 +84,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
@@ -86,6 +94,7 @@ import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.data.model.Module
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
+import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.util.MediaVisualSettings
@@ -104,9 +113,67 @@ fun ModuleWallpaperEditorScreen(
     displayDescription: String? = null,
     allowBatch: Boolean = true,
 ) {
+    val navigator = LocalNavigator.current
+    ModuleWallpaperEditorContent(
+        moduleId = moduleId,
+        displayName = displayName,
+        displayAuthor = displayAuthor,
+        displayVersion = displayVersion,
+        displayDescription = displayDescription,
+        allowBatch = allowBatch,
+        onClose = navigator::pop,
+        inDialog = false,
+    )
+}
+
+@Composable
+fun ModuleWallpaperEditorDialog(
+    request: Route.ModuleWallpaperEditor,
+    onDismissRequest: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            val dialogWidth = (maxWidth - 32.dp).coerceAtMost(640.dp)
+            val dialogHeight = (maxHeight - 32.dp).coerceAtMost(760.dp)
+            Surface(
+                modifier = Modifier.width(dialogWidth).height(dialogHeight),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 1f),
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                tonalElevation = 6.dp,
+            ) {
+                ModuleWallpaperEditorContent(
+                    moduleId = request.moduleId,
+                    displayName = request.displayName,
+                    displayAuthor = request.displayAuthor,
+                    displayVersion = request.displayVersion,
+                    displayDescription = request.displayDescription,
+                    allowBatch = request.allowBatch,
+                    onClose = onDismissRequest,
+                    inDialog = true,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ModuleWallpaperEditorContent(
+    moduleId: String,
+    displayName: String?,
+    displayAuthor: String?,
+    displayVersion: String?,
+    displayDescription: String?,
+    allowBatch: Boolean,
+    onClose: () -> Unit,
+    inDialog: Boolean,
+) {
     val context = LocalContext.current
     val resources = LocalResources.current
-    val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val moduleViewModel = viewModel<ModuleViewModel>()
     val moduleUiState by moduleViewModel.uiState.collectAsStateWithLifecycle()
@@ -212,13 +279,23 @@ fun ModuleWallpaperEditorScreen(
     }
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 1f),
+        contentWindowInsets = if (inDialog) WindowInsets(0, 0, 0, 0) else WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.module_wallpaper_editor_title)) },
+                windowInsets = if (inDialog) WindowInsets(0, 0, 0, 0) else TopAppBarDefaults.windowInsets,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 1f),
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
                 navigationIcon = {
-                    IconButton(onClick = navigator::pop) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back))
+                    IconButton(onClick = onClose) {
+                        Icon(
+                            if (inDialog) Icons.Rounded.Close else Icons.AutoMirrored.Rounded.ArrowBack,
+                            stringResource(if (inDialog) R.string.close else R.string.back),
+                        )
                     }
                 },
             )

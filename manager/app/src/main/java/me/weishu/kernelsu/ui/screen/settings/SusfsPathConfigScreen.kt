@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -83,6 +84,8 @@ import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.R
@@ -128,11 +131,13 @@ fun SusfsPathConfigScreen() {
     val context = LocalContext.current
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
+    val draftModel: SusfsEditViewModel = viewModel()
+    val draftStore = remember { SusfsEditDraftStore(context.applicationContext) }
     val kernelSlotsModel: SusfsKernelSlotsViewModel = viewModel()
     val kernelSlots by kernelSlotsModel.state.collectAsStateWithLifecycle()
-    var runtime by remember { mutableStateOf(SusfsPathConfigState()) }
-    var draft by remember { mutableStateOf(SusfsPathConfigState()) }
-    var baseline by remember { mutableStateOf<SusfsPathConfigState?>(null) }
+    var runtime by draftModel.runtime
+    var draft by draftModel.draft
+    var baseline by draftModel.baseline
     var loading by remember { mutableStateOf(true) }
     var applying by remember { mutableStateOf(false) }
     var importing by remember { mutableStateOf(false) }
@@ -151,6 +156,9 @@ fun SusfsPathConfigScreen() {
     var recoveryError by remember { mutableStateOf("") }
     var restoring by remember { mutableStateOf(false) }
     var dismissedRecoveryError by rememberSaveable { mutableStateOf("") }
+    var pendingRestoredDraft by remember { mutableStateOf<SusfsPathConfigState?>(null) }
+    var draftSaveJob by remember { mutableStateOf<Job?>(null) }
+    var draftSaveFailed by remember { mutableStateOf(false) }
 
     val selectedPage = SusfsPage.entries[selectedPageIndex.coerceIn(SusfsPage.entries.indices)]
     val runtimeScrollState = rememberScrollState()
@@ -159,6 +167,31 @@ fun SusfsPathConfigScreen() {
 
     val dirty = baseline?.let { !editableSusfsConfigEquals(it, draft) } == true
 
+    fun updateDraft(next: SusfsPathConfigState) {
+        draft = next
+        val original = baseline ?: return
+        val revision = System.nanoTime()
+        draftSaveJob?.cancel()
+        draftSaveJob = scope.launch {
+            draftSaveFailed = if (editableSusfsConfigEquals(original, next)) {
+                draftStore.clear()
+                false
+            } else {
+                !draftStore.save(next, revision)
+            }
+        }
+    }
+
+    suspend fun offerSavedDraft(refreshed: SusfsPathConfigState) {
+        if (!refreshed.available) return
+        val saved = draftStore.load() ?: return
+        if (editableSusfsConfigEquals(refreshed, restoreSusfsEditableDraft(refreshed, saved))) {
+            draftStore.clear()
+        } else {
+            pendingRestoredDraft = saved
+        }
+    }
+
     fun replaceWithRuntime(refreshed: SusfsPathConfigState) {
         runtime = refreshed
         draft = refreshed
@@ -166,6 +199,7 @@ fun SusfsPathConfigScreen() {
         actionError = ""
         actionErrorRetryable = false
         importWarnings = emptyList()
+        draftSaveFailed = false
     }
 
     fun refresh() {
@@ -174,6 +208,7 @@ fun SusfsPathConfigScreen() {
             loading = true
             val refreshed = getSusfsPathConfig()
             replaceWithRuntime(refreshed)
+            offerSavedDraft(refreshed)
             if (refreshed.available) {
                 val backup = captureSusfsRecoverySnapshot()
                 recoveryError = if (backup.success || refreshed.runtimeStatus.generation.isBlank()) "" else backup.error
@@ -184,7 +219,17 @@ fun SusfsPathConfigScreen() {
     }
 
     fun leavePage() {
-        if (dirty) showDiscardDialog = true else navigator.pop()
+        if (dirty) {
+            showDiscardDialog = true
+        } else if (pendingRestoredDraft != null) {
+            navigator.pop()
+        } else {
+            scope.launch {
+                draftSaveJob?.cancelAndJoin()
+                draftStore.clear()
+                navigator.pop()
+            }
+        }
     }
 
     fun apply(config: SusfsPathConfigState = draft) {
@@ -195,6 +240,8 @@ fun SusfsPathConfigScreen() {
             actionErrorRetryable = false
             val result = saveAndApplySusfsConfig(config)
             if (result.saved) {
+                draftSaveJob?.cancelAndJoin()
+                draftStore.clear()
                 val refreshed = getSusfsPathConfig()
                 if (refreshed.available) {
                     replaceWithRuntime(refreshed)
@@ -242,6 +289,10 @@ fun SusfsPathConfigScreen() {
             try {
                 val result = restoreSusfsFromSnapshot()
                 replaceWithRuntime(getSusfsPathConfig())
+                if (result.success) {
+                    draftSaveJob?.cancelAndJoin()
+                    draftStore.clear()
+                }
                 recoveryAvailable = hasSusfsRecoverySnapshot()
                 if (result.success) {
                     Toast.makeText(
@@ -340,11 +391,19 @@ fun SusfsPathConfigScreen() {
     BackHandler(enabled = dirty, onBack = { showDiscardDialog = true })
 
     LaunchedEffect(Unit) {
-        val initial = getSusfsPathConfig()
-        replaceWithRuntime(initial)
-        if (initial.available) {
-            val backup = captureSusfsRecoverySnapshot()
-            recoveryError = if (backup.success || initial.runtimeStatus.generation.isBlank()) "" else backup.error
+        if (!draftModel.initialized) {
+            val initial = getSusfsPathConfig()
+            replaceWithRuntime(initial)
+            draftModel.initialized = true
+            offerSavedDraft(initial)
+            if (initial.available) {
+                val backup = captureSusfsRecoverySnapshot()
+                recoveryError = if (backup.success || initial.runtimeStatus.generation.isBlank()) "" else backup.error
+            }
+        } else if (dirty) {
+            updateDraft(draft)
+        } else {
+            offerSavedDraft(runtime)
         }
         recoveryAvailable = hasSusfsRecoverySnapshot()
         loading = false
@@ -356,6 +415,28 @@ fun SusfsPathConfigScreen() {
         }
     }
 
+    pendingRestoredDraft?.let { saved ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.susfs_draft_restore_title)) },
+            text = { Text(stringResource(R.string.susfs_draft_restore_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingRestoredDraft = null
+                    updateDraft(restoreSusfsEditableDraft(runtime, saved))
+                }) { Text(stringResource(R.string.susfs_draft_restore)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        draftStore.clear()
+                        pendingRestoredDraft = null
+                    }
+                }) { Text(stringResource(R.string.susfs_discard_confirm)) }
+            },
+        )
+    }
+
     if (showDiscardDialog) {
         AlertDialog(
             onDismissRequest = { showDiscardDialog = false },
@@ -364,8 +445,12 @@ fun SusfsPathConfigScreen() {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showDiscardDialog = false
-                        navigator.pop()
+                        scope.launch {
+                            draftSaveJob?.cancelAndJoin()
+                            draftStore.clear()
+                            showDiscardDialog = false
+                            navigator.pop()
+                        }
                     },
                 ) { Text(stringResource(R.string.susfs_discard_confirm)) }
             },
@@ -389,12 +474,12 @@ fun SusfsPathConfigScreen() {
                 TextButton(
                     onClick = {
                         val imported = requireNotNull(pendingImport)
-                        draft = mergeSusfsConfig(draft, imported).copy(
+                        updateDraft(mergeSusfsConfig(draft, imported).copy(
                             available = runtime.available,
                             toolPath = runtime.toolPath,
                             capabilities = runtime.capabilities,
                             error = runtime.error,
-                        )
+                        ))
                         showImportModeDialog = false
                         pendingImport = null
                         Toast.makeText(context, R.string.susfs_import_ready, Toast.LENGTH_LONG).show()
@@ -406,12 +491,12 @@ fun SusfsPathConfigScreen() {
                     TextButton(
                         onClick = {
                             val imported = requireNotNull(pendingImport)
-                            draft = imported.copy(
+                            updateDraft(imported.copy(
                                 available = runtime.available,
                                 toolPath = runtime.toolPath,
                                 capabilities = runtime.capabilities,
                                 error = runtime.error,
-                            )
+                            ))
                             showImportModeDialog = false
                             pendingImport = null
                             Toast.makeText(context, R.string.susfs_import_ready, Toast.LENGTH_LONG).show()
@@ -538,314 +623,331 @@ fun SusfsPathConfigScreen() {
                 ),
                 tonalElevation = 3.dp,
             ) {
-                Column(modifier = Modifier.imePadding()) {
-                    Button(
-                        onClick = { apply() },
-                        enabled = runtime.available && dirty && !loading && !applying && !importing,
+                Box(Modifier.fillMaxWidth()) {
+                    Column(
                         modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .widthIn(max = 840.dp)
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .imePadding(),
                     ) {
-                        if (applying) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = { apply() },
+                            enabled = runtime.available && dirty && !loading && !applying && !importing,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                        ) {
+                            if (applying) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(stringResource(R.string.susfs_path_apply))
                         }
-                        Text(stringResource(R.string.susfs_path_apply))
-                    }
-                    ShortNavigationBar(
-                        containerColor = immersiveSurfaceColor(MaterialTheme.colorScheme.surfaceContainer),
-                    ) {
-                        SusfsPage.entries.forEachIndexed { index, page ->
-                            val label = stringResource(
-                                when (page) {
-                                    SusfsPage.RuntimePolicy -> R.string.susfs_nav_runtime
-                                    SusfsPage.PathMasking -> R.string.susfs_nav_paths
-                                    SusfsPage.KernelSpoofing -> R.string.susfs_nav_kernel
-                                },
-                            )
-                            ShortNavigationBarItem(
-                                selected = selectedPage == page,
-                                onClick = { selectedPageIndex = index },
-                                icon = {
-                                    Icon(
-                                        imageVector = when (page) {
-                                            SusfsPage.RuntimePolicy -> Icons.Rounded.Policy
-                                            SusfsPage.PathMasking -> Icons.Rounded.VisibilityOff
-                                            SusfsPage.KernelSpoofing -> Icons.Rounded.Memory
-                                        },
-                                        contentDescription = label,
-                                    )
-                                },
-                                label = {
-                                    Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                },
-                            )
+                        ShortNavigationBar(
+                            containerColor = immersiveSurfaceColor(MaterialTheme.colorScheme.surfaceContainer),
+                        ) {
+                            SusfsPage.entries.forEachIndexed { index, page ->
+                                val label = stringResource(
+                                    when (page) {
+                                        SusfsPage.RuntimePolicy -> R.string.susfs_nav_runtime
+                                        SusfsPage.PathMasking -> R.string.susfs_nav_paths
+                                        SusfsPage.KernelSpoofing -> R.string.susfs_nav_kernel
+                                    },
+                                )
+                                ShortNavigationBarItem(
+                                    selected = selectedPage == page,
+                                    onClick = { selectedPageIndex = index },
+                                    icon = {
+                                        Icon(
+                                            imageVector = when (page) {
+                                                SusfsPage.RuntimePolicy -> Icons.Rounded.Policy
+                                                SusfsPage.PathMasking -> Icons.Rounded.VisibilityOff
+                                                SusfsPage.KernelSpoofing -> Icons.Rounded.Memory
+                                            },
+                                            contentDescription = label,
+                                        )
+                                    },
+                                    label = {
+                                        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    },
+                                )
+                            }
                         }
                     }
                 }
             }
         },
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(
-                    when (selectedPage) {
-                        SusfsPage.RuntimePolicy -> runtimeScrollState
-                        SusfsPage.PathMasking -> pathsScrollState
-                        SusfsPage.KernelSpoofing -> kernelScrollState
-                    },
-                )
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            SusfsStatusPanel(
-                state = runtime,
-                loading = loading || importing || restoring,
-                page = selectedPage,
-            )
-
-            if (runtime.runtimeStatus.issues.any { it.category == "avc" }) {
-                SusfsNoticeCard(
-                    title = stringResource(R.string.susfs_avc_rejected_title),
-                    message = stringResource(R.string.susfs_avc_rejected_message),
-                    warning = true,
-                )
-                if (!dirty && runtime.avcLogSpoofing) {
-                    OutlinedButton(
-                        onClick = {
-                            val next = runtime.copy(avcLogSpoofing = false)
-                            draft = next
-                            apply(next)
+        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 840.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(
+                        when (selectedPage) {
+                            SusfsPage.RuntimePolicy -> runtimeScrollState
+                            SusfsPage.PathMasking -> pathsScrollState
+                            SusfsPage.KernelSpoofing -> kernelScrollState
                         },
-                        enabled = runtime.available && !loading && !applying && !importing,
-                    ) { Text(stringResource(R.string.susfs_disable_avc_and_retry)) }
-                }
-            }
-
-            if (!loading && (!runtime.available || runtime.runtimeStatus.generation.isBlank())) {
-                SusfsNoticeCard(
-                    title = stringResource(R.string.susfs_recovery_title),
-                    message = stringResource(
-                        if (recoveryAvailable) R.string.susfs_recovery_available
-                        else if (runtime.available) R.string.susfs_recovery_initialize_hint
-                        else R.string.susfs_recovery_unavailable,
-                    ),
-                    warning = true,
+                    )
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                SusfsStatusPanel(
+                    state = runtime,
+                    loading = loading || importing || restoring,
+                    page = selectedPage,
                 )
-                if (recoveryAvailable || runtime.available) {
-                    OutlinedButton(
-                        onClick = ::restore,
-                        enabled = !dirty && !applying && !restoring,
-                    ) {
-                        Text(stringResource(
-                            if (recoveryAvailable) R.string.susfs_recovery_action
-                            else R.string.susfs_recovery_initialize_action,
-                        ))
+                if (draftSaveFailed) {
+                    Text(
+                        text = stringResource(R.string.susfs_draft_save_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                if (runtime.runtimeStatus.issues.any { it.category == "avc" }) {
+                    SusfsNoticeCard(
+                        title = stringResource(R.string.susfs_avc_rejected_title),
+                        message = stringResource(R.string.susfs_avc_rejected_message),
+                        warning = true,
+                    )
+                    if (!dirty && runtime.avcLogSpoofing) {
+                        OutlinedButton(
+                            onClick = {
+                                val next = runtime.copy(avcLogSpoofing = false)
+                                updateDraft(next)
+                                apply(next)
+                            },
+                            enabled = runtime.available && !loading && !applying && !importing,
+                        ) { Text(stringResource(R.string.susfs_disable_avc_and_retry)) }
                     }
                 }
-            }
 
-            if (!loading && runtime.available && runtime.runtimeStatus.generation.isNotBlank() &&
-                selectedPage == SusfsPage.RuntimePolicy &&
-                (recoveryError.isBlank() || dismissedRecoveryError != recoveryError)
-            ) {
-                SusfsNoticeCard(
-                    title = stringResource(R.string.susfs_recovery_title),
-                    message = if (recoveryError.isNotBlank()) {
-                        stringResource(R.string.susfs_recovery_backup_failed, recoveryError)
-                    } else if (recoveryAvailable) {
-                        stringResource(R.string.susfs_recovery_ready)
-                    } else {
-                        stringResource(R.string.susfs_recovery_unavailable)
-                    },
-                    warning = recoveryError.isNotBlank() || !recoveryAvailable,
-                    onDismiss = if (recoveryError.isNotBlank()) {
-                        { dismissedRecoveryError = recoveryError }
-                    } else null,
-                )
-            }
+                if (!loading && (!runtime.available || runtime.runtimeStatus.generation.isBlank())) {
+                    SusfsNoticeCard(
+                        title = stringResource(R.string.susfs_recovery_title),
+                        message = stringResource(
+                            if (recoveryAvailable) R.string.susfs_recovery_available
+                            else if (runtime.available) R.string.susfs_recovery_initialize_hint
+                            else R.string.susfs_recovery_unavailable,
+                        ),
+                        warning = true,
+                    )
+                    if (recoveryAvailable || runtime.available) {
+                        OutlinedButton(
+                            onClick = ::restore,
+                            enabled = !dirty && !applying && !restoring,
+                        ) {
+                            Text(stringResource(
+                                if (recoveryAvailable) R.string.susfs_recovery_action
+                                else R.string.susfs_recovery_initialize_action,
+                            ))
+                        }
+                    }
+                }
 
-            if (importWarnings.isNotEmpty()) {
-                SusfsNoticeCard(
-                    title = stringResource(R.string.susfs_import_warning_title),
-                    message = stringResource(
-                        R.string.susfs_import_warning_message,
-                        importWarnings.size,
-                        importWarnings.take(3).joinToString("\n"),
-                    ),
-                    warning = true,
-                )
-            }
-
-            if (actionError.isNotBlank()) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.errorContainer,
+                if (!loading && runtime.available && runtime.runtimeStatus.generation.isNotBlank() &&
+                    selectedPage == SusfsPage.RuntimePolicy &&
+                    (recoveryError.isBlank() || dismissedRecoveryError != recoveryError)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    SusfsNoticeCard(
+                        title = stringResource(R.string.susfs_recovery_title),
+                        message = if (recoveryError.isNotBlank()) {
+                            stringResource(R.string.susfs_recovery_backup_failed, recoveryError)
+                        } else if (recoveryAvailable) {
+                            stringResource(R.string.susfs_recovery_ready)
+                        } else {
+                            stringResource(R.string.susfs_recovery_unavailable)
+                        },
+                        warning = recoveryError.isNotBlank() || !recoveryAvailable,
+                        onDismiss = if (recoveryError.isNotBlank()) {
+                            { dismissedRecoveryError = recoveryError }
+                        } else null,
+                    )
+                }
+
+                if (importWarnings.isNotEmpty()) {
+                    SusfsNoticeCard(
+                        title = stringResource(R.string.susfs_import_warning_title),
+                        message = stringResource(
+                            R.string.susfs_import_warning_message,
+                            importWarnings.size,
+                            importWarnings.take(3).joinToString("\n"),
+                        ),
+                        warning = true,
+                    )
+                }
+
+                if (actionError.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.errorContainer,
                     ) {
-                        Icon(Icons.Rounded.ErrorOutline, contentDescription = null)
-                        Text(
-                            stringResource(
-                                if (actionErrorRetryable) {
-                                    R.string.susfs_path_apply_failed
-                                } else {
-                                    R.string.susfs_operation_failed
-                                },
-                                actionError,
-                            ),
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        if (actionErrorRetryable) {
-                            TextButton(
-                                onClick = { apply() },
-                                enabled = runtime.available && !loading && !applying && !importing,
-                            ) {
-                                Text(stringResource(R.string.susfs_retry_apply))
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Rounded.ErrorOutline, contentDescription = null)
+                            Text(
+                                stringResource(
+                                    if (actionErrorRetryable) {
+                                        R.string.susfs_path_apply_failed
+                                    } else {
+                                        R.string.susfs_operation_failed
+                                    },
+                                    actionError,
+                                ),
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            if (actionErrorRetryable) {
+                                TextButton(
+                                    onClick = { apply() },
+                                    enabled = runtime.available && !loading && !applying && !importing,
+                                ) {
+                                    Text(stringResource(R.string.susfs_retry_apply))
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            if (selectedPage == SusfsPage.RuntimePolicy) {
-                SusfsSection(title = stringResource(R.string.susfs_runtime_policy)) {
-                    PolicyToggle(
-                        title = stringResource(R.string.susfs_enabled),
-                        summary = stringResource(R.string.susfs_enabled_summary),
-                        checked = draft.enabled,
-                        enabled = runtime.available && !applying,
-                        onCheckedChange = { draft = draft.copy(enabled = it) },
-                    )
-                    HorizontalDivider()
-                    PolicyToggle(
-                        title = stringResource(R.string.susfs_logging),
-                        summary = stringResource(R.string.susfs_logging_summary),
-                        checked = draft.logging,
-                        enabled = runtime.available && draft.enabled &&
-                            (runtime.capabilities.supportsLogging || draft.logging) && !applying,
-                        onCheckedChange = { draft = draft.copy(logging = it) },
-                    )
-                    HorizontalDivider()
-                    PolicyToggle(
-                        title = stringResource(R.string.susfs_avc_spoofing),
-                        summary = stringResource(R.string.susfs_avc_spoofing_summary),
-                        checked = draft.avcLogSpoofing,
-                        enabled = runtime.available && draft.enabled &&
-                            (runtime.capabilities.supportsAvcLogSpoofing || draft.avcLogSpoofing) && !applying,
-                        onCheckedChange = { draft = draft.copy(avcLogSpoofing = it) },
-                    )
-                    HorizontalDivider()
-                    PolicyToggle(
-                        title = stringResource(R.string.susfs_hide_mounts_non_su),
-                        summary = stringResource(R.string.susfs_hide_mounts_non_su_summary),
-                        checked = draft.hideSusMntsForNonSuProcs,
-                        enabled = runtime.available && draft.enabled &&
-                            (runtime.capabilities.supportsHideSusMounts || draft.hideSusMntsForNonSuProcs) && !applying,
-                        onCheckedChange = { draft = draft.copy(hideSusMntsForNonSuProcs = it) },
-                    )
-                }
-
-                SusfsNoticeCard(
-                    title = stringResource(R.string.susfs_runtime_notice_title),
-                    message = stringResource(R.string.susfs_runtime_notice_summary),
-                    warning = false,
-                )
-            }
-
-            if (selectedPage == SusfsPage.PathMasking) {
-                if ((draft.paths + draft.loopPaths).any { path ->
-                        path == "/data/adb" || path == "/data/adb/modules" ||
-                            listOf("/data/adb/ksu", "/data/adb/ap").any { root ->
-                                path == root || path.startsWith("$root/")
-                            }
+                if (selectedPage == SusfsPage.RuntimePolicy) {
+                    SusfsSection(title = stringResource(R.string.susfs_runtime_policy)) {
+                        PolicyToggle(
+                            title = stringResource(R.string.susfs_enabled),
+                            summary = stringResource(R.string.susfs_enabled_summary),
+                            checked = draft.enabled,
+                            enabled = runtime.available && !applying,
+                            onCheckedChange = { updateDraft(draft.copy(enabled = it)) },
+                        )
+                        HorizontalDivider()
+                        PolicyToggle(
+                            title = stringResource(R.string.susfs_logging),
+                            summary = stringResource(R.string.susfs_logging_summary),
+                            checked = draft.logging,
+                            enabled = runtime.available && draft.enabled &&
+                                (runtime.capabilities.supportsLogging || draft.logging) && !applying,
+                            onCheckedChange = { updateDraft(draft.copy(logging = it)) },
+                        )
+                        HorizontalDivider()
+                        PolicyToggle(
+                            title = stringResource(R.string.susfs_avc_spoofing),
+                            summary = stringResource(R.string.susfs_avc_spoofing_summary),
+                            checked = draft.avcLogSpoofing,
+                            enabled = runtime.available && draft.enabled &&
+                                (runtime.capabilities.supportsAvcLogSpoofing || draft.avcLogSpoofing) && !applying,
+                            onCheckedChange = { updateDraft(draft.copy(avcLogSpoofing = it)) },
+                        )
+                        HorizontalDivider()
+                        PolicyToggle(
+                            title = stringResource(R.string.susfs_hide_mounts_non_su),
+                            summary = stringResource(R.string.susfs_hide_mounts_non_su_summary),
+                            checked = draft.hideSusMntsForNonSuProcs,
+                            enabled = runtime.available && draft.enabled &&
+                                (runtime.capabilities.supportsHideSusMounts || draft.hideSusMntsForNonSuProcs) && !applying,
+                            onCheckedChange = { updateDraft(draft.copy(hideSusMntsForNonSuProcs = it)) },
+                        )
                     }
-                ) {
+
                     SusfsNoticeCard(
-                        title = stringResource(R.string.susfs_management_path_warning_title),
-                        message = stringResource(R.string.susfs_management_path_warning_message),
-                        warning = true,
+                        title = stringResource(R.string.susfs_runtime_notice_title),
+                        message = stringResource(R.string.susfs_runtime_notice_summary),
+                        warning = false,
                     )
                 }
-                SusfsStringListEditor(
-                    title = stringResource(R.string.susfs_normal_paths),
-                    summary = stringResource(R.string.susfs_normal_paths_summary),
-                    values = draft.paths,
-                    inputLabel = stringResource(R.string.susfs_path_input_label),
-                    inputHint = stringResource(R.string.susfs_path_input_hint),
-                    enabled = runtime.available && draft.enabled && !applying,
-                    normalizer = ::normalizeSusfsPath,
-                    onValuesChange = { draft = draft.copy(paths = it) },
-                )
 
-                SusfsStringListEditor(
-                    title = stringResource(R.string.susfs_loop_paths),
-                    summary = stringResource(R.string.susfs_loop_paths_summary),
-                    values = draft.loopPaths,
-                    inputLabel = stringResource(R.string.susfs_path_input_label),
-                    inputHint = stringResource(R.string.susfs_loop_paths_hint),
-                    enabled = runtime.available && draft.enabled && runtime.capabilities.supportsPathLoop && !applying,
-                    normalizer = ::normalizeSusfsPath,
-                    onValuesChange = { draft = draft.copy(loopPaths = it) },
-                )
+                if (selectedPage == SusfsPage.PathMasking) {
+                    if ((draft.paths + draft.loopPaths).any { path ->
+                            path == "/data/adb" || path == "/data/adb/modules" ||
+                                listOf("/data/adb/ksu", "/data/adb/ap").any { root ->
+                                    path == root || path.startsWith("$root/")
+                                }
+                        }
+                    ) {
+                        SusfsNoticeCard(
+                            title = stringResource(R.string.susfs_management_path_warning_title),
+                            message = stringResource(R.string.susfs_management_path_warning_message),
+                            warning = true,
+                        )
+                    }
+                    SusfsStringListEditor(
+                        title = stringResource(R.string.susfs_normal_paths),
+                        summary = stringResource(R.string.susfs_normal_paths_summary),
+                        values = draft.paths,
+                        inputLabel = stringResource(R.string.susfs_path_input_label),
+                        inputHint = stringResource(R.string.susfs_path_input_hint),
+                        enabled = runtime.available && draft.enabled && !applying,
+                        normalizer = ::normalizeSusfsPath,
+                        onValuesChange = { updateDraft(draft.copy(paths = it)) },
+                    )
 
-                SusfsStringListEditor(
-                    title = stringResource(R.string.susfs_map_paths),
-                    summary = stringResource(R.string.susfs_map_paths_summary),
-                    values = draft.susMaps,
-                    inputLabel = stringResource(R.string.susfs_path_input_label),
-                    inputHint = stringResource(R.string.susfs_map_paths_hint),
-                    enabled = runtime.available && draft.enabled && runtime.capabilities.supportsSusMap && !applying,
-                    normalizer = ::normalizeSusfsMapPath,
-                    onValuesChange = { draft = draft.copy(susMaps = it) },
-                )
-            }
+                    SusfsStringListEditor(
+                        title = stringResource(R.string.susfs_loop_paths),
+                        summary = stringResource(R.string.susfs_loop_paths_summary),
+                        values = draft.loopPaths,
+                        inputLabel = stringResource(R.string.susfs_path_input_label),
+                        inputHint = stringResource(R.string.susfs_loop_paths_hint),
+                        enabled = runtime.available && draft.enabled && runtime.capabilities.supportsPathLoop && !applying,
+                        normalizer = ::normalizeSusfsPath,
+                        onValuesChange = { updateDraft(draft.copy(loopPaths = it)) },
+                    )
 
-            if (selectedPage == SusfsPage.KernelSpoofing) {
-                SusfsIdentityEditor(
-                    draft = draft,
-                    enabled = runtime.available && draft.enabled && !applying && !importing,
-                    kernelSlots = kernelSlots,
-                    queryEnabled = runtime.available && !applying && !importing,
-                    onRefreshSlots = { kernelSlotsModel.load(refresh = true) },
-                    onChange = { draft = it },
-                )
-            }
+                    SusfsStringListEditor(
+                        title = stringResource(R.string.susfs_map_paths),
+                        summary = stringResource(R.string.susfs_map_paths_summary),
+                        values = draft.susMaps,
+                        inputLabel = stringResource(R.string.susfs_path_input_label),
+                        inputHint = stringResource(R.string.susfs_map_paths_hint),
+                        enabled = runtime.available && draft.enabled && runtime.capabilities.supportsSusMap && !applying,
+                        normalizer = ::normalizeSusfsMapPath,
+                        onValuesChange = { updateDraft(draft.copy(susMaps = it)) },
+                    )
+                }
 
-            if (selectedPage == SusfsPage.PathMasking) {
-                SusfsRedirectEditor(
-                    values = draft.openRedirects,
-                    enabled = runtime.available && draft.enabled && runtime.capabilities.supportsOpenRedirect && !applying,
-                    onValuesChange = { draft = draft.copy(openRedirects = it) },
-                )
-            }
+                if (selectedPage == SusfsPage.KernelSpoofing) {
+                    SusfsIdentityEditor(
+                        draft = draft,
+                        enabled = runtime.available && draft.enabled && !applying && !importing,
+                        kernelSlots = kernelSlots,
+                        queryEnabled = runtime.available && !applying && !importing,
+                        onRefreshSlots = { kernelSlotsModel.load(refresh = true) },
+                        onChange = { updateDraft(it) },
+                    )
+                }
 
-            if (selectedPage == SusfsPage.KernelSpoofing) {
-                SusfsKstatEditor(
-                    values = draft.kstatEntries,
-                    enabled = runtime.available && draft.enabled && runtime.capabilities.supportsKstat && !applying,
-                    onValuesChange = { draft = draft.copy(kstatEntries = it) },
-                )
-            }
+                if (selectedPage == SusfsPage.PathMasking) {
+                    SusfsRedirectEditor(
+                        values = draft.openRedirects,
+                        enabled = runtime.available && draft.enabled && runtime.capabilities.supportsOpenRedirect && !applying,
+                        onValuesChange = { updateDraft(draft.copy(openRedirects = it)) },
+                    )
+                }
 
-            when (selectedPage) {
-                SusfsPage.RuntimePolicy -> Unit
-                SusfsPage.PathMasking -> SusfsNoticeCard(
-                    title = stringResource(R.string.susfs_path_notes_title),
-                    message = stringResource(R.string.susfs_path_notes_summary),
-                    warning = false,
-                )
-                SusfsPage.KernelSpoofing -> SusfsNoticeCard(
-                    title = stringResource(R.string.susfs_kernel_notice_title),
-                    message = stringResource(R.string.susfs_kernel_notice_summary),
-                    warning = false,
-                )
+                if (selectedPage == SusfsPage.KernelSpoofing) {
+                    SusfsKstatEditor(
+                        values = draft.kstatEntries,
+                        enabled = runtime.available && draft.enabled && runtime.capabilities.supportsKstat && !applying,
+                        onValuesChange = { updateDraft(draft.copy(kstatEntries = it)) },
+                    )
+                }
+
+                when (selectedPage) {
+                    SusfsPage.RuntimePolicy -> Unit
+                    SusfsPage.PathMasking -> SusfsNoticeCard(
+                        title = stringResource(R.string.susfs_path_notes_title),
+                        message = stringResource(R.string.susfs_path_notes_summary),
+                        warning = false,
+                    )
+                    SusfsPage.KernelSpoofing -> SusfsNoticeCard(
+                        title = stringResource(R.string.susfs_kernel_notice_title),
+                        message = stringResource(R.string.susfs_kernel_notice_summary),
+                        warning = false,
+                    )
+                }
             }
         }
     }

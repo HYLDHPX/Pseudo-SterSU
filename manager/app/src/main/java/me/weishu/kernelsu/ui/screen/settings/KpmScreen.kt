@@ -10,6 +10,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -44,14 +45,16 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Icon
@@ -67,6 +70,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -138,6 +142,7 @@ import me.weishu.kernelsu.ui.util.setKpmAppExcluded
 import me.weishu.kernelsu.ui.util.unloadKpm
 import me.weishu.kernelsu.ui.util.KPATCH_NEXT_MODULE_ID
 import me.weishu.kernelsu.ui.screen.module.ModuleCardWallpaperBackground
+import me.weishu.kernelsu.ui.screen.module.ModuleWallpaperEditorDialog
 import me.weishu.kernelsu.ui.screen.module.kpmCardWallpaperId
 import me.weishu.kernelsu.ui.screen.module.rememberModuleCardWallpaperFrame
 import me.weishu.kernelsu.ui.screen.module.rememberModuleCardWallpaperLoadState
@@ -160,6 +165,19 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.systemBars
 
 private const val NATIVE_KPM_MAX_IMAGE_SIZE = 4L * 1024L * 1024L
+
+internal fun kpmOverviewStatusRes(caps: KpmCaps?, loading: Boolean, busy: Boolean): Int = when {
+    loading -> R.string.kpm_checking
+    busy -> R.string.kpm_working
+    caps == null || caps.error.isNotBlank() -> R.string.kpm_unsupported
+    caps.lateLoad -> R.string.kpm_jailbreak_disabled
+    caps.backend == "kpatch-next" && !caps.kernelSupported -> R.string.kpm_kpatch_pending
+    caps.backend == "native-gki" && !caps.loaderReady -> R.string.kpm_native_loader_unavailable
+    !caps.managementAvailable || !caps.kernelSupported -> R.string.kpm_unsupported
+    !caps.policyEnabled -> R.string.kpm_policy_disabled
+    !caps.supported -> R.string.kpm_runtime_unavailable
+    else -> R.string.kpm_ready
+}
 
 @Composable
 fun KpmScreen(
@@ -549,6 +567,7 @@ private fun NativeKpmScreen(
     var trustAcknowledged by rememberSaveable { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<KpmEntry?>(null) }
     var controlTarget by remember { mutableStateOf<KpmEntry?>(null) }
+    var wallpaperEditorRequest by remember { mutableStateOf<Route.ModuleWallpaperEditor?>(null) }
     var controlArgs by rememberSaveable { mutableStateOf("") }
     var controlOutput by remember { mutableStateOf("") }
     var excludedApps by remember { mutableStateOf(emptySet<String>()) }
@@ -680,163 +699,177 @@ private fun NativeKpmScreen(
         onKpmClick = { if (!loading && !busy) refresh() },
         onExcludeClick = { if (!loading && !busy) showExcludeDialog = true },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .padding(bottom = bottomInnerPadding),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            webUiError?.let { message ->
-                KpmMessageCard(
-                    icon = Icons.Rounded.ErrorOutline,
-                    title = stringResource(R.string.kpm_webui_unavailable),
-                    message = stringResource(R.string.kpm_webui_fallback, message),
-                    error = true,
-                )
-                if (onRetryWebUi != null) {
-                    OutlinedButton(onClick = onRetryWebUi, enabled = !busy) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.kpm_webui_retry))
+        BoxWithConstraints(Modifier.fillMaxSize().padding(innerPadding)) {
+            val wideLayout = maxWidth >= 840.dp
+            val contentWidth = minOf(maxWidth, 1120.dp)
+            val entryWidth = (contentWidth - 48.dp) / 2
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .widthIn(max = 1120.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(bottom = bottomInnerPadding),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                webUiError?.let { message ->
+                    KpmMessageCard(
+                        icon = Icons.Rounded.ErrorOutline,
+                        title = stringResource(R.string.kpm_webui_unavailable),
+                        message = stringResource(R.string.kpm_webui_fallback, message),
+                        error = true,
+                    )
+                    if (onRetryWebUi != null) {
+                        OutlinedButton(onClick = onRetryWebUi, enabled = !busy) {
+                            Icon(Icons.Rounded.Refresh, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.kpm_webui_retry))
+                        }
                     }
                 }
-            }
 
-            KpmOverviewCard(
-                caps = caps,
-                loading = loading,
-                busy = busy,
-                entryCount = entries.size,
-                showGuide = showNativeGuide,
-                onToggleGuide = { showNativeGuide = !showNativeGuide },
-                onImport = { importLauncher.launch(arrayOf("*/*")) },
-                onManageExclusions = { showExcludeDialog = true },
-                showExclusions = showExclusions,
-                onPolicyChanged = { enabled ->
-                    runOperation { setKpmPolicy(enabled) }
-                },
-            )
-
-            if (showNativeGuide && caps?.backend == "native-gki") {
-                KpmMessageCard(
-                    icon = Icons.Rounded.Info,
-                    title = stringResource(R.string.kpm_guide_title),
-                    message = stringResource(R.string.kpm_guide_body),
+                KpmOverviewCard(
+                    modifier = Modifier.align(Alignment.CenterHorizontally).widthIn(max = 720.dp).fillMaxWidth(),
+                    caps = caps,
+                    loading = loading,
+                    busy = busy,
+                    entryCount = entries.size,
+                    showGuide = showNativeGuide,
+                    onToggleGuide = { showNativeGuide = !showNativeGuide },
+                    onImport = { importLauncher.launch(arrayOf("*/*")) },
+                    onManageExclusions = { showExcludeDialog = true },
+                    showExclusions = showExclusions,
+                    onPolicyChanged = { enabled ->
+                        runOperation { setKpmPolicy(enabled) }
+                    },
                 )
-            }
 
-            if (operationError.isNotBlank()) {
-                KpmMessageCard(
-                    icon = Icons.Rounded.ErrorOutline,
-                    title = stringResource(R.string.kpm_operation_failed),
-                    message = operationError,
-                    error = true,
-                    onDismiss = { operationError = "" },
-                )
-            }
-
-            if (errorMessage.isNotBlank()) {
-                KpmMessageCard(
-                    icon = Icons.Rounded.ErrorOutline,
-                    title = stringResource(R.string.kpm_status_failed),
-                    message = errorMessage,
-                    error = true,
-                )
-            }
-
-            when {
-                caps?.lateLoad == true && errorMessage.isBlank() -> {
-                    KpmMessageCard(
-                        icon = Icons.Rounded.Security,
-                        title = stringResource(R.string.kpm_jailbreak_disabled),
-                        message = stringResource(R.string.kpm_jailbreak_disabled_summary),
-                    )
-                }
-                caps?.backend == "native-gki" && caps?.loaderReady == false && errorMessage.isBlank() -> {
+                if (showNativeGuide && caps?.backend == "native-gki") {
                     KpmMessageCard(
                         icon = Icons.Rounded.Info,
-                        title = stringResource(R.string.kpm_native_loader_unavailable),
-                        message = stringResource(R.string.kpm_native_loader_unavailable_summary),
+                        title = stringResource(R.string.kpm_guide_title),
+                        message = stringResource(R.string.kpm_guide_body),
                     )
                 }
-                caps?.kernelSupported == false && errorMessage.isBlank() -> {
-                    val kpatchPending = caps?.backend == "kpatch-next" && caps?.managementAvailable == true
+
+                if (operationError.isNotBlank()) {
+                    KpmMessageCard(
+                        icon = Icons.Rounded.ErrorOutline,
+                        title = stringResource(R.string.kpm_operation_failed),
+                        message = operationError,
+                        error = true,
+                        onDismiss = { operationError = "" },
+                    )
+                }
+
+                if (errorMessage.isNotBlank()) {
+                    KpmMessageCard(
+                        icon = Icons.Rounded.ErrorOutline,
+                        title = stringResource(R.string.kpm_status_failed),
+                        message = errorMessage,
+                        error = true,
+                    )
+                }
+
+                when {
+                    caps?.lateLoad == true && errorMessage.isBlank() -> {
+                        KpmMessageCard(
+                            icon = Icons.Rounded.Security,
+                            title = stringResource(R.string.kpm_jailbreak_disabled),
+                            message = stringResource(R.string.kpm_jailbreak_disabled_summary),
+                        )
+                    }
+                    caps?.backend == "native-gki" && caps?.loaderReady == false && errorMessage.isBlank() -> {
+                        KpmMessageCard(
+                            icon = Icons.Rounded.Info,
+                            title = stringResource(R.string.kpm_native_loader_unavailable),
+                            message = stringResource(R.string.kpm_native_loader_unavailable_summary),
+                        )
+                    }
+                    caps?.kernelSupported == false && errorMessage.isBlank() -> {
+                        val kpatchPending = caps?.backend == "kpatch-next" && caps?.managementAvailable == true
+                        KpmMessageCard(
+                            icon = Icons.Rounded.Info,
+                            title = stringResource(
+                                if (kpatchPending) {
+                                    R.string.kpm_kpatch_pending
+                                } else {
+                                    R.string.kpm_unsupported
+                                }
+                            ),
+                            message = stringResource(
+                                if (kpatchPending) {
+                                    R.string.kpm_kpatch_pending_summary
+                                } else {
+                                    R.string.kpm_unsupported_summary
+                                }
+                            ),
+                        )
+                    }
+                }
+                if (!loading && entries.isEmpty() && errorMessage.isBlank() && caps?.managementAvailable == true) {
                     KpmMessageCard(
                         icon = Icons.Rounded.Info,
-                        title = stringResource(
-                            if (kpatchPending) {
-                                R.string.kpm_kpatch_pending
-                            } else {
-                                R.string.kpm_unsupported
-                            }
-                        ),
-                        message = stringResource(
-                            if (kpatchPending) {
-                                R.string.kpm_kpatch_pending_summary
-                            } else {
-                                R.string.kpm_unsupported_summary
-                            }
-                        ),
+                        title = stringResource(R.string.kpm_empty),
+                        message = stringResource(R.string.kpm_empty_summary),
                     )
                 }
-            }
-            if (!loading && entries.isEmpty() && errorMessage.isBlank() && caps?.managementAvailable == true) {
-                KpmMessageCard(
-                    icon = Icons.Rounded.Info,
-                    title = stringResource(R.string.kpm_empty),
-                    message = stringResource(R.string.kpm_empty_summary),
-                )
-            }
-            if (entries.isNotEmpty()) {
-                Text(
-                    text = stringResource(R.string.kpm_modules_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                entries.forEach { entry ->
-                    val runtimeOperationsEnabled = caps?.let {
-                        it.supported && it.loaderReady && it.policyEnabled && !it.lateLoad
-                    } == true
-                    KpmEntryCard(
-                        entry = entry,
-                        busy = busy,
-                        managementEnabled = caps?.managementAvailable == true && caps?.policyEnabled == true,
-                        runtimeEnabled = runtimeOperationsEnabled,
-                        onEnableChanged = { enabled ->
-                            runOperation { setKpmEnabled(entry.id, enabled) }
-                        },
-                        onLoad = { runOperation { loadKpm(entry.id) } },
-                        onUnload = { runOperation { unloadKpm(entry.id) } },
-                        onDelete = { pendingDelete = entry },
-                        onControl = {
-                            controlTarget = entry
-                            controlArgs = entry.args
-                            controlOutput = ""
-                        },
-                        onEditWallpaper = {
-                            navigator.push(
-                                Route.ModuleWallpaperEditor(
-                                    moduleId = kpmCardWallpaperId(entry.id),
-                                    displayName = entry.name.ifBlank { entry.id },
-                                    displayAuthor = entry.author,
-                                    displayVersion = entry.version,
-                                    displayDescription = entry.description,
-                                    allowBatch = false,
+                if (entries.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.kpm_modules_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        entries.forEach { entry ->
+                            key(entry.id) {
+                                val runtimeOperationsEnabled = caps?.let {
+                                    it.supported && it.loaderReady && it.policyEnabled && !it.lateLoad
+                                } == true
+                                KpmEntryCard(
+                                    modifier = if (wideLayout) Modifier.width(entryWidth) else Modifier.fillMaxWidth(),
+                                    entry = entry,
+                                    busy = busy,
+                                    managementEnabled = caps?.managementAvailable == true && caps?.policyEnabled == true,
+                                    runtimeEnabled = runtimeOperationsEnabled,
+                                    onEnableChanged = { enabled ->
+                                        runOperation { setKpmEnabled(entry.id, enabled) }
+                                    },
+                                    onLoad = { runOperation { loadKpm(entry.id) } },
+                                    onUnload = { runOperation { unloadKpm(entry.id) } },
+                                    onDelete = { pendingDelete = entry },
+                                    onControl = {
+                                        controlTarget = entry
+                                        controlArgs = entry.args
+                                        controlOutput = ""
+                                    },
+                                    onEditWallpaper = {
+                                        wallpaperEditorRequest = Route.ModuleWallpaperEditor(
+                                            moduleId = kpmCardWallpaperId(entry.id),
+                                            displayName = entry.name.ifBlank { entry.id },
+                                            displayAuthor = entry.author,
+                                            displayVersion = entry.version,
+                                            displayDescription = entry.description,
+                                            allowBatch = false,
+                                        )
+                                    },
                                 )
-                            )
-                        },
-                    )
+                            }
+                        }
+                    }
                 }
-            }
 
-            Text(
-                text = stringResource(R.string.kpm_footer),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+                Text(
+                    text = stringResource(R.string.kpm_footer),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 
@@ -1093,10 +1126,17 @@ private fun NativeKpmScreen(
             },
         )
     }
+    wallpaperEditorRequest?.let { request ->
+        ModuleWallpaperEditorDialog(
+            request = request,
+            onDismissRequest = { wallpaperEditorRequest = null },
+        )
+    }
 }
 
 @Composable
 private fun KpmOverviewCard(
+    modifier: Modifier = Modifier,
     caps: KpmCaps?,
     loading: Boolean,
     busy: Boolean,
@@ -1114,21 +1154,7 @@ private fun KpmOverviewCard(
         "kpatch-next" -> stringResource(R.string.kpm_backend_kpatch_next)
         else -> stringResource(R.string.kpm_backend_unavailable)
     }
-    val statusText = when {
-        loading -> stringResource(R.string.kpm_checking)
-        busy -> stringResource(R.string.kpm_working)
-        currentCaps == null || currentCaps.error.isNotBlank() -> stringResource(R.string.kpm_unsupported)
-        currentCaps.lateLoad -> stringResource(R.string.kpm_jailbreak_disabled)
-        currentCaps.backend == "kpatch-next" && !currentCaps.kernelSupported ->
-            stringResource(R.string.kpm_kpatch_pending)
-        currentCaps.backend == "native-gki" && !currentCaps.loaderReady ->
-            stringResource(R.string.kpm_native_loader_unavailable)
-        !currentCaps.managementAvailable || !currentCaps.kernelSupported ->
-            stringResource(R.string.kpm_unsupported)
-        !currentCaps.supported -> stringResource(R.string.kpm_runtime_unavailable)
-        !currentCaps.policyEnabled -> stringResource(R.string.kpm_policy_disabled)
-        else -> stringResource(R.string.kpm_ready)
-    }
+    val statusText = stringResource(kpmOverviewStatusRes(currentCaps, loading, busy))
     val abiDetail = currentCaps?.abiVersion?.takeIf { it > 0 }?.let {
         stringResource(R.string.kpm_abi_version, it)
     }
@@ -1140,9 +1166,7 @@ private fun KpmOverviewCard(
     val cardShape = kpmCardShape(style)
     val cardSurfaceColor = kpmCardSurfaceColor(style)
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .kpmCardSurface(
+        modifier = modifier.kpmCardSurface(
                 style = style,
                 shape = cardShape,
                 surfaceColor = cardSurfaceColor,
@@ -1443,6 +1467,7 @@ private fun Modifier.kpmCardSurface(
 
 @Composable
 private fun KpmEntryCard(
+    modifier: Modifier = Modifier.fillMaxWidth(),
     entry: KpmEntry,
     busy: Boolean,
     managementEnabled: Boolean,
@@ -1454,6 +1479,7 @@ private fun KpmEntryCard(
     onControl: () -> Unit,
     onEditWallpaper: () -> Unit,
 ) {
+    var showActions by remember { mutableStateOf(false) }
     val style = LocalInterfaceStyle.current
     val wallpaperState = rememberModuleCardWallpaperState(kpmCardWallpaperId(entry.id))
     val wallpaperEntry = rememberModuleCardWallpaperFrame(wallpaperState, paused = busy)
@@ -1462,9 +1488,7 @@ private fun KpmEntryCard(
     val hasWallpaper = wallpaperEntry != null
     val cardShape = kpmCardShape(style)
     val cardSurfaceColor = kpmCardSurfaceColor(style)
-    val cardModifier = Modifier
-        .fillMaxWidth()
-        .kpmCardSurface(
+    val cardModifier = modifier.kpmCardSurface(
             style = style,
             shape = cardShape,
             surfaceColor = cardSurfaceColor,
@@ -1512,19 +1536,38 @@ private fun KpmEntryCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                IconButton(onClick = onEditWallpaper, enabled = !busy) {
-                    Icon(
-                        Icons.Rounded.Image,
-                        contentDescription = stringResource(R.string.module_wallpaper_editor_open),
-                        tint = statusColor,
-                    )
-                }
-                IconButton(onClick = onDelete, enabled = !busy) {
-                    Icon(
-                        Icons.Rounded.Delete,
-                        contentDescription = stringResource(R.string.kpm_remove),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
+                Box {
+                    IconButton(onClick = { showActions = true }, enabled = !busy) {
+                        Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.module_more_actions))
+                    }
+                    DropdownMenu(expanded = showActions, onDismissRequest = { showActions = false }) {
+                        if (entry.enabled) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.kpm_disable)) },
+                                onClick = { showActions = false; onEnableChanged(false) },
+                                enabled = !busy,
+                            )
+                        }
+                        if (entry.loaded) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.kpm_unload)) },
+                                onClick = { showActions = false; onUnload() },
+                                enabled = !busy,
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.module_wallpaper_editor_open)) },
+                            onClick = { showActions = false; onEditWallpaper() },
+                            leadingIcon = { Icon(Icons.Rounded.Image, contentDescription = null) },
+                            enabled = !busy,
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.kpm_remove)) },
+                            onClick = { showActions = false; onDelete() },
+                            leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null) },
+                            enabled = !busy,
+                        )
+                    }
                 }
             }
             if (entry.description.isNotBlank()) {
@@ -1583,57 +1626,33 @@ private fun KpmEntryCard(
                     error = true,
                 )
             }
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (entry.enabled) {
-                    OutlinedButton(
-                        onClick = { onEnableChanged(false) },
-                        enabled = !busy,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Icon(Icons.Rounded.StopCircle, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.kpm_disable))
-                    }
-                } else {
-                    Button(
-                        onClick = { onEnableChanged(true) },
-                        enabled = !busy && managementEnabled,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Icon(Icons.Rounded.CheckCircle, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.kpm_enable))
-                    }
+            when {
+                !entry.enabled -> Button(
+                    onClick = { onEnableChanged(true) },
+                    enabled = !busy && managementEnabled,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                ) {
+                    Icon(Icons.Rounded.CheckCircle, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.kpm_enable))
                 }
-                if (entry.loaded) {
-                    OutlinedButton(onClick = onUnload, enabled = !busy, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Icon(Icons.Rounded.StopCircle, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.kpm_unload))
-                    }
-                    OutlinedButton(
-                        onClick = onControl,
-                        enabled = !busy && runtimeEnabled,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Icon(Icons.Rounded.Tune, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.kpm_control))
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = onLoad,
-                        enabled = !busy && runtimeEnabled && entry.enabled && !entry.quarantined,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Icon(Icons.Rounded.Bolt, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.kpm_load))
-                    }
+                entry.loaded -> OutlinedButton(
+                    onClick = onControl,
+                    enabled = !busy && runtimeEnabled,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                ) {
+                    Icon(Icons.Rounded.Tune, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.kpm_control))
+                }
+                else -> OutlinedButton(
+                    onClick = onLoad,
+                    enabled = !busy && runtimeEnabled && !entry.quarantined,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                ) {
+                    Icon(Icons.Rounded.Bolt, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.kpm_load))
                 }
             }
             }

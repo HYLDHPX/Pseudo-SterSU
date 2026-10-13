@@ -133,6 +133,7 @@ import me.weishu.kernelsu.ui.component.bottombar.MainPagerState
 import me.weishu.kernelsu.ui.component.bottombar.mainDestinations
 import me.weishu.kernelsu.ui.component.bottombar.NavigationBadgeState
 import me.weishu.kernelsu.ui.component.bottombar.SideRail
+import me.weishu.kernelsu.ui.component.bottombar.SidebarWidgetRail
 import me.weishu.kernelsu.ui.component.bottombar.SidebarPaneShape
 import me.weishu.kernelsu.ui.component.bottombar.LocalSidebarGlassBackdrop
 import me.weishu.kernelsu.ui.component.bottombar.canCaptureSidebarWallpaper
@@ -652,7 +653,14 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.ColorPalette> { ColorPaletteScreen() }
                                 entry<Route.LauncherIcon> { LauncherIconScreen() }
                                 entry<Route.NavigationIcons> { NavigationIconScreen() }
-                                entry<Route.SidebarWidgetSettings> { SidebarWidgetSettingsScreen() }
+                                entry<Route.SidebarWidgetSettings> {
+                                    SidebarWidgetSettingsScreen(
+                                        destinations = mainDestinations(
+                                            mainPagerState.kpmActive,
+                                            uiState.stealthModeEnabled,
+                                        ),
+                                    )
+                                }
                                 entry<Route.Backgrounds> { BackgroundSettingsScreen() }
                                 entry<Route.SoundEffects> { SoundEffectsScreen() }
                                 entry<Route.StartupAnimation> { StartupAnimationScreen() }
@@ -930,10 +938,55 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 )
                                         ) {
+                                            val settingsSidebarActive = sidebarStyleActive &&
+                                                mainPagerState.fullFeatured &&
+                                                shouldShowSettingsSidebar(
+                                                    currentRoute,
+                                                    navigator.backStack.any {
+                                                        it is Route.SettingsCategory || it == Route.SidebarWidgetSettings
+                                                    },
+                                                    navigator.backStack.any { (it as? Route).isStoreRoute() },
+                                                )
                                             Scaffold(
                                                 containerColor = Color.Transparent,
                                                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                                            ) { navDisplay() }
+                                            ) {
+                                                if (settingsSidebarActive && sidebarConfig != null) {
+                                                    val railAtStart = sidebarConfig.side.isAtStart(LocalLayoutDirection.current)
+                                                    val railInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
+                                                        if (sidebarConfig.side == SidebarSide.Left) {
+                                                            WindowInsetsSides.Left
+                                                        } else {
+                                                            WindowInsetsSides.Right
+                                                        }
+                                                    )
+                                                    val rail: @Composable () -> Unit = {
+                                                        SidebarWidgetRail(
+                                                            navigationBadge = NavigationBadgeState(),
+                                                            destinations = mainDestinations(mainPagerState.kpmActive),
+                                                            selectedDestination = MainDestination.Settings,
+                                                            onDestinationSelected = { destination ->
+                                                                mainPagerState.animateTo(destination)
+                                                                navigator.popUntil { (it as? Route)?.hostsMainPager() == true }
+                                                            },
+                                                        )
+                                                    }
+                                                    CompositionLocalProvider(LocalMainPagerState provides mainPagerState) {
+                                                        Row(modifier = Modifier.fillMaxSize()) {
+                                                            if (railAtStart) rail()
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .weight(1f)
+                                                                    .consumeWindowInsets(railInsets)
+                                                                    .clip(SidebarPaneShape),
+                                                            ) { navDisplay() }
+                                                            if (!railAtStart) rail()
+                                                        }
+                                                    }
+                                                } else {
+                                                    navDisplay()
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -1081,6 +1134,30 @@ private fun Route?.hostsMainPager(): Boolean {
         this == Route.SuperUser ||
         this == Route.Module ||
         this == Route.Settings
+}
+
+private fun Route?.isStoreRoute(): Boolean = when (this) {
+    Route.ThemeStore, Route.ThemeStoreCustomize, Route.InterfaceStyleStore,
+    Route.StoreInterfaceStyles, Route.ThemeStoreAssets, Route.ThemeStoreFonts,
+    Route.ThemeStoreBackgrounds, Route.ThemeStoreTransfer, Route.ThemeStoreMy,
+    Route.ThemeStoreLibrary, Route.PluginStore, is Route.CloudThemeDetail, Route.CloudThemeRanking,
+    Route.CloudThemeCreator, Route.CloudThemeCreatorSubmission, Route.CloudThemeCreatorGuide,
+    -> true
+    else -> false
+}
+
+internal fun shouldShowSettingsSidebar(
+    route: Route?,
+    settingsAncestor: Boolean,
+    storeAncestor: Boolean = false,
+): Boolean {
+    if (storeAncestor || route.isStoreRoute()) return false
+    return when (route) {
+        is Route.SettingsCategory, Route.SidebarWidgetSettings, Route.About -> true
+        null, Route.Main, Route.Home, Route.SuperUser, Route.Module, Route.Settings,
+        Route.Install, is Route.Flash -> false
+        else -> settingsAncestor
+    }
 }
 
 @Composable

@@ -1,6 +1,10 @@
 package me.weishu.kernelsu.ui.screen.launchericon
 
 import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -38,6 +43,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,15 +62,24 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.view.WindowInsetsControllerCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.skrootpro.skrootproSp
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.screen.settings.ManagerNameDialog
+import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
+import me.weishu.kernelsu.ui.util.CustomWallpaperCrop
 import me.weishu.kernelsu.ui.util.LauncherIconOption
+import me.weishu.kernelsu.ui.util.loadCustomImageBitmap
+import me.weishu.kernelsu.ui.util.module.Shortcut
 import me.weishu.kernelsu.ui.viewmodel.SettingsViewModel
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TopAppBar
+
+private val FullImageCrop = CustomWallpaperCrop(0f, 0f, 1f, 1f)
 
 private object LauncherIdentityColors {
     val Page = Color(0xFFF4F6FA)
@@ -84,7 +99,11 @@ fun LauncherIconScreen() {
     val viewModel = viewModel<SettingsViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedIndex = LauncherIconOption.selectedIndex(uiState.launcherIcon)
+    val scope = rememberCoroutineScope()
+    var customIconUri by remember { mutableStateOf<String?>(null) }
+    var showCustomIconCrop by remember { mutableStateOf(false) }
     var showManagerNameDialog by remember { mutableStateOf(false) }
+    val customIconFailedMessage = stringResource(R.string.settings_app_icon_custom_failed)
     val defaultManagerName = stringResource(R.string.app_name)
     DisposableEffect(context) {
         val window = (context as? Activity)?.window
@@ -102,6 +121,16 @@ fun LauncherIconScreen() {
             }
         }
     }
+    val customIconPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        customIconUri = uri.toString()
+        showCustomIconCrop = true
+    }
+    val pickCustomIcon = dropUnlessResumed {
+        customIconPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
     LauncherIconScreenMiuix(
         selectedIndex = selectedIndex,
         customManagerName = uiState.customManagerName,
@@ -109,6 +138,37 @@ fun LauncherIconScreen() {
         onBack = dropUnlessResumed { navigator.pop() },
         onEditManagerName = { showManagerNameDialog = true },
         onSelect = viewModel::setLauncherIconByIndex,
+        onPickCustomIcon = pickCustomIcon,
+    )
+    SettingsWallpaperCropDialog(
+        show = showCustomIconCrop,
+        uriString = customIconUri,
+        crop = FullImageCrop,
+        onCropChange = saveShortcut@{ crop ->
+            val uri = customIconUri ?: return@saveShortcut
+            scope.launch {
+                val bitmap = withContext(Dispatchers.IO) {
+                    loadCustomImageBitmap(context, uri, maxSide = 1024, crop = crop)
+                }
+                if (bitmap == null) {
+                    Toast.makeText(context, customIconFailedMessage, Toast.LENGTH_LONG).show()
+                } else {
+                    val managerName = uiState.customManagerName.ifBlank { defaultManagerName }
+                    Shortcut.createManagerShortcut(context, bitmap, managerName)
+                }
+                showCustomIconCrop = false
+                customIconUri = null
+            }
+        },
+        onDismissRequest = {
+            showCustomIconCrop = false
+            customIconUri = null
+        },
+        title = stringResource(R.string.settings_app_icon_custom_crop),
+        emptyText = stringResource(R.string.settings_app_icon_custom_empty),
+        editorAspectRatio = 1f,
+        cropAspectRatio = 1f,
+        defaultCrop = FullImageCrop,
     )
     ManagerNameDialog(
         show = showManagerNameDialog,
@@ -126,6 +186,7 @@ private fun LauncherIconScreenMiuix(
     onBack: () -> Unit,
     onEditManagerName: () -> Unit,
     onSelect: (Int) -> Unit,
+    onPickCustomIcon: () -> Unit,
 ) {
     Scaffold(
         containerColor = LauncherIdentityColors.Page,
@@ -154,6 +215,7 @@ private fun LauncherIconScreenMiuix(
             defaultManagerName = defaultManagerName,
             onEditManagerName = onEditManagerName,
             onSelect = onSelect,
+            onPickCustomIcon = onPickCustomIcon,
             onRestore = { onSelect(0) },
             modifier = Modifier.padding(innerPadding),
         )
@@ -167,6 +229,7 @@ private fun LauncherIconPickerContent(
     defaultManagerName: String,
     onEditManagerName: () -> Unit,
     onSelect: (Int) -> Unit,
+    onPickCustomIcon: () -> Unit,
     onRestore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -215,6 +278,10 @@ private fun LauncherIconPickerContent(
             }
         }
 
+        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+            LauncherIconCustomCard(onClick = onPickCustomIcon)
+        }
+
         itemsIndexed(LauncherIconOption.entries) { index, option ->
             LauncherIconOptionCard(
                 option = option,
@@ -251,6 +318,12 @@ private fun LauncherIconPickerContent(
                         )
                     }
                 }
+                Text(
+                    text = stringResource(R.string.settings_app_icon_only_builtin),
+                    color = LauncherIdentityColors.Muted,
+                    fontSize = skrootproSp(12.5f, maxScale = 1f),
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
             }
         }
         }
@@ -261,6 +334,49 @@ internal fun launcherIconColumnCount(width: Dp): Int = when {
     width < 600.dp -> 4
     width < 840.dp -> 5
     else -> 6
+}
+
+@Composable
+private fun LauncherIconCustomCard(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(LauncherIdentityColors.Surface)
+            .border(1.dp, LauncherIdentityColors.Border, RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(54.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(LauncherIdentityColors.AccentSoft),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.AddPhotoAlternate,
+                contentDescription = null,
+                tint = LauncherIdentityColors.Accent,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                text = stringResource(R.string.settings_app_icon_custom),
+                color = LauncherIdentityColors.Ink,
+                fontSize = skrootproSp(16f, maxScale = 1f),
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.settings_app_icon_custom_pick),
+                color = LauncherIdentityColors.Muted,
+                fontSize = skrootproSp(13f, maxScale = 1f),
+            )
+        }
+    }
 }
 
 @Composable

@@ -143,7 +143,7 @@ internal fun SettingsSidebarScreen(
             bottomInnerPadding = bottomInnerPadding,
             onOpenCategory = onOpenCategory,
             onPageModeChange = onPageModeChange,
-            onOpenSidebarDesign = openSidebar,
+            isSidebarMoreSettings = true,
             onNavigateBack = { showAllSettings = false },
         )
     } else {

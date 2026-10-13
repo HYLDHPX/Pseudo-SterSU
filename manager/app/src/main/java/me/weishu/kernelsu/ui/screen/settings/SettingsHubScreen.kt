@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.ViewSidebar
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.DashboardCustomize
 import androidx.compose.material.icons.rounded.FolderSpecial
@@ -108,7 +107,7 @@ fun SettingsHubScreen(
     bottomInnerPadding: Dp,
     onOpenCategory: (SettingsCategory) -> Unit,
     onPageModeChange: (SettingsPageMode) -> Unit,
-    onOpenSidebarDesign: () -> Unit,
+    isSidebarMoreSettings: Boolean = false,
     onNavigateBack: (() -> Unit)? = null,
 ) {
     val sidebar = uiState.uiMode == InterfaceStyle.SidebarWidget.value
@@ -137,10 +136,12 @@ fun SettingsHubScreen(
                     )
                 },
                 actions = {
-                    SettingsPageModeButton(
-                        currentMode = SettingsPageMode.Categories,
-                        onModeChange = onPageModeChange,
-                    )
+                    if (!isSidebarMoreSettings) {
+                        SettingsPageModeButton(
+                            currentMode = SettingsPageMode.Categories,
+                            onModeChange = onPageModeChange,
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
@@ -163,15 +164,10 @@ fun SettingsHubScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (sidebar) {
-                item(key = "sidebar_design") {
-                    SidebarDesignShortcut(
-                        onClick = onOpenSidebarDesign,
-                        modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth(),
-                    )
-                }
-            }
-            items(SettingsCategory.entries, key = SettingsCategory::routeValue) { category ->
+            items(
+                SettingsCategory.entries.filter { !isSidebarMoreSettings || it != SettingsCategory.Appearance },
+                key = SettingsCategory::routeValue,
+            ) { category ->
                 SettingsCategoryCard(
                     category = category,
                     status = categoryStatus(category, uiState),
@@ -260,29 +256,6 @@ private fun SettingsCategoryCard(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp),
                 )
-        }
-    }
-}
-
-@Composable
-private fun SidebarDesignShortcut(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-    ) {
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(Icons.AutoMirrored.Rounded.ViewSidebar, null, Modifier.size(24.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.sidebar_widget_settings_title), style = MaterialTheme.typography.titleSmall)
-                Text(stringResource(R.string.sidebar_design_entry_summary), style = MaterialTheme.typography.bodySmall)
-            }
-            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(18.dp))
         }
     }
 }

@@ -85,13 +85,6 @@ internal fun SidebarRebootPopup() {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 row.forEach { option ->
                                     val label = stringResource(option.labelRes)
-                                    val shortLabel = when (option.reason) {
-                                        "recovery" -> "Recovery"
-                                        "bootloader" -> "Bootloader"
-                                        "download" -> "Download"
-                                        "edl" -> "EDL"
-                                        else -> label
-                                    }
                                     Column(
                                         modifier = Modifier.weight(1f)
                                             .clip(RoundedCornerShape(12.dp))
@@ -121,7 +114,7 @@ internal fun SidebarRebootPopup() {
                                                 fontWeight = FontWeight.Black,
                                             )
                                         }
-                                        Text(shortLabel, fontSize = 11.sp, lineHeight = 14.sp, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        Text(label, fontSize = 11.sp, lineHeight = 14.sp, textAlign = TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
                                 repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }

@@ -80,8 +80,11 @@ class SettingsPluginGroupingTest {
     }
 
     @Test
-    fun emptyPluginsSectionHasNoStoreEntry() {
+    fun pluginsSectionKeepsStoreWhenNoPluginsUsable() {
         val unavailable = installed.copy(incompatiblePluginIds = installed.installedPluginIds)
-        assertTrue(SettingsCatalog.entriesFor(SettingsCategory.Plugins, unavailable).isEmpty())
+        assertEquals(
+            listOf("plugin_store"),
+            SettingsCatalog.entriesFor(SettingsCategory.Plugins, unavailable).map { it.key },
+        )
     }
 }
