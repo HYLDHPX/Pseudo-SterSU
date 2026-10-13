@@ -49,6 +49,7 @@ import me.weishu.kernelsu.ui.theme.DeltaColorVariant
 import me.weishu.kernelsu.ui.theme.ThemeAppearanceDefaults
 import me.weishu.kernelsu.ui.theme.ThemeAppearanceSnapshot
 import me.weishu.kernelsu.ui.theme.ThemePreset
+import me.weishu.kernelsu.ui.screen.modulerepo.RepoSort
 import me.weishu.kernelsu.ui.theme.ThemeSyncStrategy
 import me.weishu.kernelsu.ui.theme.THEME_SYNC_STRATEGY_KEY
 import me.weishu.kernelsu.ui.theme.defaultThemePresetForUiMode
@@ -237,6 +238,16 @@ class SettingsRepositoryImpl : SettingsRepository {
     override var checkModuleUpdate: Boolean
         get() = prefs.getBoolean("module_check_update", true)
         set(value) = prefs.edit { putBoolean("module_check_update", value) }
+
+    override var moduleRepoSortOrder: String
+        get() = RepoSort.fromStored(
+            name = prefs.getString("module_repo_sort", null),
+            legacyOrdinal = if (prefs.contains("module_repo_sort_order")) prefs.getInt("module_repo_sort_order", 0) else null,
+        ).name
+        set(value) = prefs.edit {
+            putString("module_repo_sort", value)
+            remove("module_repo_sort_order")
+        }
 
     override var showVersionMismatchWarning: Boolean
         get() = prefs.getBoolean(SHOW_VERSION_MISMATCH_WARNING_KEY, true)
@@ -943,6 +954,15 @@ class SettingsRepositoryImpl : SettingsRepository {
         } else {
             false
         }
+
+    override suspend fun getShellSuAdbOnlyStatus(): String = getFeatureStatus("shell_su_adb_only")
+
+    override suspend fun getShellSuAdbOnlyPersistValue(): Long? = getFeaturePersistValue("shell_su_adb_only")
+
+    override suspend fun getShellSuAdbOnlyValue(): Long? = getFeatureValue("shell_su_adb_only")
+
+    override fun setShellSuAdbOnlyEnabled(enabled: Boolean): Boolean =
+        execKsud("feature set shell_su_adb_only ${if (enabled) 1 else 0}", true)
 
     override suspend fun getAvcSpoofStatus(): String = getFeatureStatus("avc_spoof")
 

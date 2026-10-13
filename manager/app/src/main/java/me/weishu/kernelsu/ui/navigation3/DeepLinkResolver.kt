@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import me.weishu.kernelsu.ui.screen.flash.FlashIt
 import me.weishu.kernelsu.ui.util.DownloadService
+import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
 
 /**
  * Deep link resolution: maps external Intent/Uri to an initial back stack.
@@ -23,6 +24,9 @@ object DeepLinkResolver {
     fun resolve(intent: Intent?): List<Route> {
         if (intent == null) return emptyList()
         if (intent.action == DownloadService.ACTION_INSTALL_MODULE) {
+            if (intent.getStringExtra(DownloadService.EXTRA_TOKEN) != SettingsRepositoryImpl().intentToken) {
+                return emptyList()
+            }
             val uriString = intent.getStringExtra(DownloadService.EXTRA_MODULE_URI)
                 ?: return emptyList()
             val uri = uriString.toUri()
@@ -71,6 +75,7 @@ fun HandleDeepLink(
                     intent.action = null
                     intent.removeExtra(DownloadService.EXTRA_MODULE_URI)
                     intent.removeExtra(DownloadService.EXTRA_DOWNLOAD_ID)
+                    intent.removeExtra(DownloadService.EXTRA_TOKEN)
                 }
             }
             lastHandledIntentId = currentIntentId

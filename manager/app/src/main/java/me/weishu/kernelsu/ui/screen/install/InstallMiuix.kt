@@ -77,9 +77,12 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -441,6 +444,27 @@ private fun AdvancedOptionsPanel(
                 summary = stringResource(id = R.string.enable_adb_summary),
                 onCheckedChange = actions.onSelectEnableAdb
             )
+            CheckboxPreference(
+                title = stringResource(R.string.install_block_modules),
+                checked = state.blockModulesEnabled,
+                summary = stringResource(R.string.install_block_modules_warning),
+                onCheckedChange = actions.onSelectBlockModules,
+            )
+            if (state.blockModulesEnabled) {
+                TextField(
+                    value = state.blockModules,
+                    onValueChange = actions.onBlockModulesChange,
+                    label = stringResource(R.string.install_block_modules_list),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+                Text(
+                    text = stringResource(if (state.blockModulesValid) R.string.install_block_modules_summary else R.string.install_block_modules_invalid),
+                    fontSize = 12.sp,
+                    color = if (state.blockModulesValid) colorScheme.onSurfaceVariantSummary else colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
             AnimatedVisibility(visible = state.canForceBackup) {
                 CheckboxPreference(
                     title = stringResource(id = R.string.install_force_backup),

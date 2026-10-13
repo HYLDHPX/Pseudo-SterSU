@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material.icons.filled.RemoveModerator
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Badge
@@ -349,6 +350,19 @@ fun SettingPagerMaterial(
                                     enabled = uiState.adbRootStatus == "supported",
                                     checked = uiState.isAdbRootEnabled,
                                     onCheckedChange = actions.onSetAdbRootEnabled,
+                                )
+                            },
+                            {
+                                SegmentedSwitchItem(
+                                    icon = Icons.Filled.VerifiedUser,
+                                    title = stringResource(R.string.settings_shell_su_adb_only),
+                                    summary = materialFeatureSummary(
+                                        uiState.shellSuAdbOnlyStatus,
+                                        R.string.settings_shell_su_adb_only_summary,
+                                    ),
+                                    enabled = uiState.shellSuAdbOnlyStatus == "supported",
+                                    checked = uiState.isShellSuAdbOnlyEnabled,
+                                    onCheckedChange = actions.onSetShellSuAdbOnlyEnabled,
                                 )
                             },
                             {

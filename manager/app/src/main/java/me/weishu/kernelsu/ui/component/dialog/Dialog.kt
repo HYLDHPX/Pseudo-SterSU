@@ -36,6 +36,7 @@ interface ConfirmDialogVisuals : Parcelable {
     val confirm: String?
     val dismiss: String?
     val dismissible: Boolean
+    val isRestricted: Boolean get() = false
 }
 
 @Parcelize
@@ -47,6 +48,7 @@ private data class ConfirmDialogVisualsImpl(
     override val confirm: String?,
     override val dismiss: String?,
     override val dismissible: Boolean,
+    override val isRestricted: Boolean = false,
 ) : ConfirmDialogVisuals {
     companion object {
         val Empty: ConfirmDialogVisuals = ConfirmDialogVisualsImpl("", "", isMarkdown = false, isHtml = false, confirm = null, dismiss = null, dismissible = true)
@@ -81,6 +83,7 @@ interface ConfirmDialogHandle : DialogHandle {
         confirm: String? = null,
         dismiss: String? = null,
         dismissible: Boolean = true,
+        restricted: Boolean = false,
     )
 
     suspend fun awaitConfirm(
@@ -91,6 +94,7 @@ interface ConfirmDialogHandle : DialogHandle {
         confirm: String? = null,
         dismiss: String? = null,
         dismissible: Boolean = true,
+        restricted: Boolean = false,
     ): ConfirmResult
 }
 
@@ -254,9 +258,10 @@ private class ConfirmDialogHandleImpl(
         confirm: String?,
         dismiss: String?,
         dismissible: Boolean,
+        restricted: Boolean,
     ) {
         coroutineScope.launch {
-            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, dismissible))
+            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, dismissible, restricted))
             show()
         }
     }
@@ -269,9 +274,10 @@ private class ConfirmDialogHandleImpl(
         confirm: String?,
         dismiss: String?,
         dismissible: Boolean,
+        restricted: Boolean,
     ): ConfirmResult {
         coroutineScope.launch {
-            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, dismissible))
+            updateVisuals(ConfirmDialogVisualsImpl(title, content, markdown, html, confirm, dismiss, dismissible, restricted))
             show()
         }
         return awaitResult()

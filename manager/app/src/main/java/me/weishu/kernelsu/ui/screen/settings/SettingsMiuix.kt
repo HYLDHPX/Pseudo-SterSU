@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.rounded.Adb
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.AutoFixHigh
@@ -514,6 +515,21 @@ fun SettingPagerMiuix(
                                 enabled = uiState.adbRootStatus == "supported",
                                 checked = uiState.isAdbRootEnabled,
                                 onCheckedChange = actions.onSetAdbRootEnabled,
+                            )
+
+                            val shellSuAdbOnlySummary = when (uiState.shellSuAdbOnlyStatus) {
+                                "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
+                                "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                "forced" -> stringResource(id = R.string.feature_status_forced_summary)
+                                else -> stringResource(id = R.string.settings_shell_su_adb_only_summary)
+                            }
+                            CategorizedMiuixSwitchRow(
+                                title = stringResource(id = R.string.settings_shell_su_adb_only),
+                                summary = shellSuAdbOnlySummary,
+                                icon = Icons.Rounded.VerifiedUser,
+                                enabled = uiState.shellSuAdbOnlyStatus == "supported",
+                                checked = uiState.isShellSuAdbOnlyEnabled,
+                                onCheckedChange = actions.onSetShellSuAdbOnlyEnabled,
                             )
 
                             SwitchPreference(

@@ -253,6 +253,7 @@ import me.weishu.kernelsu.ui.theme.KernelSUTheme
 import me.weishu.kernelsu.ui.theme.resolveEffectiveDarkMode
 import me.weishu.kernelsu.ui.theme.LocalAutoHideNavigationBar
 import me.weishu.kernelsu.ui.theme.LocalBlurIntensity
+import me.weishu.kernelsu.ui.theme.LocalModuleDescriptionMaxLines
 import me.weishu.kernelsu.ui.theme.LocalColorMode
 import me.weishu.kernelsu.ui.theme.LocalDeltaColorVariant
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
@@ -529,6 +530,7 @@ class MainActivity : ComponentActivity() {
                 LocalAutoHideNavigationBar provides uiState.autoHideNavigationBar,
                 LocalScrollHideNavigationBar provides uiState.scrollHideNavigationBar,
                 LocalModuleTopBarAutoHide provides uiState.moduleTopBarAutoHideEnabled,
+                LocalModuleDescriptionMaxLines provides uiState.moduleDescriptionMaxLines,
                 LocalUiMode provides uiMode,
                 LocalInterfaceStyle provides uiState.interfaceStyle,
                 LocalInterfaceStyleTheme provides selectedExternalTheme,

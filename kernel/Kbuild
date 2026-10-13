@@ -1,8 +1,10 @@
 kernelsu-objs := core/init.o
 
 kernelsu-objs += feature/kernel_umount.o
+kernelsu-objs += feature/module_blacklist.o
 kernelsu-objs += feature/sulog.o
 kernelsu-objs += feature/seccomp_hook.o
+kernelsu-objs += feature/shell_su_adb_only.o
 ifeq ($(CONFIG_KSU_SUSFS),y)
 kernelsu-objs += feature/sucompat_susfs.o
 else

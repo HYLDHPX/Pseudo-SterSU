@@ -21,10 +21,12 @@ pub enum FeatureId {
     SeccompHookCallCount = 10,
     SeccompHookReleaseCount = 11,
     SeccompHookFailureCount = 12,
+    // SterSU reserves upstream ID 6 for hook status; retain that UAPI contract.
+    ShellSuAdbOnly = 13,
 }
 
 impl FeatureId {
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 13] = [
         Self::SuCompat,
         Self::KernelUmount,
         Self::Sulog,
@@ -37,6 +39,7 @@ impl FeatureId {
         Self::SeccompHookCallCount,
         Self::SeccompHookReleaseCount,
         Self::SeccompHookFailureCount,
+        Self::ShellSuAdbOnly,
     ];
 
     pub const fn from_u32(id: u32) -> Option<Self> {
@@ -53,6 +56,7 @@ impl FeatureId {
             10 => Some(Self::SeccompHookCallCount),
             11 => Some(Self::SeccompHookReleaseCount),
             12 => Some(Self::SeccompHookFailureCount),
+            13 => Some(Self::ShellSuAdbOnly),
             _ => None,
         }
     }
@@ -71,6 +75,7 @@ impl FeatureId {
             Self::SeccompHookCallCount => "seccomp_hook_call_count",
             Self::SeccompHookReleaseCount => "seccomp_hook_release_count",
             Self::SeccompHookFailureCount => "seccomp_hook_failure_count",
+            Self::ShellSuAdbOnly => "shell_su_adb_only",
         }
     }
 
@@ -120,6 +125,9 @@ impl FeatureId {
             Self::SeccompHookCallCount => "GKI Seccomp hook invocation count",
             Self::SeccompHookReleaseCount => "GKI Seccomp filter release count",
             Self::SeccompHookFailureCount => "GKI Seccomp hook failure count",
+            Self::ShellSuAdbOnly => {
+                "Shell SU ADB Only - require a granted shell process to descend from adbd or a KernelSU root process"
+            }
         }
     }
 }
@@ -138,6 +146,7 @@ pub fn parse_feature_id(name: &str) -> Result<FeatureId> {
         "seccomp_hook_call_count" | "10" => Ok(FeatureId::SeccompHookCallCount),
         "seccomp_hook_release_count" | "11" => Ok(FeatureId::SeccompHookReleaseCount),
         "seccomp_hook_failure_count" | "12" => Ok(FeatureId::SeccompHookFailureCount),
+        "shell_su_adb_only" | "13" => Ok(FeatureId::ShellSuAdbOnly),
         _ => bail!("Unknown feature: {name}"),
     }
 }

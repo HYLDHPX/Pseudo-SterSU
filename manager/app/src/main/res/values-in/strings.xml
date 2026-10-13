@@ -269,7 +269,7 @@
     <string name="close">Tutup</string>
     <string name="download_file">Unduh dan tambal berkas</string>
     <string name="download_dialog_title">Masukkan URL image</string>
-    <string name="download_dialog_msg">Image OTA penuh atau image pabrik</string>
+    <string name="download_dialog_msg">Image OTA lengkap atau image pabrik</string>
     <string name="download_no_boot_partition">Tidak ada partisi boot, init_boot, atau vendor_boot yang ditemukan di image</string>
     <string name="download_probe_failed">Gagal memeriksa image: %1$s</string>
     <string name="install_force_backup">Cadangkan sebagai image bawaan</string>

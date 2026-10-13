@@ -38,6 +38,7 @@ data class MainActivityUiState(
     val autoHideNavigationBar: Boolean,
     val scrollHideNavigationBar: Boolean,
     val moduleTopBarAutoHideEnabled: Boolean,
+    val moduleDescriptionMaxLines: Int = 4,
     val switchStyle: String = SwitchStyle.DEFAULT_VALUE,
     val customSwitchStyle: CustomSwitchStyle? = null,
     val seasonStyle: String = SeasonStyle.DEFAULT_VALUE,

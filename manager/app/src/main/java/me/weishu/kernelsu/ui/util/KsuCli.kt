@@ -1,6 +1,7 @@
 package me.weishu.kernelsu.ui.util
 
 import android.content.Context
+import android.content.ContentResolver
 import android.net.Uri
 import android.os.Build
 import android.os.Parcelable
@@ -26,11 +27,15 @@ import me.weishu.kernelsu.core.tasks.BootKernelVersion
 import me.weishu.kernelsu.core.tasks.ExtractImage
 import me.weishu.kernelsu.core.tasks.ProbeResult
 import me.weishu.kernelsu.core.utils.DataSourceChannel
+import me.weishu.kernelsu.data.registry.DownloadVerificationException
+import me.weishu.kernelsu.data.registry.RegistryDownloadStore
+import me.weishu.kernelsu.data.registry.copyForInstall
 import me.weishu.kernelsu.ksuApp
 import okhttp3.OkHttpClient
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
@@ -3915,8 +3920,27 @@ fun flashModule(
         return FlashResult(1, error, false)
     }
 
-    val file = copyUriToCache(uri, "module.zip")
+    val storeRoot = File(ksuApp.filesDir, RegistryDownloadStore.DIR_NAME)
+    val expected = if (uri.scheme == ContentResolver.SCHEME_FILE) {
+        uri.path?.let { RegistryDownloadStore.expectedFor(storeRoot, File(it)) }
+    } else {
+        null
+    }
+    val file = File.createTempFile("module-", ".zip", ksuApp.cacheDir)
     try {
+        try {
+            val input = ksuApp.contentResolver.openInputStream(uri)
+                ?: throw IOException("Cannot open $uri")
+            input.use { copyForInstall(it, file, expected) }
+        } catch (e: IOException) {
+            Log.w("KernelSU", "module $uri not installed: ${e.message}")
+            if (e is DownloadVerificationException) {
+                uri.path?.let { RegistryDownloadStore.delete(storeRoot, File(it)) }
+            }
+            val message = "! ${e.message ?: "Failed to read module"}"
+            onStderr(message)
+            return FlashResult(1, message, false)
+        }
         val cmd = "module install ${shellQuote(file.absolutePath)}"
         val result = flashWithIO("${shellQuote(getKsuDaemonPath())} $cmd", onStdout, onStderr)
         Log.i("KernelSU", "install module $uri result: $result")
@@ -3990,14 +4014,42 @@ private fun writeLkmFile(lkm: LkmSelection): File? {
     return copyUriToCache(lkm.uri, "kernelsu-tmp-lkm.ko")
 }
 
+// A single module name as accepted by ksud's --block-module parser.
+private fun isValidBlockModuleName(name: String): Boolean =
+    name.isNotEmpty() && name.length <= 64 &&
+        name.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '_' }
+
+/** Parse the comma-separated block-modules field into the non-empty names. */
+fun parseBlockModules(input: String): List<String> =
+    input.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+
+// The kernel copies the block_modules= value into a 256-byte buffer, leaving
+// 255 bytes; a longer list would be silently truncated, leaving some modules
+// unblocked. Reject it here too.
+private const val MAX_BLOCK_MODULES_LEN = 255
+
+/** Whether every name in the block-modules field is valid (empty is valid). */
+fun isBlockModulesValid(input: String): Boolean {
+    val names = parseBlockModules(input)
+    return names.all(::isValidBlockModuleName) &&
+        names.joinToString(",").length <= MAX_BLOCK_MODULES_LEN
+}
+
 private fun bootPatchFlags(
     allowShell: Boolean,
     enableAdb: Boolean,
     forceBackup: Boolean,
+    blockModules: String,
 ): String = buildString {
     if (allowShell) append(" --allow-shell")
     if (enableAdb) append(" --enable-adbd")
     if (forceBackup) append(" --backup")
+    // Names are validated in the UI before install; pass them through without
+    // mutating. Drop the flag entirely (never inject) if anything slips through.
+    val names = parseBlockModules(blockModules)
+    if (names.isNotEmpty() && names.all(::isValidBlockModuleName)) {
+        append(" --block-module ${names.joinToString(",")}")
+    }
 }
 
 enum class BootPatchMode {
@@ -4054,12 +4106,15 @@ suspend fun installBoot(
     allowShell: Boolean,
     enableAdb: Boolean,
     forceBackup: Boolean,
+    blockModules: String,
     onStdout: (String) -> Unit,
     onStderr: (String) -> Unit,
 ): FlashResult {
     var bootFile: File? = null
     var lkmFile: File? = null
     var patchedOutput: File? = null
+
+    if (!isBlockModulesValid(blockModules)) return FlashResult(1, "Invalid kernel module block list", false)
 
     return try {
         bootFile = bootUri?.let { uri -> copyUriToCache(uri, "boot.img") }
@@ -4075,17 +4130,9 @@ suspend fun installBoot(
 
         cmd += bootFile?.let { " -b ${shellQuote(it.absolutePath)}" } ?: " -f"
 
-        if (allowShell) {
-            cmd += " --allow-shell"
-        }
-        if (enableAdb) {
-            cmd += " --enable-adbd"
-        }
+        cmd += bootPatchFlags(allowShell, enableAdb, forceBackup, blockModules)
         if (ota) {
             cmd += " -u"
-        }
-        if (forceBackup) {
-            cmd += " --backup"
         }
 
         val effectivePatchMode = if (lkm is LkmSelection.PathMaskKmiString) {
@@ -4191,9 +4238,11 @@ suspend fun downloadBoot(
     allowShell: Boolean,
     enableAdb: Boolean,
     forceBackup: Boolean,
+    blockModules: String,
     onStdout: (String) -> Unit,
     onStderr: (String) -> Unit,
 ): FlashResult = withContext(Dispatchers.IO) {
+    if (!isBlockModulesValid(blockModules)) return@withContext FlashResult(1, "Invalid kernel module block list", false)
     val bootFile = File(ksuApp.cacheDir, "download-boot.img")
     var lkmFile: File? = null
     var patchedOutput: File? = null
@@ -4253,9 +4302,7 @@ suspend fun downloadBoot(
             patchMode
         }
         var cmd = "${shellQuote(getKsuDaemonPath())} boot-patch -b ${shellQuote(bootFile.absolutePath)}"
-        if (allowShell) cmd += " --allow-shell"
-        if (enableAdb) cmd += " --enable-adbd"
-        if (forceBackup) cmd += " --backup"
+        cmd += bootPatchFlags(allowShell, enableAdb, forceBackup, blockModules)
         cmd += effectivePatchMode.cliArguments()
 
         when (lkm) {
@@ -4830,6 +4877,20 @@ suspend fun getAvailablePartitions(ota: Boolean = false): List<String> = withCon
     val cmd = if (ota) "boot-info available-partitions --ota" else "boot-info available-partitions"
     val out = shell.newJob().add("${getKsuDaemonPath()} $cmd").to(ArrayList(), null).exec().out
     out.filter { it.isNotBlank() }.map { it.trim() }
+}
+
+// Known vendor anti-root kernel modules that `--block-module` is meant for.
+private val KNOWN_BLOCKABLE_MODULES = listOf(
+    "vr", "vklp", "oplus_secure_guard", "oplus_secure_guard_new", "mkp"
+)
+
+// Return the known anti-root modules currently loaded on this device (per
+// /proc/modules), so the install screen can pre-fill only the relevant ones.
+suspend fun getLoadedBlockableModules(): List<String> = withContext(Dispatchers.IO) {
+    val shell = getRootShell()
+    val out = shell.newJob().add("cat /proc/modules").to(ArrayList(), null).exec().out
+    val loaded = out.mapNotNull { it.trim().substringBefore(' ').takeIf(String::isNotBlank) }.toHashSet()
+    KNOWN_BLOCKABLE_MODULES.filter { it in loaded }
 }
 
 fun hasMagisk(): Boolean {

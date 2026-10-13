@@ -231,6 +231,7 @@ fun ModulePagerMiuix(
                 html = it.html,
                 confirm = it.confirm,
                 dismiss = it.dismiss,
+                restricted = it.restricted,
             )
         }
     }

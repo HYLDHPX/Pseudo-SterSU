@@ -22,6 +22,8 @@ import me.weishu.kernelsu.ui.util.LocalInterfaceStyleTheme
 import me.weishu.kernelsu.ui.util.AppFontState
 import me.weishu.kernelsu.ui.util.readAppFontState
 
+val LocalModuleDescriptionMaxLines = staticCompositionLocalOf { 4 }
+
 enum class ColorMode(val value: Int) {
     SYSTEM(0),
     LIGHT(1),

@@ -65,6 +65,7 @@ import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.UploadFile
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -207,6 +208,7 @@ fun SettingsCategoryScreen(routeValue: String) {
                 onSetSuCompatMode = viewModel::setSuCompatMode,
                 onSetSulog = viewModel::setSulogEnabled,
                 onSetAdbRoot = viewModel::setAdbRootEnabled,
+                onSetShellSuAdbOnly = viewModel::setShellSuAdbOnlyEnabled,
                 onSetUseSoftReboot = viewModel::setUseSoftReboot,
                 onSetAutoJailbreak = viewModel::setAutoJailbreak,
                 onOpen = navigator::push,
@@ -498,6 +500,7 @@ private fun RootPermissionSettingsContent(
     onSetSuCompatMode: (Int) -> Unit,
     onSetSulog: (Boolean) -> Unit,
     onSetAdbRoot: (Boolean) -> Unit,
+    onSetShellSuAdbOnly: (Boolean) -> Unit,
     onSetUseSoftReboot: (Boolean) -> Unit,
     onSetAutoJailbreak: (Boolean) -> Unit,
     onOpen: (Route) -> Unit,
@@ -546,6 +549,15 @@ private fun RootPermissionSettingsContent(
             enabled = uiState.adbRootStatus == "supported",
             checked = uiState.isAdbRootEnabled,
             onCheckedChange = onSetAdbRoot,
+        )
+        SettingsDivider()
+        SettingsSwitchRow(
+            title = stringResource(R.string.settings_shell_su_adb_only),
+            summary = featureSummary(uiState.shellSuAdbOnlyStatus, R.string.settings_shell_su_adb_only_summary),
+            icon = Icons.Rounded.VerifiedUser,
+            enabled = uiState.shellSuAdbOnlyStatus == "supported",
+            checked = uiState.isShellSuAdbOnlyEnabled,
+            onCheckedChange = onSetShellSuAdbOnly,
         )
         SettingsDivider()
         SettingsSwitchRow(

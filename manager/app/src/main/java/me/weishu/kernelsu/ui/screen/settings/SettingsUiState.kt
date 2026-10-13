@@ -160,6 +160,10 @@ data class SettingsUiState(
     val adbRootStatus: String = "",
     val isAdbRootEnabled: Boolean = false,
 
+    // Shell SU ADB Only
+    val shellSuAdbOnlyStatus: String = "",
+    val isShellSuAdbOnlyEnabled: Boolean = false,
+
     // AVC Spoof
     val avcSpoofStatus: String = "",
     val isAvcSpoofEnabled: Boolean = false,
@@ -274,6 +278,7 @@ data class SettingsScreenActions(
     val onSetSelinuxHideEnabled: (Boolean) -> Unit,
     val onSetSulogEnabled: (Boolean) -> Unit,
     val onSetAdbRootEnabled: (Boolean) -> Unit,
+    val onSetShellSuAdbOnlyEnabled: (Boolean) -> Unit,
     val onSetAvcSpoofEnabled: (Boolean) -> Unit,
     val onSetDefaultUmountModules: (Boolean) -> Unit,
     val onOpenHiddenPathConfig: () -> Unit,

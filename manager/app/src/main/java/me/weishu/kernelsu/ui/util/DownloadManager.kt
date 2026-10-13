@@ -10,6 +10,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import me.weishu.kernelsu.data.registry.DownloadVerificationException
+import me.weishu.kernelsu.data.registry.ExpectedFile
+import me.weishu.kernelsu.data.registry.RegistryUrls
+import me.weishu.kernelsu.data.registry.canShareDownload
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -28,6 +32,10 @@ object DownloadManager {
         val status: Status = Status.PENDING,
         val resultUri: Uri? = null,
         val error: String? = null,
+        /** Set when a registry download was rejected (URL allowlist, size or SHA-256 mismatch). */
+        val verificationFailure: DownloadVerificationException.Reason? = null,
+        /** Size + SHA-256 a registry download is verified against; null for plain downloads. */
+        val expected: ExpectedFile? = null,
     )
 
     private val idCounter = AtomicInteger(0)
@@ -66,16 +74,8 @@ object DownloadManager {
         userAgent: String? = null,
         completionAction: DownloadCompletionAction = DownloadCompletionAction.INSTALL_MODULE,
         onCompleted: ((Uri) -> Unit)? = null,
+        expected: ExpectedFile? = null,
     ): Int {
-        val existing = _downloads.value.values.find {
-            it.url == url &&
-                it.fileName == fileName &&
-                it.targetPath == targetPath &&
-                it.completionAction == completionAction &&
-                (it.status == Status.PENDING || it.status == Status.DOWNLOADING)
-        }
-        if (existing != null) return existing.id
-
         val id = idCounter.incrementAndGet()
         val state = DownloadState(
             id = id,
@@ -84,8 +84,14 @@ object DownloadManager {
             targetPath = targetPath,
             mimeType = mimeType,
             completionAction = completionAction,
+            expected = expected,
         )
         _downloads.update { it + (id to state) }
+
+        if (expected != null && !RegistryUrls.isAllowedReleaseDownloadUrl(url)) {
+            markFailed(id, "Download URL not allowed", DownloadVerificationException.Reason.URL_NOT_ALLOWED)
+            return id
+        }
 
         if (onCompleted != null) {
             completionCallbacks[id] = onCompleted
@@ -101,6 +107,10 @@ object DownloadManager {
             putExtra(DownloadService.EXTRA_COOKIE, cookie)
             putExtra(DownloadService.EXTRA_USER_AGENT, userAgent)
             putExtra(DownloadService.EXTRA_COMPLETION_ACTION, completionAction.name)
+            if (expected != null) {
+                putExtra(DownloadService.EXTRA_EXPECTED_SIZE, expected.size)
+                putExtra(DownloadService.EXTRA_EXPECTED_SHA256, expected.sha256)
+            }
         }
         ContextCompat.startForegroundService(context, intent)
 
@@ -126,10 +136,14 @@ object DownloadManager {
         }
     }
 
-    internal fun markFailed(id: Int, error: String) {
+    internal fun markFailed(
+        id: Int,
+        error: String,
+        verificationFailure: DownloadVerificationException.Reason? = null,
+    ) {
         _downloads.update { map ->
             val state = map[id] ?: return@update map
-            map + (id to state.copy(status = Status.FAILED, error = error))
+            map + (id to state.copy(status = Status.FAILED, error = error, verificationFailure = verificationFailure))
         }
         completionCallbacks.remove(id)
     }

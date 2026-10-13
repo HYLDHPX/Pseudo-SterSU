@@ -17,6 +17,8 @@ enum ksu_feature_id {
     KSU_FEATURE_SECCOMP_HOOK_CALL_COUNT = 10,
     KSU_FEATURE_SECCOMP_HOOK_RELEASE_COUNT = 11,
     KSU_FEATURE_SECCOMP_HOOK_FAILURE_COUNT = 12,
+    /* SterSU keeps ID 6 for hook status, so this feature uses ID 13. */
+    KSU_FEATURE_SHELL_SU_ADB_ONLY = 13,
 
     KSU_FEATURE_MAX
 };
