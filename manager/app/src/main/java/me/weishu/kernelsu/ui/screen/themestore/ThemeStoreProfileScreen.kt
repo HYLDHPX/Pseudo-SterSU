@@ -1,9 +1,5 @@
 package me.weishu.kernelsu.ui.screen.themestore
 
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,31 +19,25 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.PhotoCamera
-import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.VerifiedUser
-import me.weishu.kernelsu.ui.component.store.StoreAlertDialog as AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,21 +52,23 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.dropUnlessResumed
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.R
+import me.weishu.kernelsu.ui.component.rememberCustomImageBitmap
 import me.weishu.kernelsu.ui.component.store.StoreScaffold
 import me.weishu.kernelsu.ui.component.store.StoreSectionHeading
-import me.weishu.kernelsu.ui.component.rememberCustomImageBitmap
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.util.FULL_CUSTOM_WALLPAPER_CROP
-import me.weishu.kernelsu.ui.util.ThemeAuthorGender
+import me.weishu.kernelsu.ui.util.LinkedGitHubProfile
 import me.weishu.kernelsu.ui.util.ThemeAuthorProfile
+import me.weishu.kernelsu.ui.util.isValidCloudThemeGithubLogin
+import me.weishu.kernelsu.ui.util.readLinkedGitHubProfile
 import me.weishu.kernelsu.ui.util.readThemeAuthorProfile
 import me.weishu.kernelsu.ui.util.readThemeLibrary
-import me.weishu.kernelsu.ui.util.saveThemeAuthorProfile
+import me.weishu.kernelsu.ui.util.syncThemeAuthorProfileFromGitHub
+
+private const val GITHUB_PROFILE_REFRESH_MS = 15L * 60L * 1000L
 
 @Composable
 fun ThemeStoreMyScreen(
@@ -88,143 +80,80 @@ fun ThemeStoreMyScreen(
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf(readThemeAuthorProfile(context)) }
+    var linkedAccount by remember { mutableStateOf(readLinkedGitHubProfile(context)) }
     var savedThemeCount by remember { mutableIntStateOf(readThemeLibrary(context).size) }
-    var editing by rememberSaveable { mutableStateOf(false) }
+    var changingAccount by rememberSaveable { mutableStateOf(false) }
+    var githubLoginInput by rememberSaveable { mutableStateOf(linkedAccount?.login.orEmpty()) }
     var busy by remember { mutableStateOf(false) }
-    var displayName by rememberSaveable { mutableStateOf(profile.displayName) }
-    var realName by rememberSaveable { mutableStateOf(profile.realName) }
-    var gender by rememberSaveable { mutableStateOf(profile.gender) }
-    var bio by rememberSaveable { mutableStateOf(profile.bio) }
-    var pendingAvatarUri by rememberSaveable { mutableStateOf<Uri?>(null) }
-    var removeAvatar by rememberSaveable { mutableStateOf(false) }
-    var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    fun resetDraft() {
-        displayName = profile.displayName
-        realName = profile.realName
-        gender = profile.gender
-        bio = profile.bio
-        pendingAvatarUri = null
-        removeAvatar = false
-    }
-
-    val avatarLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        pendingAvatarUri = uri
-        removeAvatar = false
-    }
-
-    LifecycleResumeEffect(editing) {
-        if (!editing) {
-            profile = readThemeAuthorProfile(context)
-            savedThemeCount = readThemeLibrary(context).size
+    fun syncProfile(login: String) {
+        if (busy || !isValidCloudThemeGithubLogin(login)) return
+        busy = true
+        errorMessage = null
+        scope.launch {
+            try {
+                profile = syncThemeAuthorProfileFromGitHub(context, login)
+                linkedAccount = readLinkedGitHubProfile(context)
+                githubLoginInput = linkedAccount?.login.orEmpty()
+                changingAccount = false
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                errorMessage = error.localizedMessage?.lineSequence()?.firstOrNull()?.take(160)
+                    ?: resources.getString(R.string.theme_store_github_sync_failed)
+            } finally {
+                busy = false
+            }
         }
+    }
+
+    LifecycleResumeEffect(Unit) {
+        profile = readThemeAuthorProfile(context)
+        linkedAccount = readLinkedGitHubProfile(context)
+        savedThemeCount = readThemeLibrary(context).size
         onPauseOrDispose { }
     }
+    LaunchedEffect(linkedAccount?.login) {
+        linkedAccount?.takeIf {
+            System.currentTimeMillis() - it.syncedAt >= GITHUB_PROFILE_REFRESH_MS
+        }?.let { syncProfile(it.login) }
+    }
 
-    val onBack = dropUnlessResumed { navigator.pop() }
     val content: @Composable (PaddingValues) -> Unit = { paddingValues ->
         ThemeStoreProfileContent(
             profile = profile,
+            linkedAccount = linkedAccount,
             savedThemeCount = savedThemeCount,
-            editing = editing,
+            changingAccount = changingAccount,
+            githubLoginInput = githubLoginInput,
             busy = busy,
-            displayName = displayName,
-            realName = realName,
-            gender = gender,
-            bio = bio,
-            avatarUriString = when {
-                pendingAvatarUri != null -> pendingAvatarUri.toString()
-                removeAvatar -> null
-                else -> profile.avatarUriString
-            },
+            errorMessage = errorMessage,
             modifier = modifier.padding(paddingValues),
-            onEdit = {
-                resetDraft()
-                editing = true
+            onLoginChange = { githubLoginInput = it.take(39) },
+            onSync = { syncProfile(githubLoginInput.trim()) },
+            onChangeAccount = {
+                githubLoginInput = linkedAccount?.login.orEmpty()
+                errorMessage = null
+                changingAccount = true
             },
-            onCancel = {
-                resetDraft()
-                editing = false
+            onCancelChange = {
+                changingAccount = false
+                errorMessage = null
             },
-            onDisplayNameChange = { displayName = it.take(32) },
-            onRealNameChange = { realName = it.take(32) },
-            onGenderChange = { gender = it },
-            onBioChange = { bio = it.take(160) },
-            onPickAvatar = { avatarLauncher.launch(arrayOf("image/*")) },
-            onRemoveAvatar = {
-                pendingAvatarUri = null
-                removeAvatar = true
-            },
-            onSave = {
-                if (busy) return@ThemeStoreProfileContent
-                busy = true
-                scope.launch {
-                    try {
-                        val result = withContext(Dispatchers.IO) {
-                            saveThemeAuthorProfile(
-                                context = context,
-                                profile = ThemeAuthorProfile(
-                                    displayName = displayName,
-                                    realName = realName,
-                                    gender = gender,
-                                    bio = bio,
-                                    avatarUriString = profile.avatarUriString,
-                                ),
-                                avatarSource = pendingAvatarUri,
-                                removeAvatar = removeAvatar,
-                            )
-                        }
-                        if (result.success && result.profile != null) {
-                            profile = result.profile
-                            resetDraft()
-                            editing = false
-                            Toast.makeText(
-                                context,
-                                R.string.theme_store_profile_saved,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        } else {
-                            errorMessage = result.error?.localizedMessage
-                                ?.lineSequence()
-                                ?.firstOrNull()
-                                ?.take(240)
-                                ?: resources.getString(R.string.theme_store_profile_save_failed)
-                        }
-                    } catch (cancellation: CancellationException) {
-                        throw cancellation
-                    } catch (error: Throwable) {
-                        errorMessage = error.localizedMessage
-                            ?.lineSequence()
-                            ?.firstOrNull()
-                            ?.take(240)
-                            ?: resources.getString(R.string.theme_store_profile_save_failed)
-                    } finally {
-                        busy = false
-                    }
-                }
-            },
+            onRefresh = { linkedAccount?.let { syncProfile(it.login) } },
             onOpenLibrary = dropUnlessResumed { navigator.push(Route.ThemeStoreLibrary) },
             onOpenCreatorCenter = dropUnlessResumed { navigator.push(Route.CloudThemeCreator) },
         )
     }
-
-    if (embedded) content(PaddingValues()) else StoreScaffold(
-        title = stringResource(R.string.theme_store_my_title), onBack = onBack,
-        maxContentWidth = 720.dp, content = content)
-
-    errorMessage?.let { message ->
-        AlertDialog(
-            onDismissRequest = { errorMessage = null },
-            title = { Text(stringResource(R.string.theme_store_profile_save_failed)) },
-            text = { Text(message) },
-            confirmButton = {
-                TextButton(onClick = { errorMessage = null }) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
+    if (embedded) {
+        content(PaddingValues())
+    } else {
+        StoreScaffold(
+            title = stringResource(R.string.theme_store_my_title),
+            onBack = dropUnlessResumed { navigator.pop() },
+            maxContentWidth = 720.dp,
+            content = content,
         )
     }
 }
@@ -232,24 +161,18 @@ fun ThemeStoreMyScreen(
 @Composable
 private fun ThemeStoreProfileContent(
     profile: ThemeAuthorProfile,
+    linkedAccount: LinkedGitHubProfile?,
     savedThemeCount: Int,
-    editing: Boolean,
+    changingAccount: Boolean,
+    githubLoginInput: String,
     busy: Boolean,
-    displayName: String,
-    realName: String,
-    gender: ThemeAuthorGender,
-    bio: String,
-    avatarUriString: String?,
+    errorMessage: String?,
     modifier: Modifier = Modifier,
-    onEdit: () -> Unit,
-    onCancel: () -> Unit,
-    onDisplayNameChange: (String) -> Unit,
-    onRealNameChange: (String) -> Unit,
-    onGenderChange: (ThemeAuthorGender) -> Unit,
-    onBioChange: (String) -> Unit,
-    onPickAvatar: () -> Unit,
-    onRemoveAvatar: () -> Unit,
-    onSave: () -> Unit,
+    onLoginChange: (String) -> Unit,
+    onSync: () -> Unit,
+    onChangeAccount: () -> Unit,
+    onCancelChange: () -> Unit,
+    onRefresh: () -> Unit,
     onOpenLibrary: () -> Unit,
     onOpenCreatorCenter: () -> Unit,
 ) {
@@ -260,358 +183,224 @@ private fun ThemeStoreProfileContent(
     ) {
         item { StoreSectionHeading(stringResource(R.string.store_redesign_profile)) }
         item {
-            if (editing) {
-                ThemeStoreProfileEditor(
+            if (linkedAccount == null || changingAccount) {
+                GitHubProfileAccountForm(
+                    value = githubLoginInput,
                     busy = busy,
-                    displayName = displayName,
-                    realName = realName,
-                    gender = gender,
-                    bio = bio,
-                    avatarUriString = avatarUriString,
-                    onDisplayNameChange = onDisplayNameChange,
-                    onRealNameChange = onRealNameChange,
-                    onGenderChange = onGenderChange,
-                    onBioChange = onBioChange,
-                    onPickAvatar = onPickAvatar,
-                    onRemoveAvatar = onRemoveAvatar,
-                    onSave = onSave,
-                    onCancel = onCancel,
+                    errorMessage = errorMessage,
+                    showCancel = linkedAccount != null,
+                    onValueChange = onLoginChange,
+                    onSync = onSync,
+                    onCancel = onCancelChange,
                 )
             } else {
-                ThemeStoreProfileSummary(profile = profile, onEdit = onEdit)
+                GitHubProfileSummary(
+                    profile = profile,
+                    login = linkedAccount.login,
+                    busy = busy,
+                    errorMessage = errorMessage,
+                    onRefresh = onRefresh,
+                    onChangeAccount = onChangeAccount,
+                )
             }
         }
-        item {
-            ThemeStoreLibraryDestination(
-                savedThemeCount = savedThemeCount,
-                enabled = !busy,
-                onClick = onOpenLibrary,
-            )
-        }
-        item {
-            ThemeStoreCreatorDestination(
-                enabled = !busy,
-                onClick = onOpenCreatorCenter,
-            )
-        }
+        item { StoreDestination(
+            title = stringResource(R.string.theme_store_my_library_title),
+            summary = stringResource(R.string.theme_store_my_count, savedThemeCount),
+            icon = Icons.Rounded.Palette,
+            onClick = onOpenLibrary,
+        ) }
+        item { StoreDestination(
+            title = stringResource(R.string.cloud_theme_creator_title),
+            summary = stringResource(R.string.cloud_theme_creator_entry_summary),
+            icon = Icons.Rounded.VerifiedUser,
+            onClick = onOpenCreatorCenter,
+        ) }
         item {
             Text(
-                text = stringResource(R.string.theme_store_profile_export_notice),
+                text = stringResource(R.string.theme_store_github_export_notice),
                 modifier = Modifier.padding(horizontal = 4.dp),
                 style = MaterialTheme.typography.bodySmall,
-                color = themeStoreProfileMutedColor(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        item { Spacer(modifier = Modifier.height(18.dp)) }
+        item { Spacer(Modifier.height(18.dp)) }
     }
 }
 
 @Composable
-private fun ThemeStoreCreatorDestination(
-    enabled: Boolean,
+private fun GitHubProfileAccountForm(
+    value: String,
+    busy: Boolean,
+    errorMessage: String?,
+    showCancel: Boolean,
+    onValueChange: (String) -> Unit,
+    onSync: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    ProfileSurface {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.theme_store_github_account_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.theme_store_github_account_explanation),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                enabled = !busy,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.theme_store_github_login_label)) },
+                prefix = { Text("@") },
+                isError = value.isNotBlank() && !isValidCloudThemeGithubLogin(value.trim()),
+            )
+            if (errorMessage != null) ProfileError(errorMessage)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onSync,
+                    enabled = !busy && isValidCloudThemeGithubLogin(value.trim()),
+                    modifier = Modifier.height(48.dp),
+                ) {
+                    Text(stringResource(if (busy) R.string.theme_store_github_syncing
+                        else R.string.theme_store_github_sync))
+                }
+                if (showCancel) {
+                    OutlinedButton(onClick = onCancel, enabled = !busy, modifier = Modifier.height(48.dp)) {
+                        Text(stringResource(android.R.string.cancel))
+                    }
+                }
+            }
+            Text(
+                text = stringResource(R.string.theme_store_github_public_notice),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GitHubProfileSummary(
+    profile: ThemeAuthorProfile,
+    login: String,
+    busy: Boolean,
+    errorMessage: String?,
+    onRefresh: () -> Unit,
+    onChangeAccount: () -> Unit,
+) {
+    ProfileSurface {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                ThemeStoreAuthorAvatar(profile.avatarUriString)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = profile.displayName.ifBlank { login },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = "@$login",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            if (profile.bio.isNotBlank()) {
+                Text(profile.bio, style = MaterialTheme.typography.bodyMedium)
+            }
+            if (errorMessage != null) ProfileError(errorMessage)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onRefresh, enabled = !busy, modifier = Modifier.height(48.dp)) {
+                    Text(stringResource(if (busy) R.string.theme_store_github_syncing
+                        else R.string.theme_store_github_refresh))
+                }
+                OutlinedButton(
+                    onClick = onChangeAccount,
+                    enabled = !busy,
+                    modifier = Modifier.height(48.dp),
+                ) { Text(stringResource(R.string.theme_store_github_change_account)) }
+            }
+            Text(
+                text = stringResource(R.string.theme_store_github_public_notice),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileError(message: String) {
+    Text(
+        text = stringResource(R.string.theme_store_github_sync_failed) + ": " + message,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.error,
+    )
+}
+
+@Composable
+private fun StoreDestination(
+    title: String,
+    summary: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit,
 ) {
-    ThemeStoreProfileSurface {
+    ProfileSurface {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = enabled, onClick = onClick)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(
-                modifier = Modifier
-                    .size(42.dp)
+                modifier = Modifier.size(42.dp)
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.VerifiedUser,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
             Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = stringResource(R.string.cloud_theme_creator_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = themeStoreProfileTextColor(),
-                )
-                Text(
-                    text = stringResource(R.string.cloud_theme_creator_entry_summary),
+                    summary,
                     style = MaterialTheme.typography.bodySmall,
-                    color = themeStoreProfileMutedColor(),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = null,
-                tint = themeStoreProfileMutedColor(),
-            )
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
         }
     }
 }
 
 @Composable
-private fun ThemeStoreProfileSummary(
-    profile: ThemeAuthorProfile,
-    onEdit: () -> Unit,
-) {
-    ThemeStoreProfileSurface {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                ThemeStoreAuthorAvatar(
-                    uriString = profile.avatarUriString,
-                    size = 56,
-                )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
-                ) {
-                    Text(
-                        text = profile.displayName
-                            .takeIf(String::isNotBlank)
-                            ?: profile.realName.takeIf(String::isNotBlank)
-                            ?: stringResource(R.string.theme_store_profile_unnamed),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = themeStoreProfileTextColor(),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    profile.realName
-                        .takeIf { it.isNotBlank() && it != profile.displayName }
-                        ?.let { name ->
-                            Text(
-                                text = name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = themeStoreProfileMutedColor(),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    if (profile.gender != ThemeAuthorGender.Unspecified) {
-                        Text(
-                            text = themeAuthorGenderLabel(profile.gender),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Rounded.Edit, stringResource(R.string.theme_store_profile_edit))
-                }
-            }
-            Text(
-                text = profile.bio.takeIf(String::isNotBlank)
-                    ?: stringResource(R.string.theme_store_profile_bio_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (profile.bio.isBlank()) {
-                    themeStoreProfileMutedColor()
-                } else {
-                    themeStoreProfileTextColor()
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun ThemeStoreProfileEditor(
-    busy: Boolean,
-    displayName: String,
-    realName: String,
-    gender: ThemeAuthorGender,
-    bio: String,
-    avatarUriString: String?,
-    onDisplayNameChange: (String) -> Unit,
-    onRealNameChange: (String) -> Unit,
-    onGenderChange: (ThemeAuthorGender) -> Unit,
-    onBioChange: (String) -> Unit,
-    onPickAvatar: () -> Unit,
-    onRemoveAvatar: () -> Unit,
-    onSave: () -> Unit,
-    onCancel: () -> Unit,
-) {
-    ThemeStoreProfileSurface {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                ThemeStoreAuthorAvatar(uriString = avatarUriString, size = 72)
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Button(enabled = !busy, onClick = onPickAvatar) {
-                        Icon(Icons.Rounded.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.size(6.dp))
-                        Text(stringResource(R.string.theme_store_profile_choose_avatar))
-                    }
-                    if (!avatarUriString.isNullOrBlank()) {
-                        TextButton(enabled = !busy, onClick = onRemoveAvatar) {
-                            Icon(
-                                Icons.Rounded.DeleteOutline,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(modifier = Modifier.size(6.dp))
-                            Text(stringResource(R.string.theme_store_profile_remove_avatar))
-                        }
-                    }
-                }
-            }
-            OutlinedTextField(
-                value = displayName,
-                onValueChange = onDisplayNameChange,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !busy,
-                singleLine = true,
-                label = { Text(stringResource(R.string.theme_store_profile_display_name_label)) },
-                supportingText = {
-                    Text(stringResource(R.string.theme_store_profile_display_name_hint))
-                },
-            )
-            OutlinedTextField(
-                value = realName,
-                onValueChange = onRealNameChange,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !busy,
-                singleLine = true,
-                label = { Text(stringResource(R.string.theme_store_profile_real_name_label)) },
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = stringResource(R.string.theme_store_profile_gender_label),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = themeStoreProfileTextColor(),
-                )
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    ThemeAuthorGender.entries.forEach { option ->
-                        FilterChip(
-                            selected = gender == option,
-                            enabled = !busy,
-                            onClick = { onGenderChange(option) },
-                            label = { Text(themeAuthorGenderLabel(option)) },
-                        )
-                    }
-                }
-            }
-            OutlinedTextField(
-                value = bio,
-                onValueChange = onBioChange,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !busy,
-                minLines = 3,
-                maxLines = 4,
-                label = { Text(stringResource(R.string.theme_store_profile_bio_label)) },
-                supportingText = {
-                    Text(stringResource(R.string.theme_store_profile_bio_count, bio.length, 160))
-                },
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    enabled = !busy,
-                    onClick = onCancel,
-                ) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-                Button(
-                    modifier = Modifier.weight(1f),
-                    enabled = !busy,
-                    onClick = onSave,
-                ) {
-                    Icon(Icons.Rounded.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.size(6.dp))
-                    Text(stringResource(R.string.theme_store_profile_save))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ThemeStoreLibraryDestination(
-    savedThemeCount: Int,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    ThemeStoreProfileSurface {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = enabled, onClick = onClick)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.13f), CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Palette,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.theme_store_my_library_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = themeStoreProfileTextColor(),
-                )
-                Text(
-                    text = stringResource(R.string.theme_store_my_count, savedThemeCount),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = themeStoreProfileMutedColor(),
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = null,
-                tint = themeStoreProfileMutedColor(),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ThemeStoreAuthorAvatar(uriString: String?, size: Int) {
+private fun ThemeStoreAuthorAvatar(uriString: String?) {
     val bitmap = rememberCustomImageBitmap(
         uriString = uriString,
         maxSide = 512,
         crop = FULL_CUSTOM_WALLPAPER_CROP,
     )
     Box(
-        modifier = Modifier
-            .size(size.dp)
-            .clip(CircleShape)
+        modifier = Modifier.size(60.dp).clip(CircleShape)
             .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
@@ -624,28 +413,21 @@ private fun ThemeStoreAuthorAvatar(uriString: String?, size: Int) {
             )
         } else {
             Icon(
-                imageVector = Icons.Rounded.Person,
+                Icons.Rounded.Person,
                 contentDescription = null,
-                modifier = Modifier.size((size * 0.46f).dp),
+                modifier = Modifier.size(30.dp),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
     }
 }
 
-
 @Composable
-private fun ThemeStoreProfileSurface(content: @Composable () -> Unit) {
-    androidx.compose.material3.Surface(modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface, content = content)
-}
-
-@Composable
-private fun themeStoreProfileTextColor(): Color {
-    return MaterialTheme.colorScheme.onSurface
-}
-
-@Composable
-private fun themeStoreProfileMutedColor(): Color {
-    return MaterialTheme.colorScheme.onSurfaceVariant
+private fun ProfileSurface(content: @Composable () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+        content = content,
+    )
 }

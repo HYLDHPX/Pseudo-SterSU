@@ -237,22 +237,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCloudStarTrack(
         cornerRadius = CornerRadius(corner, corner),
     )
 
-    val inset = 3.dp.toPx()
-    val radius = size.height / 2f - inset
-    val knobCenter = Offset(
-        x = inset + radius + (size.width - inset * 2f - radius * 2f) * nightProgress,
-        y = size.height / 2f,
-    )
     val dayAlpha = (1f - nightProgress).coerceIn(0f, 1f) * alpha
     val nightAlpha = nightProgress.coerceIn(0f, 1f) * alpha
-
-    repeat(3) { index ->
-        drawCircle(
-            color = Color.White.copy(alpha = dayAlpha * (0.10f - index * 0.02f)),
-            radius = radius * (1.25f + index * 0.34f),
-            center = knobCenter,
-        )
-    }
 
     val cloudDrift = sin(ambientMotion * TWO_PI) * 2.dp.toPx()
     drawCloudLayer(

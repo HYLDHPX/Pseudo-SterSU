@@ -118,7 +118,6 @@ import me.weishu.kernelsu.ui.theme.immersiveSurfaceColor
 import me.weishu.kernelsu.ui.util.INTERFACE_STYLE_RESULT_KEY
 import me.weishu.kernelsu.ui.util.ManagerPlugin
 import me.weishu.kernelsu.ui.viewmodel.SettingsViewModel
-import me.weishu.kernelsu.ui.webmanager.WebManagerService
 
 @Composable
 fun SettingsCategoryScreen(routeValue: String) {
@@ -236,20 +235,6 @@ fun SettingsCategoryScreen(routeValue: String) {
                 uiState = uiState,
                 onOpen = navigator::push,
                 onSetGraphicsRendererEnabled = viewModel::setGraphicsRendererFeatureEnabled,
-                onSetWebManagerAutoStart = viewModel::setWebManagerAutoStart,
-                onOpenWebManager = {
-                    WebManagerService.openInBrowser(context).onFailure { error ->
-                        Toast.makeText(
-                            context,
-                            resources.getString(R.string.web_manager_open_failed, error.message ?: "unknown error"),
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
-                },
-                onOpenStealthModeDialog = { enableAfterSave ->
-                    stealthModeDialogEnablesMode = enableAfterSave
-                    showStealthModeDialog = true
-                },
             )
             SettingsCategory.AppAndMaintenance -> AppMaintenanceSettingsContent(
                 uiState = uiState,
@@ -260,6 +245,14 @@ fun SettingsCategoryScreen(routeValue: String) {
                 onSendLog = { showSendLogDialog = true },
                 onUninstall = { showUninstallDialog = true },
                 onOpen = navigator::push,
+                onOpenStealthModeDialog = { enableAfterSave ->
+                    if (enableAfterSave) {
+                        navigator.push(Route.StealthRecoveryCheck)
+                    } else {
+                        stealthModeDialogEnablesMode = false
+                        showStealthModeDialog = true
+                    }
+                },
             )
         }
     }
@@ -676,9 +669,6 @@ private fun PluginSettingsContent(
     uiState: SettingsUiState,
     onOpen: (Route) -> Unit,
     onSetGraphicsRendererEnabled: (Boolean) -> Unit,
-    onSetWebManagerAutoStart: (Boolean) -> Unit,
-    onOpenWebManager: () -> Unit,
-    onOpenStealthModeDialog: (Boolean) -> Unit,
 ) {
     val entries = SettingsCatalog.entriesFor(SettingsCategory.Plugins, uiState)
         .filter { it.plugin != null }
@@ -710,36 +700,6 @@ private fun PluginSettingsContent(
                         icon = Icons.Rounded.Tune,
                         checked = uiState.graphicsRendererFeatureEnabled,
                         onCheckedChange = onSetGraphicsRendererEnabled,
-                    )
-                    "web_manager_auto_start" -> SettingsSwitchRow(
-                        title = title,
-                        summary = summary,
-                        icon = Icons.Rounded.Language,
-                        checked = uiState.webManagerAutoStart,
-                        onCheckedChange = onSetWebManagerAutoStart,
-                    )
-                    "web_manager_open" -> SettingsActionRow(
-                        title = title,
-                        summary = summary,
-                        icon = Icons.Rounded.Language,
-                        onClick = onOpenWebManager,
-                    )
-                    "stealth_mode" -> SettingsSwitchRow(
-                        title = title,
-                        summary = summary,
-                        icon = Icons.Rounded.Security,
-                        enabled = !uiState.stealthModeBusy && !uiState.stealthModeEnabled,
-                        checked = uiState.stealthModeEnabled,
-                        onCheckedChange = { enabled ->
-                            if (enabled) onOpenStealthModeDialog(true)
-                        },
-                    )
-                    "stealth_mode_code" -> SettingsActionRow(
-                        title = title,
-                        summary = uiState.stealthModeCode,
-                        icon = Icons.Rounded.Visibility,
-                        enabled = !uiState.stealthModeBusy && !uiState.stealthModeEnabled,
-                        onClick = { onOpenStealthModeDialog(false) },
                     )
                     else -> {
                         val destination = when (entry.plugin) {
@@ -779,6 +739,7 @@ private fun AppMaintenanceSettingsContent(
     onSendLog: () -> Unit,
     onUninstall: () -> Unit,
     onOpen: (Route) -> Unit,
+    onOpenStealthModeDialog: (Boolean) -> Unit,
 ) {
     SettingsGroup(stringResource(R.string.settings_group_general)) {
         SettingsActionRow(
@@ -786,6 +747,24 @@ private fun AppMaintenanceSettingsContent(
             summary = stringResource(R.string.settings_language_summary),
             icon = Icons.Rounded.Language,
             onClick = { onOpen(Route.LanguageSettings) },
+        )
+    }
+    SettingsGroup(stringResource(R.string.settings_group_stealth_access)) {
+        SettingsSwitchRow(
+            title = stringResource(R.string.stealth_mode_title),
+            summary = stringResource(R.string.stealth_mode_summary),
+            icon = Icons.Rounded.Security,
+            enabled = !uiState.stealthModeBusy && !uiState.stealthModeEnabled,
+            checked = uiState.stealthModeEnabled,
+            onCheckedChange = { if (it) onOpenStealthModeDialog(true) },
+        )
+        SettingsDivider()
+        SettingsActionRow(
+            title = stringResource(R.string.stealth_mode_code_title),
+            summary = uiState.stealthModeCode,
+            icon = Icons.Rounded.Visibility,
+            enabled = !uiState.stealthModeBusy && !uiState.stealthModeEnabled,
+            onClick = { onOpenStealthModeDialog(false) },
         )
     }
     SettingsGroup(stringResource(R.string.settings_group_updates_warnings)) {

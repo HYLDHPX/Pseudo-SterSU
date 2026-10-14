@@ -80,6 +80,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -404,6 +406,26 @@ private fun SidebarWidgetControls(
             SettingsSection(
                 title = stringResource(R.string.sidebar_navigation_layout_title),
             ) {
+                val iconOnlyTitle = stringResource(R.string.sidebar_navigation_icon_only_title)
+                Row(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(iconOnlyTitle, style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            stringResource(R.string.sidebar_navigation_icon_only_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = config.iconOnlyNavigation,
+                        onCheckedChange = { onUpdate(config.copy(iconOnlyNavigation = it)) },
+                        modifier = Modifier.semantics { contentDescription = iconOnlyTitle },
+                    )
+                }
                 Text(stringResource(R.string.sidebar_widget_side_title), style = MaterialTheme.typography.labelLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SidebarSide.entries.forEach { side ->
@@ -636,6 +658,7 @@ private fun SidebarWidgetPreviewPanes(
                         SidebarRailItem(
                             selected = destination == MainDestination.Home,
                             label = customIcons.labelFor(destination, stringResource(destination.label)),
+                            iconOnly = config.iconOnlyNavigation,
                         ) {
                             NavigationDestinationIcon(
                                 destination = destination,

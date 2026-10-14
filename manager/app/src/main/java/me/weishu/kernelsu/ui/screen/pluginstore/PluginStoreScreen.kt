@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -15,11 +14,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -75,13 +72,10 @@ import me.weishu.kernelsu.ui.component.store.StoreEmptyState
 import androidx.compose.material.icons.rounded.Search
 import me.weishu.kernelsu.stealth.StealthModeStore
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
-import me.weishu.kernelsu.ui.navigation3.Route
-import me.weishu.kernelsu.ui.screen.themestore.ThemeStoreNavigationBar
-import me.weishu.kernelsu.ui.screen.themestore.ThemeStoreNavigationRail
-import me.weishu.kernelsu.ui.screen.themestore.ThemeStorePage
 import me.weishu.kernelsu.ui.util.InstalledManagerPlugin
 import me.weishu.kernelsu.ui.util.InstalledKsudStatus
 import me.weishu.kernelsu.ui.util.ManagerPluginCatalogRepository
+import me.weishu.kernelsu.ui.util.ManagerPlugin
 import me.weishu.kernelsu.ui.util.ManagerPluginCompatibility
 import me.weishu.kernelsu.ui.util.ManagerPluginCompatibilityIssue
 import me.weishu.kernelsu.ui.util.ManagerPluginInstaller
@@ -92,7 +86,7 @@ import me.weishu.kernelsu.ui.util.PluginCatalogSource
 import me.weishu.kernelsu.ui.util.PluginDownloadProgress
 import me.weishu.kernelsu.ui.util.PluginSlot
 import me.weishu.kernelsu.ui.util.checkManagerPluginCompatibility
-import me.weishu.kernelsu.ui.util.disableNativeWebManagerAndVerify
+import me.weishu.kernelsu.ui.util.execKsud
 import me.weishu.kernelsu.ui.util.getInstalledKsudStatus
 import me.weishu.kernelsu.ui.util.hasPluginUpdate
 import me.weishu.kernelsu.ui.util.removeManagerPlugin
@@ -100,8 +94,6 @@ import me.weishu.kernelsu.ui.util.readHiddenPathConfig
 import me.weishu.kernelsu.ui.util.setHiddenPathAutoLoad
 import me.weishu.kernelsu.ui.util.stopPathmaskPluginForRemoval
 import me.weishu.kernelsu.ui.util.unloadHiddenPathKernelPaths
-import me.weishu.kernelsu.ui.webmanager.WebManagerPreferences
-import me.weishu.kernelsu.ui.webmanager.WebManagerServer
 
 @Composable
 fun PluginStoreScreen() {
@@ -219,18 +211,7 @@ fun PluginStoreScreen() {
                     removeManagerPlugin(
                         pluginId = plugin.id,
                         stealthEnabled = StealthModeStore.isEnabled(context),
-                        stopRemoteManagement = {
-                            if (!disableNativeWebManagerAndVerify()) return@removeManagerPlugin false
-                            WebManagerPreferences.setAutoStartEnabled(context, false)
-                            context.stopService(
-                                android.content.Intent(
-                                    context,
-                                    me.weishu.kernelsu.ui.webmanager.WebManagerService::class.java,
-                                ),
-                            )
-                            WebManagerServer.stop()
-                            true
-                        },
+                        stopRemoteManagement = { execKsud("web-manager disable", newShell = true) },
                         stopPathmask = {
                             stopPathmaskPluginForRemoval(
                                 readStatus = ::readHiddenPathConfig,
@@ -277,26 +258,19 @@ fun PluginStoreScreen() {
         onPauseOrDispose { }
     }
 
-    val onSelectedPage: (ThemeStorePage) -> Unit = { destination ->
-        when (destination) {
-            ThemeStorePage.Styles -> navigator.replace(Route.StoreInterfaceStyles)
-            ThemeStorePage.Overview -> navigator.replace(Route.ThemeStore)
-            ThemeStorePage.Customize -> navigator.replace(Route.ThemeStoreCustomize)
-            ThemeStorePage.Plugins -> Unit
-            ThemeStorePage.My -> navigator.replace(Route.ThemeStoreTransfer)
-        }
-    }
-
     val details = (catalog as? ManagerPluginCatalogSnapshotState.Ready)
         ?.snapshot
         ?.catalog
         ?.plugins
-        ?.firstOrNull { it.id == detailsId }
+        ?.firstOrNull { it.id == detailsId && ManagerPlugin.fromId(it.id)?.published == true }
     BackHandler(enabled = detailsId != null) { detailsId = null }
 
     val visiblePlugins = remember(catalog, installed, query, selectedFilter) {
         val normalized = query.trim().lowercase()
         (catalog as? ManagerPluginCatalogSnapshotState.Ready)?.snapshot?.catalog?.plugins.orEmpty()
+            .filter { plugin ->
+                ManagerPlugin.fromId(plugin.id)?.published == true
+            }
             .filter { plugin ->
                 val local = installed.firstOrNull { it.plugin.id == plugin.id }
                 (normalized.isBlank() || listOf(plugin.name, plugin.summary, plugin.description)
@@ -307,101 +281,90 @@ fun PluginStoreScreen() {
                 }
             }
     }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val useNavigationRail = maxWidth >= 720.dp
-        StoreScaffold(
-            title = details?.name ?: stringResource(R.string.store_title),
-            onBack = { if (detailsId != null) detailsId = null else navigator.pop() },
-            actions = {
-                if (detailsId == null) IconButton(
-                    onClick = { refresh(true) }, enabled = busyId == null && !refreshing,
-                ) { Icon(Icons.Rounded.Refresh, stringResource(R.string.plugin_store_refresh)) }
-            },
-            bottomBar = {
-                if (!useNavigationRail && detailsId == null) ThemeStoreNavigationBar(
-                    ThemeStorePage.Plugins, onSelectedPage, Modifier.navigationBarsPadding())
-            },
-        ) { padding ->
-            Row(Modifier.fillMaxSize().padding(padding)) {
-                if (useNavigationRail && detailsId == null) ThemeStoreNavigationRail(
-                    ThemeStorePage.Plugins, onSelectedPage, Modifier.navigationBarsPadding())
-                Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
-                    val selectedDetails = details
-                    if (selectedDetails != null) {
-                        val local = installed.firstOrNull { it.plugin.id == selectedDetails.id }
-                        PluginDetailContent(
-                            plugin = selectedDetails, installed = local,
-                            updateAvailable = hasPluginUpdate(local, selectedDetails),
-                            compatibility = if (pluginCompatibilityResolved) checkManagerPluginCompatibility(
-                                selectedDetails, BuildConfig.VERSION_CODE, ksudStatus ?: InstalledKsudStatus()) else null,
-                            compatibilityResolved = pluginCompatibilityResolved,
-                            busy = busyId != null,
-                            progress = if (busyId == selectedDetails.id) progress else null,
-                            modifier = Modifier.widthIn(max = 840.dp).fillMaxSize(),
-                            onInstall = { install(selectedDetails) },
-                            onRemove = { confirmRemoval = selectedDetails },
-                        )
-                    } else if (detailsId != null) {
-                        if (catalog is ManagerPluginCatalogSnapshotState.Loading) {
-                            me.weishu.kernelsu.ui.component.store.StoreLoadingItems()
-                        } else {
-                            StoreEmptyState(Icons.Rounded.Extension,
-                                stringResource(R.string.store_redesign_unavailable),
-                                stringResource(R.string.store_redesign_unavailable_summary),
-                                stringResource(R.string.back), { detailsId = null })
+    StoreScaffold(
+        title = details?.name ?: stringResource(R.string.plugin_store_title),
+        onBack = { if (detailsId != null) detailsId = null else navigator.pop() },
+        actions = {
+            if (detailsId == null) IconButton(
+                onClick = { refresh(true) }, enabled = busyId == null && !refreshing,
+            ) { Icon(Icons.Rounded.Refresh, stringResource(R.string.plugin_store_refresh)) }
+        },
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
+            val selectedDetails = details
+            if (selectedDetails != null) {
+                val local = installed.firstOrNull { it.plugin.id == selectedDetails.id }
+                PluginDetailContent(
+                    plugin = selectedDetails, installed = local,
+                    updateAvailable = hasPluginUpdate(local, selectedDetails),
+                    compatibility = if (pluginCompatibilityResolved) checkManagerPluginCompatibility(
+                        selectedDetails, BuildConfig.VERSION_CODE, ksudStatus ?: InstalledKsudStatus()) else null,
+                    compatibilityResolved = pluginCompatibilityResolved,
+                    busy = busyId != null,
+                    progress = if (busyId == selectedDetails.id) progress else null,
+                    modifier = Modifier.widthIn(max = 840.dp).fillMaxSize(),
+                    onInstall = { install(selectedDetails) },
+                    onRemove = { confirmRemoval = selectedDetails },
+                )
+            } else if (detailsId != null) {
+                if (catalog is ManagerPluginCatalogSnapshotState.Loading) {
+                    me.weishu.kernelsu.ui.component.store.StoreLoadingItems()
+                } else {
+                    StoreEmptyState(Icons.Rounded.Extension,
+                        stringResource(R.string.store_redesign_unavailable),
+                        stringResource(R.string.store_redesign_unavailable_summary),
+                        stringResource(R.string.back), { detailsId = null })
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.widthIn(max = 840.dp).fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    item(key = "heading") {
+                        StoreSectionHeading(stringResource(R.string.store_tab_plugins),
+                            stringResource(R.string.store_redesign_plugin_intro))
+                        Text(stringResource(R.string.plugin_store_security_notice),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    item(key = "search") {
+                        StoreSearchField(query, { query = it }, stringResource(R.string.store_redesign_plugin_search))
+                    }
+                    item(key = "filters") {
+                        StoreFilters(listOf(stringResource(R.string.cloud_theme_category_all),
+                            stringResource(R.string.store_redesign_installed), stringResource(R.string.store_redesign_updates)),
+                            selectedFilter, { selectedFilter = it })
+                    }
+                    if (refreshing) item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
+                    when (val state = catalog) {
+                        ManagerPluginCatalogSnapshotState.Loading -> item { PluginStoreLoadingState() }
+                        is ManagerPluginCatalogSnapshotState.Error -> item {
+                            PluginStoreErrorState(state.message) { refresh(true) }
                         }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.widthIn(max = 840.dp).fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                        ) {
-                            item(key = "heading") {
-                                StoreSectionHeading(stringResource(R.string.store_tab_plugins),
-                                    stringResource(R.string.store_redesign_plugin_intro))
-                                Text(stringResource(R.string.plugin_store_security_notice),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        is ManagerPluginCatalogSnapshotState.Ready -> {
+                            state.snapshot.errorMessage?.let { message -> item {
+                                PluginStoreStatusBand(message, isError = true)
+                            } }
+                            item { StoreSectionHeading(stringResource(R.string.store_redesign_results, visiblePlugins.size)) }
+                            if (state.snapshot.catalog.plugins.isEmpty()) item { PluginStoreEmptyState() }
+                            else if (visiblePlugins.isEmpty()) item {
+                                StoreEmptyState(Icons.Rounded.Search, stringResource(R.string.store_redesign_no_results),
+                                    stringResource(R.string.store_redesign_no_results_summary),
+                                    stringResource(R.string.store_redesign_clear_filters), { query = ""; selectedFilter = 0 })
                             }
-                            item(key = "search") {
-                                StoreSearchField(query, { query = it }, stringResource(R.string.store_redesign_plugin_search))
+                            items(visiblePlugins, key = { it.id }) { plugin ->
+                                val local = installed.firstOrNull { it.plugin.id == plugin.id }
+                                PluginCard(plugin, local, hasPluginUpdate(local, plugin), busyId != null,
+                                    if (busyId == plugin.id) progress else null,
+                                    if (pluginCompatibilityResolved) checkManagerPluginCompatibility(
+                                        plugin, BuildConfig.VERSION_CODE, ksudStatus ?: InstalledKsudStatus()) else null,
+                                    pluginCompatibilityResolved,
+                                    onDetails = { detailsId = plugin.id }, onInstall = { install(plugin) })
                             }
-                            item(key = "filters") {
-                                StoreFilters(listOf(stringResource(R.string.cloud_theme_category_all),
-                                    stringResource(R.string.store_redesign_installed), stringResource(R.string.store_redesign_updates)),
-                                    selectedFilter, { selectedFilter = it })
-                            }
-                            if (refreshing) item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
-                            when (val state = catalog) {
-                                ManagerPluginCatalogSnapshotState.Loading -> item { PluginStoreLoadingState() }
-                                is ManagerPluginCatalogSnapshotState.Error -> item {
-                                    PluginStoreErrorState(state.message) { refresh(true) }
-                                }
-                                is ManagerPluginCatalogSnapshotState.Ready -> {
-                                    state.snapshot.errorMessage?.let { message -> item {
-                                        PluginStoreStatusBand(message, isError = true)
-                                    } }
-                                    item { StoreSectionHeading(stringResource(R.string.store_redesign_results, visiblePlugins.size)) }
-                                    if (state.snapshot.catalog.plugins.isEmpty()) item { PluginStoreEmptyState() }
-                                    else if (visiblePlugins.isEmpty()) item {
-                                        StoreEmptyState(Icons.Rounded.Search, stringResource(R.string.store_redesign_no_results),
-                                            stringResource(R.string.store_redesign_no_results_summary),
-                                            stringResource(R.string.store_redesign_clear_filters), { query = ""; selectedFilter = 0 })
-                                    }
-                                    items(visiblePlugins, key = { it.id }) { plugin ->
-                                        val local = installed.firstOrNull { it.plugin.id == plugin.id }
-                                        PluginCard(plugin, local, hasPluginUpdate(local, plugin), busyId != null,
-                                            if (busyId == plugin.id) progress else null,
-                                            if (pluginCompatibilityResolved) checkManagerPluginCompatibility(
-                                                plugin, BuildConfig.VERSION_CODE, ksudStatus ?: InstalledKsudStatus()) else null,
-                                            pluginCompatibilityResolved,
-                                            onDetails = { detailsId = plugin.id }, onInstall = { install(plugin) })
-                                    }
-                                }
-                            }
-                            item { Spacer(Modifier.height(8.dp)) }
                         }
                     }
+                    item { Spacer(Modifier.height(8.dp)) }
                 }
             }
         }

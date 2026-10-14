@@ -38,6 +38,7 @@ enum class ManagerPlugin(
     RemoteManagementSuite(
         "remote-management-suite",
         setOf(PluginSlot.MaintenanceWebManager, PluginSlot.MaintenanceStealthMode),
+        published = false,
     ),
     AppIdManager("app-id-manager", setOf(PluginSlot.SuperuserAppIdManager)),
     AppFreeze("app-freeze", setOf(PluginSlot.SuperuserAppFreeze)),
@@ -412,6 +413,9 @@ class ManagerPluginInstaller(
         onProgress: (PluginDownloadProgress) -> Unit = {},
     ): InstalledManagerPlugin = withContext(Dispatchers.IO) {
         validatePlugin(plugin, requireDownload = true)
+        require(ManagerPlugin.fromId(plugin.id)?.published == true) {
+            "Plugin is no longer available"
+        }
         require(plugin.minManagerVersionCode <= BuildConfig.VERSION_CODE) {
             "Plugin requires a newer Manager"
         }
@@ -571,6 +575,7 @@ internal fun resolveCompatiblePluginIds(
     ksudStatus: InstalledKsudStatus,
 ): Set<String> = installed
     .asSequence()
+    .filter { ManagerPlugin.fromId(it.plugin.id)?.published != false }
     .filter { it.isCompatibleWith(managerVersionCode, ksudStatus) }
     .mapTo(linkedSetOf()) { it.plugin.id }
 

@@ -155,7 +155,6 @@ enum class ThemeStorePage(@StringRes val titleRes: Int) {
 internal val themeStoreNavigationPages = listOf(
     ThemeStorePage.Overview,
     ThemeStorePage.Styles,
-    ThemeStorePage.Plugins,
     ThemeStorePage.Customize,
     ThemeStorePage.My,
 )
@@ -209,7 +208,7 @@ fun ThemeStoreScreen(
     }
     val selectedPage = ThemeStorePage.entries.getOrElse(selectedPageIndex) {
         ThemeStorePage.Overview
-    }
+    }.takeUnless { it == ThemeStorePage.Plugins } ?: ThemeStorePage.Overview
 
     fun refresh() {
         summary = readThemeStoreSummary(context)
@@ -333,12 +332,8 @@ fun ThemeStoreScreen(
         }
     }
     val onSelectedPage: (ThemeStorePage) -> Unit = { selected ->
-        if (selected == ThemeStorePage.Plugins) {
-            navigator.replace(Route.PluginStore)
-        } else {
-            if (selected == ThemeStorePage.My) refresh()
-            selectedPageIndex = selected.ordinal
-        }
+        if (selected == ThemeStorePage.My) refresh()
+        selectedPageIndex = selected.ordinal
     }
     val content: @Composable () -> Unit = {
         pageStateHolder.SaveableStateProvider(selectedPage.name) {
@@ -378,20 +373,7 @@ fun ThemeStoreScreen(
                             .fillMaxWidth(),
                     )
 
-                    ThemeStorePage.Plugins -> ThemeStorePageColumn(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .widthIn(max = 840.dp)
-                            .fillMaxWidth(),
-                    ) {
-                        ThemeStoreDestinationItem(
-                            title = stringResource(R.string.store_tab_plugins),
-                            summary = stringResource(R.string.store_summary),
-                            status = stringResource(R.string.store_tab_plugins),
-                            icon = Icons.Rounded.Extension,
-                            onClick = { navigator.replace(Route.PluginStore) },
-                        )
-                    }
+                    ThemeStorePage.Plugins -> Unit // Retained only for saved page ordinals.
 
                     ThemeStorePage.My -> ThemeStoreLibraryScreen(
                         embedded = true,

@@ -140,7 +140,7 @@ private fun SidebarStatusHero(state: HomeUiState, actions: HomeActions, colors: 
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(R.string.home_title),
+                    text = state.customHomeTitle.ifBlank { stringResource(R.string.home_title) },
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,

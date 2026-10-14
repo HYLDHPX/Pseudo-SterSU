@@ -12,7 +12,6 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <queries>
         <provider android:authorities="weather" />
@@ -170,23 +169,6 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <service
-            android:name=".ui.webmanager.WebManagerService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="local web management server" />
-        </service>
-
-        <receiver
-            android:name=".ui.webmanager.WebManagerBootReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
         <receiver
             android:name=".magica.BootCompletedReceiver"
             android:directBootAware="true"
@@ -217,14 +199,6 @@
             <intent-filter>
                 <action android:name="me.weishu.kernelsu.action.STEALTH_MODE_DISABLED" />
                 <action android:name="me.weishu.kernelsu.action.STEALTH_MODE_CHANGED" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".ui.webmanager.ManagerAppSettingsSyncReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="me.weishu.kernelsu.action.MANAGER_SETTINGS_CHANGED" />
             </intent-filter>
         </receiver>
 

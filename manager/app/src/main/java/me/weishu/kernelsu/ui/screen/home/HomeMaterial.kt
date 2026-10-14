@@ -46,6 +46,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -95,6 +96,7 @@ private fun HomePagerMaterialContent(
     ExpressiveScaffold(
         topBar = {
             TopBar(
+                title = state.customHomeTitle.ifBlank { stringResource(R.string.app_name) },
                 showSusfs = state.showSusfsPathConfig,
                 onSusfsClick = actions.onSusfsPathClick,
                 scrollBehavior = scrollBehavior,
@@ -180,12 +182,13 @@ private fun HomePagerMaterialContent(
 
 @Composable
 private fun TopBar(
+    title: String,
     showSusfs: Boolean,
     onSusfsClick: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
     ExpressiveTopAppBar(
-        title = { Text(stringResource(R.string.app_name)) },
+        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         actions = {
             if (showSusfs) {
                 IconButton(onClick = onSusfsClick) {

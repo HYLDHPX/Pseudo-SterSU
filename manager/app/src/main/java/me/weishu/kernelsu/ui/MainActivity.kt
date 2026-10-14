@@ -67,6 +67,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -76,6 +77,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -222,6 +224,7 @@ import me.weishu.kernelsu.ui.screen.settings.RescueProtectionScreen
 import me.weishu.kernelsu.ui.screen.settings.HomeCardWallpaperScreen
 import me.weishu.kernelsu.ui.screen.settings.InstallCardWallpaperScreen
 import me.weishu.kernelsu.ui.screen.settings.LanguageSettingsScreen
+import me.weishu.kernelsu.ui.screen.settings.StealthRecoveryCheckScreen
 import me.weishu.kernelsu.ui.screen.settings.PreInstallStyleSettingsScreen
 import me.weishu.kernelsu.ui.screen.settings.SettingPager
 import me.weishu.kernelsu.ui.screen.settings.SettingsCategoryScreen
@@ -601,9 +604,11 @@ class MainActivity : ComponentActivity() {
                     )
                     val flashRoute = navigator.current() as? Route.Flash
                     var flashBackEnabled by remember(flashRoute) { mutableStateOf(false) }
+                    var sidebarNavigationBadge by remember { mutableStateOf(NavigationBadgeState()) }
                     val mainScreenEntry = @Composable {
                         MainScreen(
                             onDestinationChanged = viewModel::setSelectedMainDestination,
+                            onNavigationBadgeChanged = { sidebarNavigationBadge = it },
                             mainPagerState = mainPagerState,
                             stealthModeEnabled = uiState.stealthModeEnabled,
                         )
@@ -616,9 +621,17 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    val kpmPageActiveForNavigation = mainPagerState.kpmActive || currentRoute == Route.Kpm
+                    val sidebarStackTransitions = shouldUseSidebarStackNavigationTransitions(
+                        kpmPageActive = kpmPageActiveForNavigation,
+                        sidebarStyleActive = uiState.interfaceStyle == InterfaceStyle.SidebarWidget.value,
+                        animationsEnabled = rememberSystemAnimationsEnabled(),
+                        stealthModeEnabled = uiState.stealthModeEnabled,
+                    )
+                    val stackDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
                     val navDisplay = @Composable {
                         NavDisplay(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().clipToBounds(),
                             backStack = if (uiState.stealthModeEnabled) {
                                 stealthNavigator.backStack
                             } else {
@@ -669,6 +682,7 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.HomeCardWallpapers> { HomeCardWallpaperScreen() }
                                 entry<Route.InstallCardWallpapers> { InstallCardWallpaperScreen() }
                                 entry<Route.LanguageSettings> { LanguageSettingsScreen() }
+                                entry<Route.StealthRecoveryCheck> { StealthRecoveryCheckScreen() }
                                 entry<Route.PreInstallStyleSettings> { PreInstallStyleSettingsScreen() }
                                 entry<Route.VisualEffects> { VisualEffectsScreen() }
                                 entry<Route.SwitchStyleCreator> { SwitchStyleCreatorScreen() }
@@ -766,35 +780,42 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.Module> { mainScreenEntry() }
                                 entry<Route.Settings> { mainScreenEntry() }
                             },
-                            transitionSpec = if (shouldUseLayeredNavigationTransitions(
-                                    mainPagerState.kpmActive,
+                            transitionSpec = when {
+                                sidebarStackTransitions -> sidebarStackForwardTransition(stackDirection)
+                                shouldUseLayeredNavigationTransitions(
+                                    kpmPageActiveForNavigation,
                                     uiState.interfaceStyle == InterfaceStyle.SidebarWidget.value,
-                                )) {
-                                stableNavForwardTransition()
-                            } else {
-                                instantNavTransition()
+                                ) -> stableNavForwardTransition()
+                                else -> instantNavTransition()
                             },
-                            popTransitionSpec = if (shouldUseLayeredNavigationTransitions(
-                                    mainPagerState.kpmActive,
+                            popTransitionSpec = when {
+                                sidebarStackTransitions -> sidebarStackPopTransition(stackDirection)
+                                shouldUseLayeredNavigationTransitions(
+                                    kpmPageActiveForNavigation,
                                     uiState.interfaceStyle == InterfaceStyle.SidebarWidget.value,
-                                )) {
-                                stableNavPopTransition()
-                            } else {
-                                instantNavTransition()
+                                ) -> stableNavPopTransition()
+                                else -> instantNavTransition()
                             },
                             predictivePopTransitionSpec = { _ ->
-                                // Secondary pages and the main pager share one transparent
-                                // wallpaper layer. Interactively animating both scenes makes
-                                // their app bars and cards show through each other while the
-                                // back gesture is held. Keep the current scene stable during
-                                // the gesture and swap scenes only after the pop commits.
-                                instantNavTransitionContentTransform()
+                                if (sidebarStackTransitions) {
+                                    sidebarStackPopTransitionContentTransform(stackDirection)
+                                } else {
+                                    // Other styles can show transparent wallpaper layers through
+                                    // both scenes during an interactive back gesture.
+                                    instantNavTransitionContentTransform()
+                                }
                             },
                             transitionEffects = NavDisplayTransitionEffects(
                                 enableCornerClip = false,
                                 dimAmount = 0f,
                                 blockInputDuringTransition = true,
-                                popDirectionFollowsSwipeEdge = true,
+                                // The library's right-edge override replaces our pop spec.
+                                // Never let it animate a retained KPM WebView or a sidebar scene.
+                                popDirectionFollowsSwipeEdge = shouldAllowSwipeEdgePopOverride(
+                                    sidebarStyleActive = uiState.interfaceStyle == InterfaceStyle.SidebarWidget.value,
+                                    kpmPageActive = kpmPageActiveForNavigation,
+                                    stealthModeEnabled = uiState.stealthModeEnabled,
+                                ),
                             ),
                         )
                     }
@@ -811,7 +832,9 @@ class MainActivity : ComponentActivity() {
                             routeInitialized = true
                         } else {
                             navigationTransitionActive = true
-                            delay(NAV_TRANSITION_DURATION_MS.toLong())
+                            delay(
+                                (if (sidebarStackTransitions) SIDEBAR_STACK_DURATION_MS else NAV_TRANSITION_DURATION_MS).toLong()
+                            )
                             navigationTransitionActive = false
                         }
                     }
@@ -949,11 +972,19 @@ class MainActivity : ComponentActivity() {
                                                     },
                                                     navigator.backStack.any { (it as? Route).isStoreRoute() },
                                                 )
+                                            // Keep the rail outside NavDisplay across main, module repository,
+                                            // and settings scenes so the animated content keeps one width.
+                                            val hostedSidebarRail = shouldHostSidebarRail(
+                                                route = currentRoute,
+                                                settingsSidebarActive = settingsSidebarActive,
+                                                fullFeatured = mainPagerState.fullFeatured,
+                                                stealthModeEnabled = uiState.stealthModeEnabled,
+                                            )
                                             Scaffold(
                                                 containerColor = Color.Transparent,
                                                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                                             ) {
-                                                if (settingsSidebarActive && sidebarConfig != null) {
+                                                if (sidebarStyleActive && sidebarConfig != null) {
                                                     val railAtStart = sidebarConfig.side.isAtStart(LocalLayoutDirection.current)
                                                     val railInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
                                                         if (sidebarConfig.side == SidebarSide.Left) {
@@ -964,9 +995,13 @@ class MainActivity : ComponentActivity() {
                                                     )
                                                     val rail: @Composable () -> Unit = {
                                                         SidebarWidgetRail(
-                                                            navigationBadge = NavigationBadgeState(),
+                                                            navigationBadge = sidebarNavigationBadge,
                                                             destinations = mainDestinations(mainPagerState.kpmActive),
-                                                            selectedDestination = MainDestination.Settings,
+                                                            selectedDestination = when {
+                                                                currentRoute.hostsMainPager() -> mainPagerState.destinationForPage()
+                                                                currentRoute == Route.ModuleRepo || currentRoute is Route.ModuleRepoDetail -> MainDestination.Module
+                                                                else -> MainDestination.Settings
+                                                            },
                                                             onDestinationSelected = { destination ->
                                                                 mainPagerState.animateTo(destination)
                                                                 navigator.popUntil { (it as? Route)?.hostsMainPager() == true }
@@ -975,14 +1010,21 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                     CompositionLocalProvider(LocalMainPagerState provides mainPagerState) {
                                                         Row(modifier = Modifier.fillMaxSize()) {
-                                                            if (railAtStart) rail()
+                                                            if (hostedSidebarRail && railAtStart) rail()
                                                             Box(
                                                                 modifier = Modifier
                                                                     .weight(1f)
-                                                                    .consumeWindowInsets(railInsets)
-                                                                    .clip(SidebarPaneShape),
-                                                            ) { navDisplay() }
-                                                            if (!railAtStart) rail()
+                                                                    .then(
+                                                                        if (hostedSidebarRail) {
+                                                                            Modifier.consumeWindowInsets(railInsets).clip(SidebarPaneShape)
+                                                                        } else Modifier
+                                                                    ),
+                                                            ) {
+                                                                CompositionLocalProvider(
+                                                                    LocalSidebarRailHostedExternally provides hostedSidebarRail,
+                                                                ) { navDisplay() }
+                                                            }
+                                                            if (hostedSidebarRail && !railAtStart) rail()
                                                         }
                                                     }
                                                 } else {
@@ -1142,7 +1184,7 @@ private fun Route?.isStoreRoute(): Boolean = when (this) {
     Route.ThemeStore, Route.ThemeStoreCustomize, Route.InterfaceStyleStore,
     Route.StoreInterfaceStyles, Route.ThemeStoreAssets, Route.ThemeStoreFonts,
     Route.ThemeStoreBackgrounds, Route.ThemeStoreTransfer, Route.ThemeStoreMy,
-    Route.ThemeStoreLibrary, Route.PluginStore, is Route.CloudThemeDetail, Route.CloudThemeRanking,
+    Route.ThemeStoreLibrary, is Route.CloudThemeDetail, Route.CloudThemeRanking,
     Route.CloudThemeCreator, Route.CloudThemeCreatorSubmission, Route.CloudThemeCreatorGuide,
     -> true
     else -> false
@@ -1275,6 +1317,9 @@ private fun Modifier.customClickSound(uriString: String?, volume: Float): Modifi
 }
 
 private const val NAV_TRANSITION_DURATION_MS = 240
+private const val SIDEBAR_STACK_DURATION_MS = 280
+private const val SIDEBAR_STACK_ENTER_FADE_MS = 110
+private const val SIDEBAR_STACK_EXIT_FADE_MS = 70
 private const val NAV_TRANSITION_FADE_IN_MS = 220
 private const val NAV_TRANSITION_FADE_OUT_MS = 180
 private const val NAV_TRANSITION_ENTER_SCALE = 0.965f
@@ -1294,6 +1339,46 @@ private fun <T : Any> stableNavPopTransition(): AnimatedContentTransitionScope<S
 private fun <T : Any> instantNavTransition(): AnimatedContentTransitionScope<Scene<T>>.() -> ContentTransform = {
     instantNavTransitionContentTransform()
 }
+
+private fun <T : Any> sidebarStackForwardTransition(direction: Int): AnimatedContentTransitionScope<Scene<T>>.() -> ContentTransform = {
+    ContentTransform(
+        targetContentEnter = fadeIn(
+            animationSpec = tween(SIDEBAR_STACK_ENTER_FADE_MS),
+        ) + slideInHorizontally(
+            animationSpec = tween(SIDEBAR_STACK_DURATION_MS, easing = FastOutSlowInEasing),
+            initialOffsetX = { width -> width * direction / 4 },
+        ),
+        initialContentExit = fadeOut(
+            animationSpec = tween(SIDEBAR_STACK_EXIT_FADE_MS),
+        ) + slideOutHorizontally(
+            animationSpec = tween(SIDEBAR_STACK_DURATION_MS, easing = FastOutSlowInEasing),
+            targetOffsetX = { width -> -width * direction / 10 },
+        ),
+        targetContentZIndex = 1f,
+        sizeTransform = null,
+    )
+}
+
+private fun <T : Any> sidebarStackPopTransition(direction: Int): AnimatedContentTransitionScope<Scene<T>>.() -> ContentTransform = {
+    sidebarStackPopTransitionContentTransform(direction)
+}
+
+private fun sidebarStackPopTransitionContentTransform(direction: Int): ContentTransform = ContentTransform(
+    targetContentEnter = fadeIn(
+        animationSpec = tween(SIDEBAR_STACK_ENTER_FADE_MS),
+    ) + slideInHorizontally(
+        animationSpec = tween(SIDEBAR_STACK_DURATION_MS, easing = FastOutSlowInEasing),
+        initialOffsetX = { width -> -width * direction / 10 },
+    ),
+    initialContentExit = fadeOut(
+        animationSpec = tween(SIDEBAR_STACK_EXIT_FADE_MS),
+    ) + slideOutHorizontally(
+        animationSpec = tween(SIDEBAR_STACK_DURATION_MS, easing = FastOutSlowInEasing),
+        targetOffsetX = { width -> width * direction / 4 },
+    ),
+    targetContentZIndex = 0f,
+    sizeTransform = null,
+)
 
 private fun instantNavTransitionContentTransform(): ContentTransform {
     return ContentTransform(
@@ -1354,11 +1439,13 @@ private fun stableNavPopTransitionContentTransform(): ContentTransform {
 }
 
 val LocalMainPagerState = staticCompositionLocalOf<MainPagerState> { error("LocalMainPagerState not provided") }
+private val LocalSidebarRailHostedExternally = staticCompositionLocalOf { false }
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun MainScreen(
     onDestinationChanged: (MainDestination) -> Unit = {},
+    onNavigationBadgeChanged: (NavigationBadgeState) -> Unit = {},
     mainPagerState: MainPagerState,
     stealthModeEnabled: Boolean = false,
 ) {
@@ -1454,6 +1541,7 @@ fun MainScreen(
     } else {
         NavigationBadgeState()
     }
+    SideEffect { onNavigationBadgeChanged(navigationBadge) }
     val surfaceColor = liquidGlassBackdropColor()
     val blurBackdrop = rememberBlurBackdrop(enableBlur)
     val floatingBarBackdrop = if (enableFloatingBottomBar && enableFloatingBottomBarBlur) {
@@ -1628,7 +1716,9 @@ fun MainScreen(
                 .fillMaxSize()
                 .navigationBarVisibilityController(navigationBarVisibilityState),
         ) {
-        if (useNavigationRail) {
+        if (sidebarConfig != null && LocalSidebarRailHostedExternally.current) {
+            pagerContent(WindowInsets.systemBars.asPaddingValues().calculateBottomPadding())
+        } else if (useNavigationRail) {
             val railAtStart = sidebarConfig?.let {
                 it.side.isAtStart(layoutDirection)
             } ?: true
@@ -1779,6 +1869,28 @@ internal fun shouldUseLayeredNavigationTransitions(
     // producing a white flash and overlapping cards on return.
     return !kpmPageActive && !sidebarStyleActive
 }
+
+internal fun shouldUseSidebarStackNavigationTransitions(
+    kpmPageActive: Boolean,
+    sidebarStyleActive: Boolean,
+    animationsEnabled: Boolean,
+    stealthModeEnabled: Boolean = false,
+): Boolean = sidebarStyleActive && !kpmPageActive && animationsEnabled && !stealthModeEnabled
+
+internal fun shouldAllowSwipeEdgePopOverride(
+    sidebarStyleActive: Boolean,
+    kpmPageActive: Boolean,
+    stealthModeEnabled: Boolean,
+): Boolean = !sidebarStyleActive && !kpmPageActive && !stealthModeEnabled
+
+internal fun shouldHostSidebarRail(
+    route: Route?,
+    settingsSidebarActive: Boolean,
+    fullFeatured: Boolean,
+    stealthModeEnabled: Boolean,
+): Boolean = fullFeatured && !stealthModeEnabled && (
+    route.hostsMainPager() || route == Route.ModuleRepo || route is Route.ModuleRepoDetail || settingsSidebarActive
+)
 
 internal fun shouldReturnMainPagerBackToHome(
     selectedPage: Int,

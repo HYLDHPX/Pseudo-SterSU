@@ -141,6 +141,19 @@ class SidebarWidgetStyleTest {
     }
 
     @Test
+    fun iconOnlyModeDefaultsOffAndKeepsNavigationSettings() {
+        val original = SidebarWidgetConfig(
+            side = SidebarSide.Right,
+            navigationOrder = SIDEBAR_NAVIGATION_IDS.reversed(),
+        )
+        assertEquals(false, original.iconOnlyNavigation)
+        assertTrue(isSidebarWidgetPreference("sidebar_widget_icon_only_navigation"))
+        val enabled = original.copy(iconOnlyNavigation = true).normalized()
+        assertEquals(true, enabled.iconOnlyNavigation)
+        assertEquals(original, enabled.copy(iconOnlyNavigation = false))
+    }
+
+    @Test
     fun navigationOrderFiltersUnavailableKpmWithoutLosingOtherDestinations() {
         val normalized = normalizeSidebarNavigationOrder(
             requested = listOf(SIDEBAR_NAV_KPM, SIDEBAR_NAV_MODULE, SIDEBAR_NAV_HOME),

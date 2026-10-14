@@ -86,12 +86,10 @@ internal object SettingsCatalog {
         pluginEntry("pathmask_lkm", ManagerPlugin.PathmaskLkm, R.string.hidden_path_lkm_builtin_title, R.string.hidden_path_config_summary) {
             it.pathConfigBackend == PathConfigBackend.PathmaskLkm
         },
-        pluginEntry("web_manager_auto_start", ManagerPlugin.RemoteManagementSuite, R.string.web_manager_auto_start, R.string.web_manager_auto_start_summary),
-        pluginEntry("web_manager_open", ManagerPlugin.RemoteManagementSuite, R.string.web_manager_open, R.string.web_manager_open_summary),
-        pluginEntry("stealth_mode", ManagerPlugin.RemoteManagementSuite, R.string.stealth_mode_title, R.string.stealth_mode_summary),
-        pluginEntry("stealth_mode_code", ManagerPlugin.RemoteManagementSuite, R.string.stealth_mode_code_title, R.string.stealth_mode_code_format),
 
         entry("web_debugging", SettingsCategory.AppAndMaintenance, R.string.enable_web_debugging, R.string.enable_web_debugging_summary),
+        entry("stealth_mode", SettingsCategory.AppAndMaintenance, R.string.stealth_mode_title, R.string.stealth_mode_summary),
+        entry("stealth_mode_code", SettingsCategory.AppAndMaintenance, R.string.stealth_mode_code_title, R.string.stealth_mode_code_format),
         entry("language", SettingsCategory.AppAndMaintenance, R.string.settings_language, R.string.settings_language_summary),
         entry("module_updates", SettingsCategory.AppAndMaintenance, R.string.settings_module_check_update, R.string.settings_module_check_update_summary),
         entry("version_warning", SettingsCategory.AppAndMaintenance, R.string.settings_version_mismatch_warning, R.string.settings_version_mismatch_warning_summary),

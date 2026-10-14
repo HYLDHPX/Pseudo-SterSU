@@ -51,4 +51,40 @@ class StealthModeStoreTest {
         assertEquals("'a'\"'\"'b'", StealthModeStore.shellQuote("a'b"))
         assertEquals("'\$(id); rm -f /data/local/tmp/x'", StealthModeStore.shellQuote("\$(id); rm -f /data/local/tmp/x"))
     }
+
+    @Test
+    fun recoveryRequestSizeMatchesJsonEscapingAtBoundary() {
+        assertEquals(11, StealthModeStore.recoveryRequestBodyBytes(""))
+        assertEquals(4096, StealthModeStore.recoveryRequestBodyBytes("a".repeat(4085)))
+        assertEquals(StealthCodeValidation.Valid, StealthModeStore.validateCode("a".repeat(4085)))
+        assertEquals(StealthCodeValidation.TooLong, StealthModeStore.validateCode("a".repeat(4086)))
+        assertEquals(13, StealthModeStore.recoveryRequestBodyBytes("\\"))
+        assertEquals(17, StealthModeStore.recoveryRequestBodyBytes("\u0001"))
+        assertEquals(15, StealthModeStore.recoveryRequestBodyBytes("😀"))
+        assertEquals(StealthCodeValidation.TooLong, StealthModeStore.validateCode("\u0001".repeat(681)))
+    }
+
+    @Test
+    fun allRecoveryPreflightChecksMustPass() {
+        val ready = StealthRecoveryPreflight(
+            rootShellAvailable = true,
+            recoveryCommandAvailable = true,
+            dataDirectoryWritable = true,
+            portAvailable = true,
+            modeDisabled = true,
+        )
+        assertTrue(ready.ready)
+        assertFalse(ready.copy(rootShellAvailable = false).ready)
+        assertFalse(ready.copy(recoveryCommandAvailable = false).ready)
+        assertFalse(ready.copy(dataDirectoryWritable = false).ready)
+        assertFalse(ready.copy(portAvailable = false).ready)
+        assertFalse(ready.copy(modeDisabled = false).ready)
+    }
+
+    @Test
+    fun staleStealthPreferenceCannotHideManagerWithoutRootVerification() {
+        assertFalse(StealthModeStore.shouldHideManager(localEnabled = true, rootStateVerified = false))
+        assertFalse(StealthModeStore.shouldHideManager(localEnabled = false, rootStateVerified = true))
+        assertTrue(StealthModeStore.shouldHideManager(localEnabled = true, rootStateVerified = true))
+    }
 }

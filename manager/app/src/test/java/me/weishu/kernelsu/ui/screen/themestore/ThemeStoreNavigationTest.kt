@@ -5,7 +5,7 @@ import org.junit.Test
 
 class ThemeStoreNavigationTest {
     @Test
-    fun primaryDestinationsKeepSavedOrdinalsAndGroupStoreCatalogs() {
+    fun primaryDestinationsKeepSavedOrdinalsWithoutPluginTab() {
         assertEquals(
             listOf(
                 ThemeStorePage.Overview,
@@ -20,7 +20,6 @@ class ThemeStoreNavigationTest {
             listOf(
                 ThemeStorePage.Overview,
                 ThemeStorePage.Styles,
-                ThemeStorePage.Plugins,
                 ThemeStorePage.Customize,
                 ThemeStorePage.My,
             ),

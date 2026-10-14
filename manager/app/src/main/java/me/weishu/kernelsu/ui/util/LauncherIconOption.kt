@@ -9,7 +9,6 @@ import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import me.weishu.kernelsu.R
-import me.weishu.kernelsu.ui.webmanager.WEB_MANAGER_LAUNCHER_HIDDEN_KEY
 
 private const val LAUNCHER_ALIAS_PACKAGE = "me.weishu.kernelsu.ui"
 private const val SETTINGS_PREFERENCES = "settings"
@@ -95,12 +94,13 @@ fun reconcileLauncherIcon(context: Context): Boolean {
         LauncherIconOption.DEFAULT_VALUE,
     )
     val normalizedOption = LauncherIconOption.fromValue(storedValue)
-    if (storedValue == normalizedOption.value) return true
+    val legacyHidden = preferences.getBoolean("web_manager_launcher_hidden", false)
+    if (storedValue == normalizedOption.value && !legacyHidden) return true
 
-    val iconApplied = preferences.getBoolean(WEB_MANAGER_LAUNCHER_HIDDEN_KEY, false) ||
-        applyLauncherIcon(appContext, normalizedOption)
+    val iconApplied = applyLauncherIcon(appContext, normalizedOption)
     return iconApplied && preferences.edit()
         .putString(LauncherIconOption.PREF_KEY, normalizedOption.value)
+        .putBoolean("web_manager_launcher_hidden", false)
         .commit()
 }
 

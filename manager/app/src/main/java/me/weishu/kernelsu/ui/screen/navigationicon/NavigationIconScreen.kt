@@ -329,6 +329,12 @@ private fun NavigationIconScreenMiuix(
                         text = stringResource(R.string.settings_navigation_icons),
                         topPadding = 12.dp,
                     )
+                    MiuixText(
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
+                        text = stringResource(R.string.settings_navigation_icons_restart_hint),
+                        color = colorScheme.onBackground,
+                        fontSize = 13.sp,
+                    )
                     Card(
                         modifier = Modifier
                             .padding(top = 6.dp, bottom = 18.dp)

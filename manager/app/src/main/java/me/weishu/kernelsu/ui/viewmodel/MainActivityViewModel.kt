@@ -97,6 +97,8 @@ class MainActivityViewModel(
     private val mainPageState = MainPageState(savedStateHandle)
     @Volatile
     private var stealthModeResolved = false
+    @Volatile
+    private var stealthModeVerified = false
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == null || key in observedKeys) {
             _uiState.value = readUiStateSafely()
@@ -187,7 +189,9 @@ class MainActivityViewModel(
             customBackgroundMusicVolume = settingRepo.customBackgroundMusicVolume,
             customNavigationIcons = settingRepo.customNavigationIcons,
             deltaColorVariant = settingRepo.deltaColorVariant,
-            stealthModeEnabled = StealthModeStore.isEnabled(),
+            stealthModeEnabled = StealthModeStore.shouldHideManager(
+                StealthModeStore.isEnabled(), stealthModeVerified,
+            ),
             stealthModeResolved = stealthModeResolved,
         )
     }
@@ -281,7 +285,9 @@ class MainActivityViewModel(
             customBackgroundMusicVolume = DEFAULT_CUSTOM_BACKGROUND_MUSIC_VOLUME,
             customNavigationIcons = CustomNavigationIconSet(),
             deltaColorVariant = DeltaColorVariant.DEFAULT_VALUE,
-            stealthModeEnabled = StealthModeStore.isEnabled(),
+            stealthModeEnabled = StealthModeStore.shouldHideManager(
+                StealthModeStore.isEnabled(), stealthModeVerified,
+            ),
             stealthModeResolved = stealthModeResolved,
         )
     }
@@ -298,9 +304,8 @@ class MainActivityViewModel(
                     delay(STEALTH_ROOT_READ_RETRY_MILLIS)
                 }
             }
-            if (!resolved) {
-                Log.w(TAG, "root stealth state unavailable; using persisted local state")
-            }
+            stealthModeVerified = resolved
+            if (!resolved) Log.w(TAG, "root stealth state unavailable; showing Manager for recovery")
             stealthModeResolved = true
             _uiState.value = readUiStateSafely()
         }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.CardDefaults as MaterialCardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
@@ -18,6 +19,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
+import me.weishu.kernelsu.ui.LocalUiMode
+import me.weishu.kernelsu.ui.UiMode
 import me.weishu.kernelsu.ui.theme.LocalBlurIntensity
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.util.InterfaceStylePalette
@@ -73,7 +76,11 @@ fun liquidGlassBackdropColor(): Color {
         palette?.let { Color(it.background) }
             ?: if (isInDarkTheme()) FrostedGlassTokens.DarkBackground else FrostedGlassTokens.Background
     } else {
-        MiuixTheme.colorScheme.surface
+        if (LocalUiMode.current == UiMode.Material) {
+            MaterialTheme.colorScheme.surface
+        } else {
+            MiuixTheme.colorScheme.surface
+        }
     }
 }
 

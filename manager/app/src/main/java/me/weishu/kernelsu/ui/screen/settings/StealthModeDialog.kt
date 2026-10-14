@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.stealth.StealthModeStore
+import me.weishu.kernelsu.stealth.StealthCodeValidation
 
 @Composable
 internal fun StealthModeCodeDialog(
@@ -24,7 +25,8 @@ internal fun StealthModeCodeDialog(
 ) {
     if (!show) return
     var draft by rememberSaveable(show, currentCode) { mutableStateOf(currentCode) }
-    val valid = StealthModeStore.normalizeCode(draft) != null
+    val validation = StealthModeStore.validateCode(draft)
+    val valid = validation == StealthCodeValidation.Valid
     AlertDialog(
         onDismissRequest = { if (!busy) onDismissRequest() },
         title = {
@@ -48,8 +50,11 @@ internal fun StealthModeCodeDialog(
                     supportingText = {
                         Text(
                             stringResource(
-                                if (valid) R.string.stealth_mode_code_format
-                                else R.string.stealth_mode_code_invalid
+                                when (validation) {
+                                    StealthCodeValidation.Valid -> R.string.stealth_mode_code_format
+                                    StealthCodeValidation.Invalid -> R.string.stealth_mode_code_invalid
+                                    StealthCodeValidation.TooLong -> R.string.stealth_mode_code_too_long
+                                }
                             )
                         )
                     },

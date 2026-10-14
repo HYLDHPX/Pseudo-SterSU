@@ -111,6 +111,7 @@ data class SidebarWidgetConfig(
     val imageShape: SidebarImageShape = SidebarImageShape.Circle,
     val navigationPosition: SidebarNavigationPosition = SidebarNavigationPosition.Center,
     val navigationOrder: List<String> = SIDEBAR_NAVIGATION_IDS,
+    val iconOnlyNavigation: Boolean = false,
     val side: SidebarSide = SidebarSide.Left,
     val weatherApi: SidebarWeatherConfig = SidebarWeatherConfig(),
     // Retain the old switch for older versions; the explicit material takes precedence.
@@ -160,6 +161,7 @@ fun readSidebarWidgetConfig(context: Context): SidebarWidgetConfig {
             prefs.getString(SIDEBAR_NAVIGATION_POSITION_KEY, null)
         ),
         navigationOrder = navigationOrder.ifEmpty { SIDEBAR_NAVIGATION_IDS },
+        iconOnlyNavigation = prefs.getBoolean(SIDEBAR_ICON_ONLY_NAVIGATION_KEY, false),
         side = SidebarSide.fromValue(prefs.getString(SIDEBAR_SIDE_KEY, null)),
         weatherApi = readSidebarWeatherConfig(context),
         glassEnabled = prefs.getBoolean(SIDEBAR_GLASS_ENABLED_KEY, true),
@@ -190,6 +192,7 @@ fun writeSidebarWidgetConfig(context: Context, config: SidebarWidgetConfig) {
         putString(SIDEBAR_IMAGE_SHAPE_KEY, value.imageShape.value)
         putString(SIDEBAR_NAVIGATION_POSITION_KEY, value.navigationPosition.value)
         putString(SIDEBAR_NAVIGATION_ORDER_KEY, value.navigationOrder.joinToString(","))
+        putBoolean(SIDEBAR_ICON_ONLY_NAVIGATION_KEY, value.iconOnlyNavigation)
         putString(SIDEBAR_SIDE_KEY, value.side.value)
         putBoolean(SIDEBAR_GLASS_ENABLED_KEY, value.material != SidebarMaterial.Flat)
         putString(SIDEBAR_MATERIAL_KEY, value.material.value)
@@ -237,6 +240,7 @@ private const val SIDEBAR_IMAGE_URI_KEY = "sidebar_widget_image_uri"
 private const val SIDEBAR_IMAGE_SHAPE_KEY = "sidebar_widget_image_shape"
 private const val SIDEBAR_NAVIGATION_POSITION_KEY = "sidebar_widget_navigation_position"
 private const val SIDEBAR_NAVIGATION_ORDER_KEY = "sidebar_widget_navigation_order"
+private const val SIDEBAR_ICON_ONLY_NAVIGATION_KEY = "sidebar_widget_icon_only_navigation"
 private const val SIDEBAR_SIDE_KEY = "sidebar_widget_side"
 private const val SIDEBAR_GLASS_ENABLED_KEY = "sidebar_widget_glass_enabled"
 private const val SIDEBAR_HOME_LAYOUT_KEY = "sidebar_widget_home_layout"
@@ -252,6 +256,7 @@ private val SIDEBAR_WIDGET_KEYS = setOf(
     SIDEBAR_IMAGE_SHAPE_KEY,
     SIDEBAR_NAVIGATION_POSITION_KEY,
     SIDEBAR_NAVIGATION_ORDER_KEY,
+    SIDEBAR_ICON_ONLY_NAVIGATION_KEY,
     SIDEBAR_SIDE_KEY,
     SIDEBAR_GLASS_ENABLED_KEY,
     SIDEBAR_MATERIAL_KEY,

@@ -13,11 +13,14 @@ import okhttp3.Cache
 import okhttp3.OkHttpClient
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import me.weishu.kernelsu.ui.util.AppLanguageManager
+import me.weishu.kernelsu.ui.util.ManagerPlugin
+import me.weishu.kernelsu.ui.util.ManagerPluginRegistry
 import me.weishu.kernelsu.ui.util.reconcileLauncherIcon
+import me.weishu.kernelsu.ui.util.execKsud
 import me.weishu.kernelsu.stealth.StealthModeStore
-import me.weishu.kernelsu.ui.webmanager.ManagerAppSettingsStore
 import java.io.File
 import java.util.Locale
+import kotlin.concurrent.thread
 
 lateinit var ksuApp: KernelSUApplication
 
@@ -66,8 +69,8 @@ class KernelSUApplication : Application(), ViewModelStoreOwner {
         }
 
         reconcileLauncherIcon(this)
+        retireLegacyWebManager()
         StealthModeStore.reconcileFromRootAsync(this)
-        ManagerAppSettingsStore.reconcileFromRootAsync(this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val prefs = this.getSharedPreferences("settings", MODE_PRIVATE)
@@ -75,15 +78,25 @@ class KernelSUApplication : Application(), ViewModelStoreOwner {
             setEnableOnBackInvokedCallback(applicationInfo, enable)
         }
 
-        val webroot = File(dataDir, "webroot")
-        if (!webroot.exists()) {
-            runCatching { webroot.mkdir() }
-                .onFailure { Log.w(TAG, "create webroot failed", it) }
-        }
     }
 
     override val viewModelStore: ViewModelStore
         get() = appViewModelStore
+
+    private fun retireLegacyWebManager() {
+        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        prefs.edit().putBoolean("web_manager_auto_start", false).apply()
+        if (prefs.getBoolean("web_manager_retired_v1", false)) return
+        thread(name = "retire-web-manager", isDaemon = true) {
+            if (execKsud("web-manager disable", newShell = true)) {
+                runCatching {
+                    ManagerPluginRegistry(this).remove(ManagerPlugin.RemoteManagementSuite.id)
+                }.onSuccess {
+                    prefs.edit().putBoolean("web_manager_retired_v1", true).apply()
+                }.onFailure { Log.w(TAG, "retire web manager plugin record failed", it) }
+            }
+        }
+    }
 
     private fun createOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder().cache(Cache(File(cacheDir, "okhttp"), 10 * 1024 * 1024))

@@ -46,6 +46,10 @@ sealed interface Route : NavKey, Parcelable {
 
     @Parcelize
     @Serializable
+    data object StealthRecoveryCheck : Route
+
+    @Parcelize
+    @Serializable
     data object PreInstallStyleSettings : Route
 
     @Parcelize

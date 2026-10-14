@@ -22,7 +22,10 @@ class SettingsPluginGroupingTest {
     fun everyDownloadablePluginIsRepresentedOnlyInPlugins() {
         val entries = allEntries(installed) + allEntries(installed.copy(isLkmMode = true))
         val plugins = entries.filter { it.plugin != null }
-        assertEquals(ManagerPlugin.entries.toSet(), plugins.mapNotNull { it.plugin }.toSet())
+        assertEquals(
+            ManagerPlugin.entries.filterNot { it == ManagerPlugin.RemoteManagementSuite }.toSet(),
+            plugins.mapNotNull { it.plugin }.toSet(),
+        )
         assertTrue(plugins.all { it.category == SettingsCategory.Plugins })
     }
 

@@ -112,6 +112,8 @@ import me.weishu.kernelsu.ui.component.pixel.pixelPalette
 import me.weishu.kernelsu.ui.component.rain.RainStyle
 import me.weishu.kernelsu.ui.component.rain.rainPalette
 import me.weishu.kernelsu.ui.component.miuix.SendLogDialog
+import me.weishu.kernelsu.ui.navigation3.LocalNavigator
+import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.component.uninstalldialog.UninstallDialog
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
 import me.weishu.kernelsu.ui.theme.immersiveSurfaceColor
@@ -161,10 +163,10 @@ fun SettingPagerMiuix(
     val topBarColors = skrootproTopBarColors(barColor, colorScheme.onSurface)
     val loadingDialog = rememberLoadingDialog()
     val context = LocalContext.current
+    val navigator = LocalNavigator.current
     val showUninstallDialog = rememberSaveable { mutableStateOf(false) }
     val showSendLogDialog = rememberSaveable { mutableStateOf(false) }
     val showStealthModeDialog = rememberSaveable { mutableStateOf(false) }
-    val stealthModeDialogEnablesMode = rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var expandedCategoryRoute by rememberSaveable {
         mutableStateOf(readLastSettingsCategory(context)?.routeValue)
@@ -734,44 +736,27 @@ fun SettingPagerMiuix(
                             checked = uiState.enableWebDebugging,
                             onCheckedChange = actions.onSetEnableWebDebugging,
                         )
-                        if (uiState.hasPlugin(ManagerPlugin.RemoteManagementSuite)) {
-                            CategorizedMiuixSwitchRow(
-                                title = stringResource(id = R.string.web_manager_auto_start),
-                                summary = stringResource(id = R.string.web_manager_auto_start_summary),
-                                icon = Icons.Rounded.Language,
-                                checked = uiState.webManagerAutoStart,
-                                onCheckedChange = actions.onSetWebManagerAutoStart,
-                            )
-                            CategorizedMiuixActionRow(
-                                title = stringResource(id = R.string.web_manager_open),
-                                summary = stringResource(id = R.string.web_manager_open_summary),
-                                icon = Icons.Rounded.Language,
-                                onClick = actions.onOpenWebManager,
-                            )
-                            CategorizedMiuixSwitchRow(
-                                title = stringResource(id = R.string.stealth_mode_title),
-                                summary = stringResource(id = R.string.stealth_mode_summary),
-                                icon = Icons.Rounded.Security,
-                                enabled = !uiState.stealthModeBusy,
-                                checked = uiState.stealthModeEnabled,
-                                onCheckedChange = { enabled ->
-                                    if (enabled) {
-                                        stealthModeDialogEnablesMode.value = true
-                                        showStealthModeDialog.value = true
-                                    }
-                                },
-                            )
-                            CategorizedMiuixActionRow(
-                                title = stringResource(id = R.string.stealth_mode_code_title),
-                                summary = uiState.stealthModeCode,
-                                icon = Icons.Rounded.Visibility,
-                                enabled = !uiState.stealthModeBusy && !uiState.stealthModeEnabled,
-                                onClick = {
-                                    stealthModeDialogEnablesMode.value = false
-                                    showStealthModeDialog.value = true
-                                },
-                            )
-                        }
+                        CategorizedMiuixSwitchRow(
+                            title = stringResource(id = R.string.stealth_mode_title),
+                            summary = stringResource(id = R.string.stealth_mode_summary),
+                            icon = Icons.Rounded.Security,
+                            enabled = !uiState.stealthModeBusy && !uiState.stealthModeEnabled,
+                            checked = uiState.stealthModeEnabled,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    navigator.push(Route.StealthRecoveryCheck)
+                                }
+                            },
+                        )
+                        CategorizedMiuixActionRow(
+                            title = stringResource(id = R.string.stealth_mode_code_title),
+                            summary = uiState.stealthModeCode,
+                            icon = Icons.Rounded.Visibility,
+                            enabled = !uiState.stealthModeBusy && !uiState.stealthModeEnabled,
+                            onClick = {
+                                showStealthModeDialog.value = true
+                            },
+                        )
                     }
                     }
 
@@ -854,11 +839,11 @@ fun SettingPagerMiuix(
     StealthModeCodeDialog(
         show = showStealthModeDialog.value,
         currentCode = uiState.stealthModeCode,
-        enableAfterSave = stealthModeDialogEnablesMode.value,
+        enableAfterSave = false,
         busy = uiState.stealthModeBusy,
         onDismissRequest = { showStealthModeDialog.value = false },
         onConfirm = { code ->
-            actions.onSetStealthMode(stealthModeDialogEnablesMode.value, code)
+            actions.onSetStealthMode(false, code)
             showStealthModeDialog.value = false
         },
     )

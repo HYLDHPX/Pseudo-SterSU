@@ -32,10 +32,7 @@ class PluginStoreTest {
             publishedManagerPlugins().map { it.id }.toSet(),
             catalog.plugins.map { it.id }.toSet(),
         )
-        assertEquals(
-            setOf(PluginSlot.MaintenanceWebManager, PluginSlot.MaintenanceStealthMode),
-            catalog.plugins.first { it.id == ManagerPlugin.RemoteManagementSuite.id }.slots,
-        )
+        assertFalse(ManagerPlugin.RemoteManagementSuite.published)
         assertEquals(
             setOf(PluginSlot.MountHidePathmaskLkm),
             catalog.plugins.first { it.id == ManagerPlugin.PathmaskLkm.id }.slots,
@@ -158,12 +155,16 @@ class PluginStoreTest {
     }
 
     @Test
-    fun replacementSignedBundledCatalogIncludesEveryPublishedPlugin() {
+    fun replacementSignedBundledCatalogCanContainRetiredLegacyPlugin() {
         val catalog = bundledCatalog(2)
         verifyManagerPluginCatalogSignature(catalog, bundledSignature(2))
 
         val parsed = parseManagerPluginCatalog(catalog.toString(Charsets.UTF_8))
-        assertEquals(publishedManagerPlugins().map { it.id }.toSet(), parsed.plugins.map { it.id }.toSet())
+        assertEquals(
+            publishedManagerPlugins().map { it.id }.toSet(),
+            parsed.plugins.filter { ManagerPlugin.fromId(it.id)?.published == true }.map { it.id }.toSet(),
+        )
+        assertTrue(parsed.plugins.any { it.id == ManagerPlugin.RemoteManagementSuite.id })
         assertTrue(parsed.plugins.any { it.id == ManagerPlugin.PathmaskLkm.id })
     }
 

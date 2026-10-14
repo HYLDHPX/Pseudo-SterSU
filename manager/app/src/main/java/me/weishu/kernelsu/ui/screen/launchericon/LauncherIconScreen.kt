@@ -1,6 +1,5 @@
 package me.weishu.kernelsu.ui.screen.launchericon
 
-import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -37,9 +36,9 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.core.view.WindowInsetsControllerCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -82,14 +80,16 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 private val FullImageCrop = CustomWallpaperCrop(0f, 0f, 1f, 1f)
 
 private object LauncherIdentityColors {
-    val Page = Color(0xFFF4F6FA)
-    val Surface = Color(0xFFFFFFFF)
-    val SurfaceMuted = Color(0xFFEEF2F7)
-    val Ink = Color(0xFF172033)
-    val Muted = Color(0xFF5D687A)
-    val Border = Color(0xFFD8E0EA)
-    val Accent = Color(0xFF3568D4)
-    val AccentSoft = Color(0xFFE8EEFC)
+    val Page: Color @Composable get() = MaterialTheme.colorScheme.background
+    val Surface: Color @Composable get() = MaterialTheme.colorScheme.surfaceContainerLow
+    val SurfaceMuted: Color @Composable get() = MaterialTheme.colorScheme.surfaceContainerHigh
+    val Ink: Color @Composable get() = MaterialTheme.colorScheme.onSurface
+    val Muted: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+    val Border: Color @Composable get() = MaterialTheme.colorScheme.outlineVariant
+    val Accent: Color @Composable get() = MaterialTheme.colorScheme.primary
+    val AccentSoft: Color @Composable get() = MaterialTheme.colorScheme.primaryContainer
+    val AccentText: Color @Composable get() = MaterialTheme.colorScheme.onPrimaryContainer
+    val OnAccent: Color @Composable get() = MaterialTheme.colorScheme.onPrimary
 }
 
 @Composable
@@ -105,22 +105,6 @@ fun LauncherIconScreen() {
     var showManagerNameDialog by remember { mutableStateOf(false) }
     val customIconFailedMessage = stringResource(R.string.settings_app_icon_custom_failed)
     val defaultManagerName = stringResource(R.string.app_name)
-    DisposableEffect(context) {
-        val window = (context as? Activity)?.window
-        if (window == null) {
-            onDispose { }
-        } else {
-            val controller = WindowInsetsControllerCompat(window, window.decorView)
-            val previousLightStatusBars = controller.isAppearanceLightStatusBars
-            val previousLightNavigationBars = controller.isAppearanceLightNavigationBars
-            controller.isAppearanceLightStatusBars = true
-            controller.isAppearanceLightNavigationBars = true
-            onDispose {
-                controller.isAppearanceLightStatusBars = previousLightStatusBars
-                controller.isAppearanceLightNavigationBars = previousLightNavigationBars
-            }
-        }
-    }
     val customIconPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
@@ -359,7 +343,7 @@ private fun LauncherIconCustomCard(onClick: () -> Unit) {
             Icon(
                 imageVector = Icons.Rounded.AddPhotoAlternate,
                 contentDescription = null,
-                tint = LauncherIdentityColors.Accent,
+                tint = LauncherIdentityColors.AccentText,
                 modifier = Modifier.size(28.dp),
             )
         }
@@ -414,7 +398,7 @@ private fun ManagerNameCard(
             ) {
                 Text(
                     text = displayName.take(1).ifBlank { "A" },
-                    color = LauncherIdentityColors.Accent,
+                    color = LauncherIdentityColors.AccentText,
                     fontSize = skrootproSp(22f, maxScale = 1f),
                     fontWeight = FontWeight.Bold,
                 )
@@ -502,7 +486,7 @@ private fun LauncherIconOptionCard(
             ) {
                 Text(
                     text = stringResource(option.labelRes),
-                    color = if (selected) LauncherIdentityColors.Accent else LauncherIdentityColors.Ink,
+                    color = if (selected) LauncherIdentityColors.AccentText else LauncherIdentityColors.Ink,
                     fontSize = skrootproSp(13.5f, maxScale = 1f),
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                     textAlign = TextAlign.Center,
@@ -523,7 +507,7 @@ private fun LauncherIconOptionCard(
                 Icon(
                     imageVector = Icons.Rounded.Check,
                     contentDescription = stringResource(R.string.settings_app_icon_picker_selected),
-                    tint = Color.White,
+                    tint = LauncherIdentityColors.OnAccent,
                     modifier = Modifier.size(14.dp),
                 )
             }

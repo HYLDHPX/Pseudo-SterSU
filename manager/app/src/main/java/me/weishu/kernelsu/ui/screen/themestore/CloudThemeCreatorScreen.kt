@@ -109,6 +109,7 @@ import me.weishu.kernelsu.ui.util.buildCloudThemeSubmissionManifest
 import me.weishu.kernelsu.ui.util.canonicalCloudThemePackageFileName
 import me.weishu.kernelsu.ui.util.exportCloudThemeStorePackage
 import me.weishu.kernelsu.ui.util.isValidCloudThemeGithubLogin
+import me.weishu.kernelsu.ui.util.readLinkedGitHubProfile
 import me.weishu.kernelsu.ui.util.readThemeAuthorProfile
 import me.weishu.kernelsu.ui.util.safeCloudThemeMessage
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
@@ -137,6 +138,9 @@ fun CloudThemeCreatorScreen(initialPageIndex: Int = 0) {
         mutableStateOf(
             creatorRepository.readDraft().let { saved ->
                 saved.copy(
+                    githubLogin = saved.githubLogin.ifBlank {
+                        readLinkedGitHubProfile(context)?.login.orEmpty()
+                    },
                     authorName = saved.authorName.ifBlank { localProfile.displayName },
                     authorBio = saved.authorBio.ifBlank { localProfile.bio },
                     minManagerVersionCodeText = "1",

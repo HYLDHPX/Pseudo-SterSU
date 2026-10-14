@@ -13,6 +13,8 @@ private const val THEME_AUTHOR_REAL_NAME_KEY = "real_name"
 private const val THEME_AUTHOR_GENDER_KEY = "gender"
 private const val THEME_AUTHOR_BIO_KEY = "bio"
 private const val THEME_AUTHOR_AVATAR_URI_KEY = "avatar_uri"
+private const val THEME_AUTHOR_GITHUB_LOGIN_KEY = "github_login"
+private const val THEME_AUTHOR_GITHUB_SYNCED_AT_KEY = "github_synced_at"
 private const val MAX_THEME_AUTHOR_NAME_LENGTH = 32
 private const val MAX_THEME_AUTHOR_BIO_LENGTH = 160
 private const val MAX_THEME_AUTHOR_AVATAR_BYTES = 16L * 1024L * 1024L
@@ -72,6 +74,7 @@ fun saveThemeAuthorProfile(
     profile: ThemeAuthorProfile,
     avatarSource: Uri? = null,
     removeAvatar: Boolean = false,
+    githubLogin: String? = null,
 ): ThemeAuthorProfileSaveResult {
     val appContext = context.applicationContext
     val previous = readThemeAuthorProfile(appContext)
@@ -97,6 +100,10 @@ fun saveThemeAuthorProfile(
             } else {
                 putString(THEME_AUTHOR_AVATAR_URI_KEY, avatarUri)
             }
+            if (githubLogin != null) {
+                putString(THEME_AUTHOR_GITHUB_LOGIN_KEY, normalizeCloudThemeGithubLogin(githubLogin))
+                putLong(THEME_AUTHOR_GITHUB_SYNCED_AT_KEY, System.currentTimeMillis())
+            }
         }
         val committed = editor.commit()
         check(committed) { "Unable to save author profile" }
@@ -108,6 +115,15 @@ fun saveThemeAuthorProfile(
         deleteThemeAuthorAvatar(appContext, stagedAvatarUri)
         ThemeAuthorProfileSaveResult(success = false, profile = previous, error = error)
     }
+}
+
+data class LinkedGitHubProfile(val login: String, val syncedAt: Long)
+
+fun readLinkedGitHubProfile(context: Context): LinkedGitHubProfile? {
+    val prefs = context.applicationContext.getSharedPreferences(THEME_AUTHOR_PREFS, Context.MODE_PRIVATE)
+    val login = prefs.getString(THEME_AUTHOR_GITHUB_LOGIN_KEY, null).orEmpty()
+    if (!isValidCloudThemeGithubLogin(login)) return null
+    return LinkedGitHubProfile(login, prefs.getLong(THEME_AUTHOR_GITHUB_SYNCED_AT_KEY, 0L))
 }
 
 internal fun sanitizeThemeAuthorProfile(profile: ThemeAuthorProfile): ThemeAuthorProfile {

@@ -13,6 +13,7 @@ import me.weishu.kernelsu.ui.component.bottombar.stateFor
 import me.weishu.kernelsu.ui.component.bottombar.shouldAcceptKpmAvailability
 import me.weishu.kernelsu.ui.component.bottombar.shouldResetMainPagerForFeatureAvailability
 import me.weishu.kernelsu.ui.navigation3.Route
+import me.weishu.kernelsu.ui.screen.modulerepo.RepoModuleArg
 import me.weishu.kernelsu.ui.screen.launchericon.launcherIconColumnCount
 import me.weishu.kernelsu.ui.util.CustomNavigationIconSet
 import me.weishu.kernelsu.ui.util.CustomNavigationIconSlot
@@ -160,6 +161,39 @@ class MainLayoutTest {
     }
 
     @Test
+    fun sidebarStackTransitionsRespectKpmAndSystemAnimationSettings() {
+        assertTrue(shouldUseSidebarStackNavigationTransitions(false, true, true))
+        assertFalse(shouldUseSidebarStackNavigationTransitions(true, true, true))
+        assertFalse(shouldUseSidebarStackNavigationTransitions(false, true, false))
+        assertFalse(shouldUseSidebarStackNavigationTransitions(false, false, true))
+        assertFalse(shouldUseSidebarStackNavigationTransitions(false, true, true, stealthModeEnabled = true))
+    }
+
+    @Test
+    fun sidebarRailKeepsMainPagerModuleRepoAndSettingsAtTheSameWidth() {
+        assertTrue(shouldHostSidebarRail(Route.Main, false, true, false))
+        assertTrue(shouldHostSidebarRail(Route.ModuleRepo, false, true, false))
+        assertTrue(shouldHostSidebarRail(
+            Route.ModuleRepoDetail(RepoModuleArg("test", "Test", "", emptyList(), "", 0, "", false)),
+            false, true, false,
+        ))
+        assertTrue(shouldHostSidebarRail(Route.SettingsCategory("appearance"), true, true, false))
+        assertFalse(shouldHostSidebarRail(Route.ThemeStore, false, true, false))
+        assertFalse(shouldHostSidebarRail(Route.Main, false, false, false))
+        assertFalse(shouldHostSidebarRail(Route.Main, false, true, true))
+        assertFalse(shouldHostSidebarRail(Route.ModuleRepo, false, false, false))
+        assertFalse(shouldHostSidebarRail(Route.ModuleRepo, false, true, true))
+    }
+
+    @Test
+    fun swipeEdgeOverrideCannotBypassSidebarOrKpmSafety() {
+        assertTrue(shouldAllowSwipeEdgePopOverride(false, false, false))
+        assertFalse(shouldAllowSwipeEdgePopOverride(true, false, false))
+        assertFalse(shouldAllowSwipeEdgePopOverride(false, true, false))
+        assertFalse(shouldAllowSwipeEdgePopOverride(false, false, true))
+    }
+
+    @Test
     fun settingsDetailsKeepSidebarButStoreFlowDoesNot() {
         assertTrue(shouldShowSettingsSidebar(Route.SettingsCategory("appearance"), settingsAncestor = true))
         assertTrue(shouldShowSettingsSidebar(Route.SidebarWidgetSettings, settingsAncestor = false))
@@ -168,7 +202,8 @@ class MainLayoutTest {
         assertFalse(shouldShowSettingsSidebar(Route.NavigationIcons, settingsAncestor = false))
         assertFalse(shouldShowSettingsSidebar(Route.ThemeStore, settingsAncestor = true))
         assertFalse(shouldShowSettingsSidebar(Route.ThemeStoreFonts, settingsAncestor = true))
-        assertFalse(shouldShowSettingsSidebar(Route.PluginStore, settingsAncestor = true))
+        assertTrue(shouldShowSettingsSidebar(Route.PluginStore, settingsAncestor = true))
+        assertFalse(shouldShowSettingsSidebar(Route.PluginStore, settingsAncestor = false))
         assertFalse(shouldShowSettingsSidebar(Route.CloudThemeDetail("theme"), settingsAncestor = true))
         assertFalse(shouldShowSettingsSidebar(Route.NavigationIcons, settingsAncestor = true, storeAncestor = true))
         assertFalse(shouldShowSettingsSidebar(Route.SidebarWidgetSettings, settingsAncestor = true, storeAncestor = true))

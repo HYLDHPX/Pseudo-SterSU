@@ -174,6 +174,7 @@ fun SidebarWidgetRail(
             SidebarRailItem(
                 selected = selected,
                 label = label,
+                iconOnly = config.iconOnlyNavigation,
                 badgeCount = badge?.count,
                 onClick = {
                     if (onDestinationSelected == null) mainPagerState.animateTo(destination)
@@ -306,6 +307,7 @@ internal fun SidebarRailLayout(
 internal fun SidebarRailItem(
     selected: Boolean,
     label: String,
+    iconOnly: Boolean = false,
     badgeCount: Int? = null,
     onClick: (() -> Unit)? = null,
     role: Role = Role.Tab,
@@ -379,15 +381,17 @@ internal fun SidebarRailItem(
                 )
                 content()
             }
-            Text(
-                text = label,
-                fontSize = 11.sp,
-                lineHeight = 14.sp,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-            )
+            if (!iconOnly) {
+                Text(
+                    text = label,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

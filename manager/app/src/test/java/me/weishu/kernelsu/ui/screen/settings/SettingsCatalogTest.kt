@@ -11,9 +11,9 @@ class SettingsCatalogTest {
         val base = SettingsUiState(uiMode = InterfaceStyle.Material.value)
         assertEquals(1, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, base))
         val installed = base.copy(installedPluginIds = ManagerPlugin.entries.map { it.id }.toSet())
-        assertEquals(13, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, installed))
+        assertEquals(9, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, installed))
         assertEquals(
-            14,
+            10,
             SettingsCatalog.visibleEntryCount(
                 SettingsCategory.Plugins,
                 installed.copy(graphicsRendererFeatureEnabled = true),
@@ -72,13 +72,13 @@ class SettingsCatalogTest {
     }
 
     @Test
-    fun webAndStealthEntriesFollowPluginAvailability() {
+    fun stealthEntriesAreBuiltinAndRemotePluginIsRetired() {
         val base = SettingsUiState()
         assertEquals(listOf("plugin_store"), SettingsCatalog.entriesFor(SettingsCategory.Plugins, base).map { it.key })
         val installed = base.copy(installedPluginIds = setOf(ManagerPlugin.RemoteManagementSuite.id))
-        assertEquals(5, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, installed))
+        assertEquals(1, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, installed))
         assertEquals(
-            listOf("web_debugging"),
+            listOf("web_debugging", "stealth_mode", "stealth_mode_code"),
             SettingsCatalog.entriesFor(SettingsCategory.AppAndMaintenance, installed)
                 .filter { it.key.startsWith("web_") || it.key.startsWith("stealth_") }
                 .map { it.key },
