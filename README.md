@@ -60,3 +60,4 @@ SterSU 继承上游的许可边界，具体以各文件声明为准：
 - [KOWX712/KernelSU](https://github.com/KOWX712/KernelSU)：内核模块文件来源。
 - [Kernel-Assisted Superuser](https://git.zx2c4.com/kernel-assisted-superuser/about/) 与 [Magisk](https://github.com/topjohnwu/Magisk)：技术思路参考。
 - [genuine](https://github.com/brevent/genuine/) 与 [Diamorphine](https://github.com/m0nad/Diamorphine)：签名校验与底层实现参考。
+- (https://github.com/hartgerinktarcila-design/7kimisu/tree/main):隐身模式的借鉴
