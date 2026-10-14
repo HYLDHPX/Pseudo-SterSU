@@ -312,22 +312,6 @@ pub fn set_feature(id: &str, value: u64) -> Result<()> {
     Ok(())
 }
 
-/// Query a feature for local management surfaces without parsing CLI output.
-/// The final flag reports whether an active module owns the feature.
-pub fn feature_state(id: &str) -> Result<(u64, bool, bool)> {
-    let feature_id = parse_feature_id(id)?;
-    let state = get_kernel_feature(feature_id)?;
-    let managed = managed_feature_ids().contains(&feature_id.canonical_id());
-    Ok((state.value, state.supported, managed))
-}
-
-/// Apply a writable feature and persist the complete supported feature snapshot
-/// so the same state is restored on the next boot.
-pub fn set_feature_persisted(id: &str, value: u64) -> Result<()> {
-    set_feature(id, value)?;
-    save_config()
-}
-
 pub fn list_features() {
     println!("Available Features:");
     println!("{}", "=".repeat(80));

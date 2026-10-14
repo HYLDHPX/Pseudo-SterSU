@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SterSU 隐身恢复</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="panel">
+    <div class="mark" aria-hidden="true">S</div>
+    <p class="eyebrow">仅限本机 · 127.0.0.1</p>
+    <h1>关闭隐身模式</h1>
+    <p class="description">输入启用隐身模式时设置的密令。此页面只能关闭隐身模式，不提供 Root、模块或设备管理功能。</p>
+    <form id="recovery-form">
+      <label for="code">隐身密令</label>
+      <input id="code" name="code" type="password" autocomplete="off" spellcheck="false" required>
+      <button id="submit" type="submit">确认关闭</button>
+    </form>
+    <p id="message" role="status" aria-live="polite"></p>
+    <p class="fallback">无法访问此页面时，也可以使用手机拨号密令恢复。</p>
+  </main>
+</body>
+</html>

@@ -1,16 +1,11 @@
 use crate::module::{ScriptWait, handle_updated_modules, prune_modules};
-use crate::utils::{is_safe_mode, switch_mnt_ns};
+use crate::utils::is_safe_mode;
 use crate::{
     assets, defs, ksucalls, metamodule, restorecon,
     utils::{self},
 };
 use anyhow::{Context, Result};
-use libc::_exit;
 use log::{error, info, warn};
-use prop_rs_android::resetprop::ResetProp;
-use prop_rs_android::sys_prop;
-use rustix::process::chdir;
-use std::process::Command;
 use std::{path::Path, time::Instant};
 
 pub fn on_post_fs_data() -> Result<()> {
@@ -202,7 +197,10 @@ pub fn run_stage(stage: &str, wait: ScriptWait) {
     }
 
     if stage == "service" {
-        crate::web_manager::start_if_enabled();
+        if let Err(error) = crate::web_manager::disable() {
+            warn!("failed to retire legacy web manager: {error:#}");
+        }
+        crate::stealth_recovery::start_if_enabled();
     }
 
     // execute metamodule stage script first (priority)
@@ -271,36 +269,6 @@ pub fn on_boot_completed() {
     crate::cpu_spoof::apply_if_enabled_after_boot();
 }
 
-const fn resetprop() -> ResetProp {
-    ResetProp {
-        skip_svc: true,
-        persistent: false,
-        persist_only: false,
-        verbose: false,
-        show_context: false,
-        rebuild: false,
-    }
-}
-
-fn reset_boot_completed() -> Result<()> {
-    sys_prop::init().context("Failed to initialize system property API")?;
-    let rp = resetprop();
-    // Set prop value to 0 in advance to ensure resetprop -w works
-    info!("reset boot complete prop to 0");
-    rp.set("sys.boot_completed", "0")
-        .context("Failed to set sys.boot_completed to 0")?;
-    Ok(())
-}
-
-fn wait_for_boot_completed() -> Result<()> {
-    sys_prop::init().context("Failed to initialize system property API")?;
-    let rp = resetprop();
-    info!("waiting for boot complete");
-    rp.wait("sys.boot_completed", Some("0"), None)
-        .context("wait for sys.boot_completed failed")?;
-    Ok(())
-}
-
 fn catch_bootlog(logname: &str, command: &[&str]) -> Result<()> {
     use std::os::unix::process::CommandExt;
     use std::process::Stdio;
@@ -336,50 +304,4 @@ fn catch_bootlog(logname: &str, command: &[&str]) -> Result<()> {
     }
 
     Ok(())
-}
-
-pub fn soft_reboot() -> Result<()> {
-    // check it avoid user click "soft_reboot" in manager when version mismatch
-    if ksucalls::is_uapi_version_mismatch() {
-        warn!(
-            "Kernel and userspace uapi version mismatch; continue soft_reboot with compatible paths"
-        );
-    }
-
-    utils::daemonize_with(true, || -> Result<()> {
-        switch_mnt_ns(1)?;
-        chdir("/")?;
-        Ok(())
-    })?;
-
-    info!("emulating soft_reboot!");
-    if let Err(e) = reset_boot_completed() {
-        warn!("reset boot completed failed: {e}");
-    }
-    run_stage(
-        "emulated-soft-reboot",
-        ScriptWait::Until(Instant::now() + defs::BOOT_STAGE_TIMEOUT),
-    );
-    info!("stop");
-    let status = Command::new("stop").status().context("stop failed")?;
-    if !status.success() {
-        warn!("stop exited with status: {status}");
-    }
-    info!("post-fs-data");
-    on_post_fs_data()?;
-    info!("start");
-    let status = Command::new("start").status().context("start failed")?;
-    if !status.success() {
-        warn!("start exited with status: {status}");
-    }
-    info!("services");
-    on_services();
-    if let Err(e) = wait_for_boot_completed() {
-        warn!("wait for boot completed failed: {e}");
-    }
-    on_boot_completed();
-
-    unsafe {
-        _exit(0);
-    }
 }

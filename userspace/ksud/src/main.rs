@@ -71,6 +71,8 @@ mod sepolicy;
 #[cfg(target_os = "android")]
 mod soft_reboot;
 #[cfg(target_os = "android")]
+mod stealth_recovery;
+#[cfg(target_os = "android")]
 mod su;
 #[cfg(target_os = "android")]
 mod sulog;
@@ -84,8 +86,6 @@ mod unload;
 mod utils;
 #[cfg(target_os = "android")]
 mod web_manager;
-#[cfg(target_os = "android")]
-mod web_manager_susfs;
 
 fn main() -> anyhow::Result<()> {
     #[cfg(target_os = "android")]

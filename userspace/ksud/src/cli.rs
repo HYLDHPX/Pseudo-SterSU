@@ -11,8 +11,8 @@ use crate::lkm_image::BootPatchV2Args;
 use crate::module::regenerate_preinit_rc;
 use crate::{
     apk_sign, assets, cpu_spoof, debug, defs, dynamic_manager, epkesu_hide, init_event,
-    kpatch_next, kpm, ksu_uapi, ksucalls, module, module_config, pathmask, rescue, sulog, utils,
-    web_manager,
+    kpatch_next, kpm, ksu_uapi, ksucalls, module, module_config, pathmask, rescue,
+    stealth_recovery, sulog, utils, web_manager,
 };
 
 /// KernelSU userspace cli
@@ -80,10 +80,17 @@ enum Commands {
     /// Trigger `service` event
     Services,
 
-    /// Manage the persistent native Web Manager
+    /// Retire a previously enabled Web Manager
+    #[command(hide = true)]
     WebManager {
         #[command(subcommand)]
         command: WebManager,
+    },
+
+    /// Manage the local stealth recovery page
+    StealthRecovery {
+        #[command(subcommand)]
+        command: StealthRecovery,
     },
 
     /// Run sulog reader daemon. Not for user. Use `ksud debug sulogd` to launch daemon.
@@ -559,25 +566,19 @@ enum Module {
 
 #[derive(clap::Subcommand, Debug)]
 enum WebManager {
-    /// Enable the persistent server and start it now
-    Enable {
-        /// Loopback TCP port (1024-65535)
-        #[arg(long)]
-        port: Option<u16>,
-    },
-    /// Disable auto-start and stop the current server
+    /// Disable auto-start and stop the old server
     Disable,
-    /// Start the server when it is enabled
+}
+
+#[derive(clap::Subcommand, Debug)]
+enum StealthRecovery {
+    /// Start the recovery page and its boot fallback while stealth is enabled
     Start,
-    /// Stop the current server without changing the persistent switch
+    /// Stop the recovery page and remove its boot fallback
     Stop,
-    /// Print server status as JSON
+    /// Print the local recovery address and running state
     Status,
-    /// Print the authenticated loopback URL
-    Url,
-    /// Generate a new authentication token
-    RotateToken,
-    /// Internal daemon entry point
+    /// Internal server entry point
     #[command(hide = true)]
     Serve,
 }
@@ -1211,15 +1212,17 @@ pub fn run() -> Result<()> {
             init_event::on_services();
             Ok(())
         }
-        Commands::WebManager { command } => match command {
-            WebManager::Enable { port } => web_manager::enable(port),
-            WebManager::Disable => web_manager::disable(),
-            WebManager::Start => web_manager::start(),
-            WebManager::Stop => web_manager::stop(),
-            WebManager::Status => web_manager::print_status(),
-            WebManager::Url => web_manager::print_url(),
-            WebManager::RotateToken => web_manager::rotate_token(),
-            WebManager::Serve => web_manager::serve(),
+        Commands::WebManager {
+            command: WebManager::Disable,
+        } => web_manager::disable(),
+        Commands::StealthRecovery { command } => match command {
+            StealthRecovery::Start => stealth_recovery::start(),
+            StealthRecovery::Stop => stealth_recovery::stop(),
+            StealthRecovery::Status => {
+                stealth_recovery::status();
+                Ok(())
+            }
+            StealthRecovery::Serve => stealth_recovery::serve(),
         },
         Commands::Sulogd => sulog::run_sulogd(),
         Commands::Profile { command } => match command {
