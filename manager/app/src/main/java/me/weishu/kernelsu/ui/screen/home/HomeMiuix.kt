@@ -176,6 +176,7 @@ fun HomePagerMiuix(
     homeLayoutEditor: HomeLayoutEditor? = null,
     homeLayoutLandscapeOverride: Boolean? = null,
     classicHomeLayoutEnabled: Boolean = false,
+    showPrivilegedActions: Boolean = true,
 ) {
     val enableBlur = LocalEnableBlur.current
     val homeTitle = state.customHomeTitle.ifBlank { stringResource(R.string.app_name) }
@@ -195,6 +196,7 @@ fun HomePagerMiuix(
                 showSusfs = state.showSusfsPathConfig,
                 onSusfsClick = actions.onSusfsPathClick,
                 controlsEnabled = homeLayoutEditor == null,
+                showPrivilegedActions = showPrivilegedActions,
             )
         },
         popupHost = { },
@@ -412,6 +414,7 @@ private fun TopBar(
     showSusfs: Boolean,
     onSusfsClick: () -> Unit,
     controlsEnabled: Boolean = true,
+    showPrivilegedActions: Boolean = true,
 ) {
     BlurredBar(backdrop) {
         Row(
@@ -432,15 +435,17 @@ private fun TopBar(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            IconButton(
-                enabled = controlsEnabled,
-                onClick = onDiagnoseClick,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Info,
-                    contentDescription = stringResource(R.string.root_diagnose),
-                    tint = contentColor,
-                )
+            if (showPrivilegedActions) {
+                IconButton(
+                    enabled = controlsEnabled,
+                    onClick = onDiagnoseClick,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Info,
+                        contentDescription = stringResource(R.string.root_diagnose),
+                        tint = contentColor,
+                    )
+                }
             }
             if (showSusfs) {
                 IconButton(
@@ -454,11 +459,13 @@ private fun TopBar(
                     )
                 }
             }
-            Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                RebootListPopupMiuix(
-                    tint = contentColor,
-                    enabled = controlsEnabled,
-                )
+            if (showPrivilegedActions) {
+                Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                    RebootListPopupMiuix(
+                        tint = contentColor,
+                        enabled = controlsEnabled,
+                    )
+                }
             }
         }
     }

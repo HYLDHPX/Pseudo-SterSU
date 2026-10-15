@@ -410,13 +410,16 @@ class MainActivity : ComponentActivity() {
             }
             val appSettings = uiState.appSettings
             val uiMode = uiState.uiMode
-            val startupAnimationUri = uiState.customStartupAnimationUri
-            val clickSoundUri = uiState.customClickSoundUri
+            val startupAnimationUri = if (uiState.stealthModeEnabled) null else uiState.customStartupAnimationUri
+            val clickSoundUri = if (uiState.stealthModeEnabled) null else uiState.customClickSoundUri
             val clickSoundVolume = uiState.customClickSoundVolume
-            val backgroundMusicUri = uiState.customBackgroundMusicUri
+            val backgroundMusicUri = if (uiState.stealthModeEnabled) null else uiState.customBackgroundMusicUri
             val backgroundMusicVolume = uiState.customBackgroundMusicVolume
             val appAudioSettings = uiState.appAudioSettings
             var showStartupAnimation by rememberSaveable { mutableStateOf(!startupAnimationUri.isNullOrBlank()) }
+            LaunchedEffect(uiState.stealthModeEnabled) {
+                if (uiState.stealthModeEnabled) showStartupAnimation = false
+            }
             val effectiveEnableBlur = resolveRealtimeBlurEnabled(
                 interfaceStyle = uiState.interfaceStyle,
                 requested = uiState.enableBlur,
@@ -835,7 +838,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     val effectiveBackground = uiState.effectiveCustomBackground(
-                        mainPagerState.destinationForPage(),
+                        if (uiState.stealthModeEnabled) MainDestination.Home else mainPagerState.destinationForPage(),
                         currentRoute,
                     )
                     val pagerBackgrounds = if (
@@ -911,11 +914,12 @@ class MainActivity : ComponentActivity() {
                             backgroundScrollFollowState = backgroundScrollFollowState,
                             pagerBackgrounds = pagerBackgrounds,
                             horizontalPagerPosition = {
-                                calculateContinuousPagerPagePosition(
-                                    currentPage = mainPagerState.pagerState.currentPage,
-                                    currentPageOffsetFraction =
-                                        mainPagerState.pagerState.currentPageOffsetFraction,
-                                )
+                                if (uiState.stealthModeEnabled) 0f else
+                                    calculateContinuousPagerPagePosition(
+                                        currentPage = mainPagerState.pagerState.currentPage,
+                                        currentPageOffsetFraction =
+                                            mainPagerState.pagerState.currentPageOffsetFraction,
+                                    )
                             },
                             backgroundLayerModifier = sidebarWallpaperModifier,
                         ) {
@@ -1019,13 +1023,15 @@ class MainActivity : ComponentActivity() {
                                                             ) {
                                                                 CompositionLocalProvider(
                                                                     LocalSidebarRailHostedExternally provides hostedSidebarRail,
-                                                                ) { navDisplay() }
+                                                                ) {
+                                                                    key(uiState.stealthModeEnabled) { navDisplay() }
+                                                                }
                                                             }
                                                             if (hostedSidebarRail && !railAtStart) rail()
                                                         }
                                                     }
                                                 } else {
-                                                    navDisplay()
+                                                    key(uiState.stealthModeEnabled) { navDisplay() }
                                                 }
                                             }
                                         }
@@ -1086,8 +1092,10 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         KernelStatusEvents.requestRefresh()
         StealthModeStore.reconcileFromRootAsync(this)
-        StartupSoundPlayer.playConfigured(this)
-        BackgroundMusicPlayer.playConfigured(this)
+        if (!StealthModeStore.isEnabled(this)) {
+            StartupSoundPlayer.playConfigured(this)
+            BackgroundMusicPlayer.playConfigured(this)
+        }
     }
 
     override fun onStop() {
@@ -1462,7 +1470,11 @@ fun MainScreen(
     val kpmDisableTick by KernelStatusEvents.kpmDisableTick.collectAsStateWithLifecycle()
     val kpmEnableTick by KernelStatusEvents.kpmEnableTick.collectAsStateWithLifecycle()
     val pagerState = mainPagerState.pagerState
-    val fullFeaturedResult by produceState<Boolean?>(initialValue = null, refreshTick) {
+    val fullFeaturedResult by produceState<Boolean?>(initialValue = null, refreshTick, stealthModeEnabled) {
+        if (stealthModeEnabled) {
+            value = false
+            return@produceState
+        }
         // Keep the last confirmed value while the refresh probe is running. Writing
         // null here creates a transient false state that can remove the KPM page.
         val fullFeatured = kotlinx.coroutines.withContext(Dispatchers.IO) {
@@ -1487,14 +1499,15 @@ fun MainScreen(
         }
         value = fullFeatured
     }
-    val isFullFeatured = fullFeaturedResult == true
-    val userScrollEnabled = mainPagerState.fullFeatured
+    val effectiveFullFeaturedResult = if (stealthModeEnabled) false else fullFeaturedResult
+    val isFullFeatured = effectiveFullFeaturedResult == true
+    val userScrollEnabled = mainPagerState.fullFeatured && !stealthModeEnabled
     val kpmPageActiveResult by produceState<KpmPageAvailability>(
         initialValue = KpmPageAvailability.Unknown,
-        fullFeaturedResult,
+        effectiveFullFeaturedResult,
         refreshTick,
     ) {
-        value = when (fullFeaturedResult) {
+        value = when (effectiveFullFeaturedResult) {
             // A full-feature probe can briefly fail while manager registration or
             // the root shell is being refreshed. Keep the committed pager topology
             // until the backend capability probe reports a confirmed inactive state.
@@ -1555,8 +1568,8 @@ fun MainScreen(
         onDestinationChanged(mainPagerState.syncSettledPage(settledPage))
     }
 
-    LaunchedEffect(fullFeaturedResult) {
-        mainPagerState.updateFeatureAvailability(fullFeaturedResult)
+    LaunchedEffect(effectiveFullFeaturedResult) {
+        mainPagerState.updateFeatureAvailability(effectiveFullFeaturedResult)
     }
     LaunchedEffect(kpmPageActiveResult) {
         mainPagerState.updateKpmAvailability(kpmPageActiveResult.asBooleanOrNull())
@@ -1620,7 +1633,17 @@ fun MainScreen(
                         }
                     ),
             ) {
-                HorizontalPager(
+                if (stealthModeEnabled) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                        Box(
+                            modifier = Modifier
+                                .widthIn(max = mainPagerContentMaxWidth(MainDestination.Home, sidebarConfig != null))
+                                .fillMaxSize(),
+                        ) {
+                            HomePager(navController, bottomInnerPadding, stealthModeEnabled = true)
+                        }
+                    }
+                } else HorizontalPager(
                     modifier = Modifier
                         .fillMaxSize()
                         .then(
@@ -1713,7 +1736,7 @@ fun MainScreen(
                 .fillMaxSize()
                 .navigationBarVisibilityController(navigationBarVisibilityState),
         ) {
-        if (sidebarConfig != null && LocalSidebarRailHostedExternally.current) {
+        if (stealthModeEnabled || (sidebarConfig != null && LocalSidebarRailHostedExternally.current)) {
             pagerContent(WindowInsets.systemBars.asPaddingValues().calculateBottomPadding())
         } else if (useNavigationRail) {
             val railAtStart = sidebarConfig?.let {

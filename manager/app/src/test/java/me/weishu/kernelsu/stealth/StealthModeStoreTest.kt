@@ -82,9 +82,18 @@ class StealthModeStoreTest {
     }
 
     @Test
-    fun staleStealthPreferenceCannotHideManagerWithoutRootVerification() {
+    fun staleStealthPreferenceCannotHideManagerWithoutRootOrRecoveryVerification() {
         assertFalse(StealthModeStore.shouldHideManager(localEnabled = true, rootStateVerified = false))
         assertFalse(StealthModeStore.shouldHideManager(localEnabled = false, rootStateVerified = true))
         assertTrue(StealthModeStore.shouldHideManager(localEnabled = true, rootStateVerified = true))
+    }
+
+    @Test
+    fun recoveryFallbackRequiresTheKnownHealthResponse() {
+        val body = "{\"message\":\"ready\",\"ok\":true}"
+        assertTrue(StealthModeStore.isValidRecoveryHealthResponse(200, "1", body))
+        assertFalse(StealthModeStore.isValidRecoveryHealthResponse(200, null, body))
+        assertFalse(StealthModeStore.isValidRecoveryHealthResponse(200, "1", "{\"ok\":false}"))
+        assertFalse(StealthModeStore.isValidRecoveryHealthResponse(400, "1", body))
     }
 }

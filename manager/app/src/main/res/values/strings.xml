@@ -6,7 +6,7 @@
     <string name="module_shortcut_scheme_copied">Shortcut link copied</string>
     <string name="jailbreak_reboot_warning">You are in Jailbreak mode. Rebooting will lose root access, and you will have to jailbreak again after the device starts up. Reboot anyway?</string>
     <string name="home">Home</string>
-    <string name="home_not_installed">Ready to install</string>
+    <string name="home_not_installed">Not installed</string>
     <string name="home_click_to_install">Tap to install</string>
     <string name="home_install_preparing">Preparing install</string>
     <string name="home_working">SterSU active</string>

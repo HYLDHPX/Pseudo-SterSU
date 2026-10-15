@@ -220,8 +220,10 @@ class HomeUiStateTest {
 
         assertNull(hidden.ksuVersion)
         assertFalse(hidden.isKernelActive)
+        assertFalse(hidden.isFullFeatured)
         assertFalse(hidden.isManager)
         assertFalse(hidden.isRootAvailable)
+        assertFalse(hidden.showSusfsPathConfig)
         assertEquals(RootRuntimeState.DriverDisconnected, hidden.rootRuntimeState)
         assertEquals(0, hidden.superuserCount)
         assertEquals(0, hidden.moduleCount)

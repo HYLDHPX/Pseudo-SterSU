@@ -75,12 +75,13 @@ fun HomePagerMaterial(
     actions: HomeActions,
     bottomInnerPadding: Dp,
     sidebarHomeLayout: SidebarHomeLayout = SidebarHomeLayout.Material,
+    showPrivilegedActions: Boolean = true,
 ) {
     val cards = if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) {
         rememberSidebarWidgetConfig().homeCards
     } else SidebarHomeCards()
     CompositionLocalProvider(LocalSidebarHomeCards provides cards) {
-        HomePagerMaterialContent(state, actions, bottomInnerPadding, sidebarHomeLayout)
+        HomePagerMaterialContent(state, actions, bottomInnerPadding, sidebarHomeLayout, showPrivilegedActions)
     }
 }
 
@@ -90,6 +91,7 @@ private fun HomePagerMaterialContent(
     actions: HomeActions,
     bottomInnerPadding: Dp,
     sidebarHomeLayout: SidebarHomeLayout,
+    showPrivilegedActions: Boolean,
 ) {
     val scrollBehavior = rememberExpressivePageScrollBehavior()
 
@@ -99,6 +101,7 @@ private fun HomePagerMaterialContent(
                 title = state.customHomeTitle.ifBlank { stringResource(R.string.app_name) },
                 showSusfs = state.showSusfsPathConfig,
                 onSusfsClick = actions.onSusfsPathClick,
+                showReboot = showPrivilegedActions,
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -185,6 +188,7 @@ private fun TopBar(
     title: String,
     showSusfs: Boolean,
     onSusfsClick: () -> Unit,
+    showReboot: Boolean,
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
     ExpressiveTopAppBar(
@@ -198,7 +202,7 @@ private fun TopBar(
                     )
                 }
             }
-            if (LocalInterfaceStyle.current != InterfaceStyle.SidebarWidget.value) {
+            if (showReboot && LocalInterfaceStyle.current != InterfaceStyle.SidebarWidget.value) {
                 RebootListPopup()
             }
         },

@@ -295,17 +295,28 @@ class MainActivityViewModel(
     private fun resolveStealthModeFromRoot() {
         viewModelScope.launch(Dispatchers.IO) {
             var resolved = false
+            var failure: Throwable? = null
             for (attempt in 0 until STEALTH_ROOT_READ_ATTEMPTS) {
-                if (StealthModeStore.reconcileFromRoot().isSuccess) {
+                val result = StealthModeStore.reconcileFromRoot()
+                if (result.isSuccess) {
                     resolved = true
                     break
                 }
+                failure = result.exceptionOrNull()
                 if (attempt < STEALTH_ROOT_READ_ATTEMPTS - 1) {
                     delay(STEALTH_ROOT_READ_RETRY_MILLIS)
                 }
             }
-            stealthModeVerified = resolved
-            if (!resolved) Log.w(TAG, "root stealth state unavailable; showing Manager for recovery")
+            // Some devices deny the Manager a root shell even though ksud's local
+            // recovery daemon is running. Its health endpoint confirms that the
+            // root-side stealth marker is still active without exposing the code.
+            val recoveryReady = !resolved && StealthModeStore.isEnabled() &&
+                StealthModeStore.isRecoveryServiceReady()
+            stealthModeVerified = resolved || recoveryReady
+            if (!resolved) {
+                Log.w(TAG, "root stealth check failed (${failure?.javaClass?.simpleName}); " +
+                    "recovery service ready=$recoveryReady")
+            }
             stealthModeResolved = true
             _uiState.value = readUiStateSafely()
         }

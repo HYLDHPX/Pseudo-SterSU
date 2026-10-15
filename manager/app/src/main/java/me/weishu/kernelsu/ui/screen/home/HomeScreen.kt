@@ -66,6 +66,14 @@ fun HomePager(
     val scope = rememberCoroutineScope()
     var installFeedbackActive by remember { mutableStateOf(false) }
     var jailbreakInProgress by remember { mutableStateOf(false) }
+    LaunchedEffect(stealthModeEnabled) {
+        if (stealthModeEnabled) {
+            installFeedbackActive = false
+            jailbreakInProgress = false
+            loadingDialog.hide()
+            viewModel.dismissDiagnosticReport()
+        }
+    }
     val refreshTick by KernelStatusEvents.refreshTick.collectAsStateWithLifecycle()
     val displayState = if (stealthModeEnabled) uiState.asStealthModeState() else uiState
 
@@ -106,7 +114,7 @@ fun HomePager(
 
     val showInlineInstallFeedback = !displayState.isKernelActive && displayState.kernelVersion.isGKI()
     val interfaceStyle = LocalInterfaceStyle.current
-    val sidebarHomeLayout = if (interfaceStyle == InterfaceStyle.SidebarWidget.value && !stealthModeEnabled) {
+    val sidebarHomeLayout = if (interfaceStyle == InterfaceStyle.SidebarWidget.value) {
         rememberSidebarWidgetConfig().homeLayout
     } else {
         SidebarHomeLayout.Material
@@ -189,6 +197,7 @@ fun HomePager(
                 actions = actions,
                 bottomInnerPadding = bottomInnerPadding,
                 sidebarHomeLayout = sidebarHomeLayout,
+                showPrivilegedActions = !stealthModeEnabled,
             )
         } else when (interfaceStyle) {
             InterfaceStyle.Skrootpro.value -> HomePagerSkrootpro(
@@ -216,6 +225,7 @@ fun HomePager(
                 actions = actions,
                 bottomInnerPadding = bottomInnerPadding,
                 installFeedbackActive = installFeedbackActive && showInlineInstallFeedback,
+                showPrivilegedActions = !stealthModeEnabled,
             )
 
             else -> HomePagerMiuix(
@@ -224,6 +234,7 @@ fun HomePager(
                 bottomInnerPadding = bottomInnerPadding,
                 installFeedbackActive = installFeedbackActive && showInlineInstallFeedback,
                 classicHomeLayoutEnabled = useClassicMiuixHomeLayout,
+                showPrivilegedActions = !stealthModeEnabled,
             )
         }
 
@@ -257,13 +268,15 @@ fun HomePager(
 
     }
 
-    RootDiagnosticDialog(
-        running = diagnosticRunning,
-        report = diagnosticReport,
-        onDismissRequest = {
-            if (!diagnosticRunning) viewModel.dismissDiagnosticReport()
-        },
-    )
+    if (!stealthModeEnabled) {
+        RootDiagnosticDialog(
+            running = diagnosticRunning,
+            report = diagnosticReport,
+            onDismissRequest = {
+                if (!diagnosticRunning) viewModel.dismissDiagnosticReport()
+            },
+        )
+    }
 }
 
 internal fun shouldUseClassicMiuixHomeLayout(

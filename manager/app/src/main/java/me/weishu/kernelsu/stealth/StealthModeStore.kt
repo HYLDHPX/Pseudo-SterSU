@@ -8,7 +8,9 @@ import com.topjohnwu.superuser.ShellUtils
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.util.withNewRootShell
 import java.net.InetSocketAddress
+import java.net.HttpURLConnection
 import java.net.ServerSocket
+import java.net.URL
 import kotlin.concurrent.thread
 
 const val STEALTH_MODE_ENABLED_KEY = "stealth_mode_enabled"
@@ -275,6 +277,29 @@ object StealthModeStore {
         }.getOrDefault(false)
         return rootChecks.copy(portAvailable = portAvailable)
     }
+
+    /** The recovery daemon only serves this endpoint while the root-side marker exists. */
+    fun isRecoveryServiceReady(): Boolean = runCatching {
+        val connection = URL("${STEALTH_RECOVERY_URL}health").openConnection() as HttpURLConnection
+        try {
+            connection.connectTimeout = 1000
+            connection.readTimeout = 1000
+            connection.requestMethod = "GET"
+            if (connection.responseCode != 200) return@runCatching false
+            val body = connection.inputStream.bufferedReader().use { it.readText() }
+            isValidRecoveryHealthResponse(
+                connection.responseCode,
+                connection.getHeaderField("X-SterSU-Recovery"),
+                body,
+            )
+        } finally {
+            connection.disconnect()
+        }
+    }.getOrDefault(false)
+
+    internal fun isValidRecoveryHealthResponse(status: Int, marker: String?, body: String): Boolean =
+        status == 200 && marker == "1" &&
+            body.contains("\"ok\":true") && body.contains("\"message\":\"ready\"")
 
     fun readRootState(): Result<StealthModeRootState> = runCatching {
         val output = withNewRootShell {

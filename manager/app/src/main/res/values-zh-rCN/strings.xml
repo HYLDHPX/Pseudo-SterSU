@@ -44,7 +44,7 @@
     <string name="module_wallpaper_clear">&#x6E05;&#x9664;&#x6A21;&#x5757;&#x58C1;&#x7EB8;</string>
     <string name="module_wallpaper_preview_hint">&#x6A21;&#x5757;&#x5361;&#x7247;&#x9884;&#x89C8;</string>
     <string name="home">主页</string>
-    <string name="home_not_installed">可开始安装</string>
+    <string name="home_not_installed">未安装</string>
     <string name="home_click_to_install">点击安装</string>
     <string name="home_working">SterSU 已激活</string>
     <string name="home_working_version">已安装版本：%s</string>
