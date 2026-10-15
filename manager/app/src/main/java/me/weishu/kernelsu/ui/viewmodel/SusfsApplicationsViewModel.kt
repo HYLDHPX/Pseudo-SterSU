@@ -19,6 +19,7 @@ import me.weishu.kernelsu.ui.util.SusfsImportPlan
 import me.weishu.kernelsu.ui.util.SusfsPolicyState
 import me.weishu.kernelsu.ui.util.planSusfsImport
 import me.weishu.kernelsu.ui.util.updateSusfsUid
+import me.weishu.kernelsu.ui.util.getLkmSusfsStatus
 
 internal enum class SusfsAppCategory { All, Risk, Normal }
 internal enum class SusfsAppFilter { All, Enabled, Disabled, Default, Unknown }
@@ -138,9 +139,10 @@ internal class SusfsApplicationsViewModel : ViewModel() {
         if (!state.value.busy) mutableState.update { it.copy(preview = null) }
     }
 
-    fun applyPreview() {
+    fun applyPreview(lkmMode: Boolean = false) {
         val plan = state.value.preview ?: return
         operate {
+            if (lkmMode) requireLkmReady()
             try {
                 val report = repository.apply(plan)
                 mutableState.update { it.copy(report = report, preview = null, notice = "applied") }
@@ -153,7 +155,8 @@ internal class SusfsApplicationsViewModel : ViewModel() {
         }
     }
 
-    fun change(app: SusfsApplication, mode: SusfsHideMode) = operate {
+    fun change(app: SusfsApplication, mode: SusfsHideMode, lkmMode: Boolean = false) = operate {
+        if (lkmMode) requireLkmReady()
         val entries = listOf(SusfsApplicationHidingConfigEntry(app.packageName, mode))
         val plan = planSusfsImport(entries, listOf(app.target))
         if (!plan.canApply) return@operate
@@ -171,5 +174,12 @@ internal class SusfsApplicationsViewModel : ViewModel() {
         load()
         repository.export(uri, state.value.apps)
         mutableState.update { it.copy(notice = "exported") }
+    }
+
+    private suspend fun requireLkmReady() {
+        val status = getLkmSusfsStatus()
+        check(status.error.isBlank() && status.loaded && "CONFIG_KSU_SUSFS_SUS_PATH" in status.features) {
+            "lkm_susfs_guard_unavailable"
+        }
     }
 }

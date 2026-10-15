@@ -1,5 +1,7 @@
 package me.weishu.kernelsu.ui.screen.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,15 +9,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Policy
@@ -48,13 +53,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.dropUnlessResumed
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
+import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.theme.immersivePageColor
 import me.weishu.kernelsu.ui.theme.immersiveScrolledTopBarColor
 import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
@@ -68,6 +78,13 @@ import me.weishu.kernelsu.ui.util.removeLkmSusfsPath
 import me.weishu.kernelsu.ui.util.setLkmSusfsHideMounts
 import me.weishu.kernelsu.ui.util.setLkmSusfsLogging
 import me.weishu.kernelsu.ui.util.setLkmSusfsUname
+import me.weishu.kernelsu.ui.util.LKM_SUSFS_PATH_CONFIG_MAX_BYTES
+import me.weishu.kernelsu.ui.util.decodeLkmSusfsPathConfig
+import me.weishu.kernelsu.ui.util.encodeLkmSusfsPathConfig
+import me.weishu.kernelsu.ui.util.planLkmSusfsPathImport
+import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
 
 private const val PATH_FEATURE = "CONFIG_KSU_SUSFS_SUS_PATH"
 private const val LOG_FEATURE = "CONFIG_KSU_SUSFS_ENABLE_LOG"
@@ -76,10 +93,17 @@ private const val UNAME_FEATURE = "CONFIG_KSU_SUSFS_SPOOF_UNAME"
 
 private enum class LkmSusfsPage { Status, Policy, Paths }
 
+private data class LkmSusfsPathImport(
+    val existing: List<String>,
+    val importedCount: Int,
+    val additions: List<String>,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LkmSusfsScreen() {
     val navigator = LocalNavigator.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf(LkmSusfsStatus()) }
     var loading by remember { mutableStateOf(true) }
@@ -88,6 +112,9 @@ fun LkmSusfsScreen() {
     var page by remember { mutableStateOf(LkmSusfsPage.Status) }
     var showConfirmation by remember { mutableStateOf(false) }
     var actionError by remember { mutableStateOf("") }
+    var actionNotice by remember { mutableStateOf("") }
+    var pendingImport by remember { mutableStateOf<LkmSusfsPathImport?>(null) }
+    var importReport by remember { mutableStateOf<String?>(null) }
     var pathInput by remember { mutableStateOf("") }
     var unameRelease by remember { mutableStateOf("") }
     var unameVersion by remember { mutableStateOf("") }
@@ -109,12 +136,20 @@ fun LkmSusfsScreen() {
 
     fun act(operation: suspend () -> String?, onSuccess: () -> Unit = {}) {
         if (busy || loading) return
+        busy = true
         scope.launch {
-            busy = true
-            actionError = operation().orEmpty()
-            if (actionError.isEmpty()) onSuccess()
-            syncStatus(getLkmSusfsStatus())
-            busy = false
+            actionNotice = ""
+            try {
+                actionError = operation().orEmpty()
+                if (actionError.isEmpty()) onSuccess()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                actionError = failure.message.orEmpty()
+            } finally {
+                syncStatus(getLkmSusfsStatus())
+                busy = false
+            }
         }
     }
 
@@ -123,6 +158,74 @@ fun LkmSusfsScreen() {
     val policyAvailable = canEdit && LOG_FEATURE in status.features
     val mountAvailable = canEdit && MOUNT_FEATURE in status.features
     val unameAvailable = canEdit && UNAME_FEATURE in status.features
+
+    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null || busy || loading) return@rememberLauncherForActivityResult
+        busy = true
+        scope.launch {
+            actionError = ""
+            actionNotice = ""
+            try {
+                val current = getLkmSusfsStatus()
+                check(current.error.isBlank() && current.loaded && PATH_FEATURE in current.features) {
+                    "LKM SUSFS path guard is unavailable"
+                }
+                val content = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        val output = ByteArrayOutputStream()
+                        val buffer = ByteArray(8192)
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            check(output.size() + count <= LKM_SUSFS_PATH_CONFIG_MAX_BYTES) {
+                                "LKM SUSFS path config is too large"
+                            }
+                            output.write(buffer, 0, count)
+                        }
+                        Charsets.UTF_8.newDecoder()
+                            .onMalformedInput(CodingErrorAction.REPORT)
+                            .onUnmappableCharacter(CodingErrorAction.REPORT)
+                            .decode(ByteBuffer.wrap(output.toByteArray())).toString()
+                    } ?: error("Cannot open LKM SUSFS path config")
+                }
+                val imported = decodeLkmSusfsPathConfig(content)
+                pendingImport = LkmSusfsPathImport(
+                    current.paths, imported.size, planLkmSusfsPathImport(imported, current.paths),
+                )
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                actionError = failure.message.orEmpty()
+            } finally {
+                busy = false
+            }
+        }
+    }
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null || busy || loading) return@rememberLauncherForActivityResult
+        busy = true
+        scope.launch {
+            actionError = ""
+            actionNotice = ""
+            try {
+                val current = getLkmSusfsStatus()
+                check(current.error.isBlank()) { "Cannot read LKM SUSFS path config" }
+                val json = encodeLkmSusfsPathConfig(current.paths)
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri, "wt")?.bufferedWriter(Charsets.UTF_8)?.use {
+                        it.write(json)
+                    } ?: error("Cannot save LKM SUSFS path config")
+                }
+                actionNotice = context.getString(R.string.lkm_susfs_paths_exported, current.paths.size)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                actionError = failure.message.orEmpty()
+            } finally {
+                busy = false
+            }
+        }
+    }
 
     Scaffold(
         containerColor = immersivePageColor(MaterialTheme.colorScheme.background),
@@ -193,8 +296,11 @@ fun LkmSusfsScreen() {
                 }
                 if (actionError.isNotBlank()) {
                     LkmSusfsCard {
-                        Text(actionError, color = MaterialTheme.colorScheme.error)
+                        SelectionContainer { Text(actionError, color = MaterialTheme.colorScheme.error) }
                     }
+                }
+                if (actionNotice.isNotBlank()) {
+                    LkmSusfsCard { Text(actionNotice) }
                 }
                 if (status.policyError.isNotBlank()) {
                     LkmSusfsCard {
@@ -229,6 +335,18 @@ fun LkmSusfsScreen() {
                             )
                             if (status.lastError.isNotBlank()) {
                                 Text(status.lastError, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                        LkmSusfsCard {
+                            Text(stringResource(R.string.lkm_susfs_applications_title), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.lkm_susfs_applications_summary), style = MaterialTheme.typography.bodySmall)
+                            Button(
+                                onClick = dropUnlessResumed { navigator.push(Route.LkmSusfsApplications) },
+                                enabled = pathAvailable,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(Icons.Rounded.Apps, contentDescription = null)
+                                Text(stringResource(R.string.lkm_susfs_applications_open), modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                         LkmSusfsCard {
@@ -316,6 +434,19 @@ fun LkmSusfsScreen() {
                         LkmSusfsCard {
                             Text(stringResource(R.string.lkm_susfs_nav_paths), style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(R.string.lkm_susfs_paths_summary), style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.lkm_susfs_paths_transfer_summary), style = MaterialTheme.typography.bodySmall)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = { importer.launch(arrayOf("application/json", "text/*", "application/octet-stream")) },
+                                    enabled = pathAvailable,
+                                    modifier = Modifier.weight(1f),
+                                ) { Text(stringResource(R.string.lkm_susfs_paths_import)) }
+                                OutlinedButton(
+                                    onClick = { exporter.launch("SterSU-LKM-SUSFS-paths.json") },
+                                    enabled = !busy && !loading && status.error.isBlank(),
+                                    modifier = Modifier.weight(1f),
+                                ) { Text(stringResource(R.string.lkm_susfs_paths_export)) }
+                            }
                             OutlinedTextField(
                                 value = pathInput,
                                 onValueChange = { pathInput = it },
@@ -375,6 +506,77 @@ fun LkmSusfsScreen() {
                 TextButton(onClick = { showConfirmation = false }) {
                     Text(stringResource(android.R.string.cancel))
                 }
+            },
+        )
+    }
+
+    pendingImport?.let { preview ->
+        AlertDialog(
+            onDismissRequest = { if (!busy) pendingImport = null },
+            title = { Text(stringResource(R.string.lkm_susfs_paths_import_preview_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.lkm_susfs_paths_import_preview, preview.importedCount, preview.additions.size))
+                    Text(stringResource(R.string.lkm_susfs_paths_import_merge_note), style = MaterialTheme.typography.bodySmall)
+                    SelectionContainer {
+                        Column(Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()).widthIn(max = 500.dp)) {
+                            preview.additions.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !busy && preview.additions.isNotEmpty(),
+                    onClick = {
+                        if (busy) return@TextButton
+                        busy = true
+                        scope.launch {
+                            actionError = ""
+                            actionNotice = ""
+                            try {
+                                val current = getLkmSusfsStatus()
+                                check(current.error.isBlank() && current.loaded && PATH_FEATURE in current.features) {
+                                    "LKM SUSFS path guard is unavailable"
+                                }
+                                check(current.paths == preview.existing) { "LKM SUSFS paths changed; import again" }
+                                val failed = mutableListOf<String>()
+                                var added = 0
+                                preview.additions.forEach { path ->
+                                    val error = addLkmSusfsPath(path)
+                                    if (error == null) added++ else failed += "$path: $error"
+                                }
+                                importReport = context.getString(
+                                    R.string.lkm_susfs_paths_import_result, added, failed.size,
+                                ) + if (failed.isEmpty()) "" else "\n\n" + failed.joinToString("\n")
+                                pendingImport = null
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (failure: Exception) {
+                                actionError = failure.message.orEmpty()
+                                pendingImport = null
+                            } finally {
+                                syncStatus(getLkmSusfsStatus())
+                                busy = false
+                            }
+                        }
+                    },
+                ) { Text(stringResource(R.string.lkm_susfs_paths_import)) }
+            },
+            dismissButton = {
+                TextButton(enabled = !busy, onClick = { pendingImport = null }) {
+                    Text(stringResource(R.string.close))
+                }
+            },
+        )
+    }
+    importReport?.let { report ->
+        AlertDialog(
+            onDismissRequest = { importReport = null },
+            title = { Text(stringResource(R.string.lkm_susfs_paths_import_result_title)) },
+            text = { SelectionContainer { Text(report, modifier = Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) } },
+            confirmButton = {
+                TextButton(onClick = { importReport = null }) { Text(stringResource(R.string.close)) }
             },
         )
     }

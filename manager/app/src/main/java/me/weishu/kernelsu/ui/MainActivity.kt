@@ -212,6 +212,7 @@ import me.weishu.kernelsu.ui.screen.settings.GraphicsRendererScreen
 import me.weishu.kernelsu.ui.screen.settings.ForegroundToolProtectionScreen
 import me.weishu.kernelsu.ui.screen.settings.ImageToolScreen
 import me.weishu.kernelsu.ui.screen.settings.KpmScreen
+import me.weishu.kernelsu.ui.screen.settings.LkmSusfsApplicationsScreen
 import me.weishu.kernelsu.ui.screen.settings.LkmSusfsScreen
 import me.weishu.kernelsu.ui.screen.settings.SusfsPathConfigScreen
 import me.weishu.kernelsu.ui.util.captureSusfsRecoverySnapshot
@@ -688,6 +689,7 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.SwitchStyleCreator> { SwitchStyleCreatorScreen() }
                                 entry<Route.SusfsPathConfig> { SusfsPathConfigScreen() }
                                 entry<Route.LkmSusfs> { LkmSusfsScreen() }
+                                entry<Route.LkmSusfsApplications> { LkmSusfsApplicationsScreen() }
                                 entry<Route.SusfsApplications> { SusfsApplicationsScreen() }
                                 entry<Route.SusfsGuide> { SusfsGuideScreen() }
                                 entry<Route.ForegroundToolProtection> { ForegroundToolProtectionScreen() }

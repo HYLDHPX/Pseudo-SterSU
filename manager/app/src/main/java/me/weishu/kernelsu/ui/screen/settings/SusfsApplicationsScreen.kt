@@ -92,6 +92,7 @@ import me.weishu.kernelsu.ui.util.SusfsImportPlan
 import me.weishu.kernelsu.ui.util.SusfsPlanAction
 import me.weishu.kernelsu.ui.util.SusfsPolicyState
 import me.weishu.kernelsu.ui.util.SusfsRiskSignal
+import me.weishu.kernelsu.ui.util.getLkmSusfsStatus
 import me.weishu.kernelsu.ui.viewmodel.SusfsAppCategory
 import me.weishu.kernelsu.ui.viewmodel.SusfsAppFilter
 import me.weishu.kernelsu.ui.viewmodel.SusfsApplicationsViewModel
@@ -101,7 +102,44 @@ import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SusfsApplicationsScreen() {
+fun LkmSusfsApplicationsScreen() {
+    val navigator = LocalNavigator.current
+    var ready by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        val status = getLkmSusfsStatus()
+        ready = status.error.isBlank() && status.loaded && "CONFIG_KSU_SUSFS_SUS_PATH" in status.features
+    }
+    if (ready == true) {
+        SusfsApplicationsScreen(lkmMode = true)
+    } else {
+        Scaffold(
+            containerColor = immersivePageColor(MaterialTheme.colorScheme.background),
+            contentWindowInsets = WindowInsets.safeDrawing,
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.lkm_susfs_applications_title)) },
+                    navigationIcon = {
+                        IconButton(onClick = dropUnlessResumed { navigator.pop() }) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back))
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = immersiveTopBarColor(MaterialTheme.colorScheme.background),
+                        scrolledContainerColor = immersiveScrolledTopBarColor(MaterialTheme.colorScheme.surface),
+                    ),
+                )
+            },
+        ) { padding ->
+            Column(Modifier.padding(padding).padding(16.dp)) {
+                Text(stringResource(if (ready == null) R.string.susfs_apps_working else R.string.lkm_susfs_applications_unavailable))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SusfsApplicationsScreen(lkmMode: Boolean = false) {
     val model = viewModel<SusfsApplicationsViewModel>()
     val state by model.state.collectAsStateWithLifecycle()
     val navigator = LocalNavigator.current
@@ -133,7 +171,7 @@ fun SusfsApplicationsScreen() {
 
     fun requestChange(app: SusfsApplication, mode: SusfsHideMode) {
         if (state.busy) return
-        if (app.packageNames.size > 1) pendingChange = app to mode else model.change(app, mode)
+        if (app.packageNames.size > 1) pendingChange = app to mode else model.change(app, mode, lkmMode)
     }
 
     Scaffold(
@@ -141,7 +179,7 @@ fun SusfsApplicationsScreen() {
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.susfs_applications_title), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = { Text(stringResource(if (lkmMode) R.string.lkm_susfs_applications_title else R.string.susfs_applications_title), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = dropUnlessResumed { navigator.pop() }) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back))
@@ -171,7 +209,7 @@ fun SusfsApplicationsScreen() {
                                 onClick = {
                                     menu = false
                                     model.choosingDocument = true
-                                    exporter.launch("SterSU-application-policies.json")
+                                    exporter.launch(if (lkmMode) "SterSU-LKM-application-policies.json" else "SterSU-application-policies.json")
                                 },
                             )
                             DropdownMenuItem(
@@ -204,6 +242,13 @@ fun SusfsApplicationsScreen() {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                if (lkmMode) item(key = "lkm-note") {
+                    Text(
+                        stringResource(R.string.lkm_susfs_applications_summary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 item(key = "search") {
                     OutlinedTextField(
                         value = query,
@@ -310,7 +355,7 @@ fun SusfsApplicationsScreen() {
     }
 
     state.preview?.let { plan ->
-        SusfsImportPreview(plan, state.busy, onDismiss = model::dismissPreview, onApply = model::applyPreview)
+        SusfsImportPreview(plan, state.busy, onDismiss = model::dismissPreview, onApply = { model.applyPreview(lkmMode) })
     }
     pendingChange?.let { (app, mode) ->
         AlertDialog(
@@ -323,7 +368,7 @@ fun SusfsApplicationsScreen() {
                 }
             },
             confirmButton = {
-                TextButton(enabled = !state.busy, onClick = { pendingChange = null; model.change(app, mode) }) {
+                TextButton(enabled = !state.busy, onClick = { pendingChange = null; model.change(app, mode, lkmMode) }) {
                     Text(stringResource(R.string.confirm))
                 }
             },
@@ -335,7 +380,7 @@ fun SusfsApplicationsScreen() {
         title = { Text(stringResource(R.string.susfs_apps_help)) },
         text = {
             LazyColumn(Modifier.heightIn(max = 440.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item { Text(stringResource(R.string.susfs_applications_summary)) }
+                item { Text(stringResource(if (lkmMode) R.string.lkm_susfs_applications_summary else R.string.susfs_applications_summary)) }
                 item { Text(stringResource(R.string.susfs_apps_help_steps)) }
                 item { Text(stringResource(R.string.susfs_apps_backup_help)) }
             }
@@ -448,6 +493,9 @@ private fun policyLabel(policy: SusfsPolicyState): String = when {
 @Composable
 private fun policyFailureText(detail: String): String {
     val reason = detail.substringBefore(":")
+    if (reason == "lkm_susfs_guard_unavailable") {
+        return stringResource(R.string.lkm_susfs_applications_unavailable)
+    }
     val res = when (reason) {
         "not_installed" -> R.string.susfs_apps_not_installed
         "protected_app" -> R.string.susfs_applications_system_disabled

@@ -130,6 +130,10 @@ sealed interface Route : NavKey, Parcelable {
 
     @Parcelize
     @Serializable
+    data object LkmSusfsApplications : Route
+
+    @Parcelize
+    @Serializable
     data object SusfsApplications : Route
 
     @Parcelize
