@@ -2,6 +2,9 @@ package me.weishu.kernelsu.ui.component.material
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -31,6 +34,9 @@ import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SearchBarValue
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberContainedSearchBarState
@@ -47,16 +53,83 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.ImeAction
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
+
+@Composable
+fun InlineSearchAppBar(
+    title: @Composable () -> Unit,
+    searchText: String,
+    searchHint: String,
+    onSearchTextChange: (String) -> Unit,
+    onClearClick: () -> Unit,
+    navigationIcon: @Composable (() -> Unit)? = null,
+    actions: @Composable (() -> Unit)? = null,
+    scrollBehavior: TopAppBarScrollBehavior? = null,
+) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val topBarContainerColor = if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) {
+        MaterialTheme.colorScheme.surface
+    } else immersiveTopBarColor(MaterialTheme.colorScheme.surface)
+
+    Surface(color = topBarContainerColor, contentColor = MaterialTheme.colorScheme.onSurface) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            ExpressiveTopAppBar(
+                title = title,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = topBarContainerColor,
+                    scrolledContainerColor = topBarContainerColor,
+                ),
+                navigationIcon = { navigationIcon?.invoke() },
+                actions = { actions?.invoke() },
+                windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+                scrollBehavior = scrollBehavior,
+            )
+            TextField(
+                value = searchText,
+                onValueChange = onSearchTextChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 8.dp),
+                placeholder = { Text(searchHint) },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                trailingIcon = if (searchText.isNotEmpty()) {
+                    {
+                        IconButton(onClick = onClearClick) {
+                            Icon(Icons.Filled.Close, contentDescription = null)
+                        }
+                    }
+                } else null,
+                singleLine = true,
+                shape = RoundedCornerShape(28.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                }),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+            )
+        }
+    }
+}
 
 @Composable
 fun SearchAppBar(

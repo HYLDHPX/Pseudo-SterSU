@@ -55,6 +55,10 @@ jobs:
                 lkm_platform_name="lkm-${lkm_platform_name%-lkm}_kernelsu.ko"
                 KO="$(ls $dir/*_kernelsu.ko)"
                 mv "$KO" "lkm/$lkm_platform_name"
+                SUSFS_KO="$(find "$dir" -maxdepth 1 -name '*_susfs_guard_lkm.ko' -print -quit)"
+                if [ -n "$SUSFS_KO" ]; then
+                  cp "$SUSFS_KO" "lkm/${lkm_platform_name%_kernelsu.ko}_susfs_guard_lkm.ko"
+                fi
             fi
           done
 
@@ -67,5 +71,6 @@ jobs:
           files: |
             manager/*.apk
             lkm/lkm-*_kernelsu.ko
+            lkm/lkm-*_susfs_guard_lkm.ko
             ksud/ksud-*
             ksuinit/*

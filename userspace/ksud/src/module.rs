@@ -1321,9 +1321,8 @@ fn list_module(path: &str) -> Vec<HashMap<String, String>> {
 }
 
 pub fn get_modules() -> Vec<HashMap<String, String>> {
-    if let Err(e) = handle_updated_modules() {
-        warn!("handle updated modules before list failed: {e}");
-    }
+    // Install scripts may query this list while their modules_update directory is in use.
+    // Applying pending updates here would move that directory out from under the installer.
     list_module(defs::MODULE_DIR)
 }
 

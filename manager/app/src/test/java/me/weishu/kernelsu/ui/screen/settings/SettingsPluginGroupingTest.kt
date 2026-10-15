@@ -73,11 +73,8 @@ class SettingsPluginGroupingTest {
     }
 
     @Test
-    fun pathmaskWaitsForLkmDetectionAndNeverAppearsInLateLoadMode() {
+    fun gkiSusfsPathConfigStaysOutsideLkmAndLateLoadModes() {
         val lkm = installed.copy(isLkmMode = true)
-        assertTrue(allEntries(lkm).any { it.key == "pathmask_lkm" })
-        assertFalse(allEntries(lkm.copy(runtimeModeResolved = false)).any { it.key == "pathmask_lkm" })
-        assertFalse(allEntries(lkm.copy(isLateLoadMode = true)).any { it.key == "pathmask_lkm" })
         assertFalse(allEntries(lkm).any { it.key == "path_config" })
         assertTrue(allEntries(installed).any { it.key == "path_config" && it.plugin == null })
     }

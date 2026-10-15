@@ -8,7 +8,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,14 +17,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -49,14 +46,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,9 +67,7 @@ import me.weishu.kernelsu.ui.component.liquid.FrostedGlassCardStyle
 import me.weishu.kernelsu.ui.component.snow.snowMiuixCardColors
 import me.weishu.kernelsu.ui.component.snow.snowMiuixCardSurface
 import me.weishu.kernelsu.ui.component.snow.isSnowInterfaceStyle
-import me.weishu.kernelsu.ui.component.miuix.SearchBarFake
-import me.weishu.kernelsu.ui.component.miuix.SearchBox
-import me.weishu.kernelsu.ui.component.miuix.SearchPager
+import me.weishu.kernelsu.ui.component.miuix.SearchBar
 import me.weishu.kernelsu.ui.component.pixel.pixelAwareMiuixCardCornerRadius
 import me.weishu.kernelsu.ui.component.pixel.pixelAwareMiuixCardShape
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
@@ -120,7 +110,18 @@ fun SuperUserPagerMiuix(
 ) {
     val searchStatus = uiState.searchStatus
     val enableBlur = LocalEnableBlur.current
-    val density = LocalDensity.current
+    val lazyListState = rememberLazyListState()
+    var scrollBeforeSearch by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    LaunchedEffect(searchStatus.searchText) {
+        if (searchStatus.searchText.isNotBlank()) {
+            lazyListState.scrollToItem(0)
+        } else {
+            scrollBeforeSearch?.let { (index, offset) ->
+                lazyListState.scrollToItem(index, offset)
+                scrollBeforeSearch = null
+            }
+        }
+    }
 
     val scrollBehavior = MiuixScrollBehavior()
     val dynamicTopPadding by remember {
@@ -136,8 +137,7 @@ fun SuperUserPagerMiuix(
         containerColor = Color.Transparent,
         topBar = {
             BlurredBar(backdrop) {
-                searchStatus.TopAppBarAnim(backgroundColor = topBarColors.container) {
-                    TopAppBar(
+                TopAppBar(
                         color = topBarColors.container,
                         titleColor = topBarColors.content,
                         title = stringResource(R.string.superuser),
@@ -279,150 +279,32 @@ fun SuperUserPagerMiuix(
                         },
                         scrollBehavior = scrollBehavior,
                         bottomContent = {
-                            Box(
-                                modifier = Modifier
-                                    .alpha(if (searchStatus.isCollapsed()) 1f else 0f)
-                                    .onGloballyPositioned { coordinates ->
-                                        with(density) {
-                                            val newOffsetY = coordinates.positionInWindow().y.toDp()
-                                            if (searchStatus.offsetY != newOffsetY) {
-                                                actions.onSearchStatusChange(searchStatus.copy(offsetY = newOffsetY))
-                                            }
-                                        }
+                            SearchBar(
+                                searchStatus = searchStatus.copy(label = stringResource(R.string.superuser_search_hint)),
+                                onSearchStatusChange = { status ->
+                                    if (searchStatus.searchText.isBlank() && status.searchText.isNotBlank()) {
+                                        scrollBeforeSearch = lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
                                     }
-                                    .then(
-                                        if (searchStatus.isCollapsed()) {
-                                            Modifier.pointerInput(Unit) {
-                                                detectTapGestures {
-                                                    actions.onSearchStatusChange(searchStatus.copy(current = SearchStatus.Status.EXPANDING))
-                                                }
-                                            }
-                                        } else Modifier,
-                                    ),
-                            ) {
-                                SearchBarFake(searchStatus.label, dynamicTopPadding)
-                            }
+                                    actions.onSearchStatusChange(status)
+                                },
+                                searchBarTopPadding = dynamicTopPadding,
+                            )
                         }
                     )
-                }
-            }
-        },
-        popupHost = {
-            val expandedSearchUids = remember { mutableStateOf(setOf<Int>()) }
-            LaunchedEffect(uiState.searchResults) {
-                expandedSearchUids.value = uiState.searchResults
-                    .filter { it.apps.size > 1 }
-                    .map { it.uid }
-                    .toSet()
-            }
-            searchStatus.SearchPager(
-                onSearchStatusChange = actions.onSearchStatusChange,
-                defaultResult = {
-                    val imeBottomPadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
-                    if (uiState.recentlyInstalledResults.isNotEmpty()) {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .overScrollVertical(),
-                        ) {
-                            item {
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    text = stringResource(R.string.recently_installed),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = colorScheme.onSurfaceVariantSummary,
-                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
-                                )
-                            }
-                            items(uiState.recentlyInstalledResults, key = { it.uid }, contentType = { "recent-group" }) { group ->
-                                Column {
-                                    GroupItem(
-                                        group = group,
-                                        onToggleExpand = {},
-                                    ) {
-                                        actions.onOpenProfile(group)
-                                    }
-                                    AnimatedVisibility(
-                                        visible = group.apps.size > 1,
-                                        enter = expandVertically() + fadeIn(),
-                                        exit = shrinkVertically() + fadeOut()
-                                    ) {
-                                        Column {
-                                            group.apps.forEach { app ->
-                                                SimpleAppItem(app = app)
-                                            }
-                                            Spacer(Modifier.height(6.dp))
-                                        }
-                                    }
-                                }
-                            }
-                            item {
-                                Spacer(Modifier.height(maxOf(bottomInnerPadding, imeBottomPadding)))
-                            }
-                        }
-                    }
-                },
-                searchBarTopPadding = dynamicTopPadding,
-            ) {
-                val imeBottomPadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .overScrollVertical(),
-                ) {
-                    item {
-                        Spacer(Modifier.height(6.dp))
-                    }
-                    items(uiState.searchResults, key = { it.uid }, contentType = { "group" }) { group ->
-                        val expanded = expandedSearchUids.value.contains(group.uid)
-                        AnimatedVisibility(
-                            visible = uiState.searchResults.isNotEmpty(),
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
-                        ) {
-                            Column {
-                                GroupItem(
-                                    group = group,
-                                    onToggleExpand = {
-                                        if (group.apps.size > 1) {
-                                            expandedSearchUids.value =
-                                                if (expanded) expandedSearchUids.value - group.uid else expandedSearchUids.value + group.uid
-                                        }
-                                    },
-                                ) {
-                                    actions.onOpenProfile(group)
-                                }
-                                AnimatedVisibility(
-                                    visible = expanded && group.apps.size > 1,
-                                    enter = expandVertically() + fadeIn(),
-                                    exit = shrinkVertically() + fadeOut()
-                                ) {
-                                    Column {
-                                        group.apps.forEach { app ->
-                                            SimpleAppItem(
-                                                app = app,
-                                                matched = group.matchedIdentifiers.contains(app.displayIdentifier),
-                                            )
-                                        }
-                                        Spacer(Modifier.height(6.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    item {
-                        Spacer(Modifier.height(maxOf(bottomInnerPadding, imeBottomPadding)))
-                    }
-                }
             }
         },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
     ) { innerPadding ->
         val layoutDirection = LocalLayoutDirection.current
-        val lazyListState = rememberLazyListState()
-        searchStatus.SearchBox {
-            val lazyListState = rememberLazyListState()
+        val isSearching = searchStatus.searchText.isNotBlank()
+        val visibleApps = if (isSearching) uiState.searchResults else uiState.groupedApps
+        val expandedSearchUids = remember { mutableStateOf(setOf<Int>()) }
+        LaunchedEffect(uiState.searchResults) {
+            expandedSearchUids.value = uiState.searchResults
+                .filter { it.apps.size > 1 }
+                .map { it.uid }
+                .toSet()
+        }
             var refreshTick by remember { mutableIntStateOf(0) }
             val latestGroupedApps = rememberUpdatedState(uiState.groupedApps)
             val latestRefreshing = rememberUpdatedState(uiState.isRefreshing)
@@ -489,15 +371,25 @@ fun SuperUserPagerMiuix(
                             ),
                             overscrollEffect = null,
                         ) {
-                            items(uiState.groupedApps, key = { it.uid }, contentType = { "group" }) { group ->
-                                val expanded = expandedUids.value.contains(group.uid)
+                            if (isSearching && visibleApps.isEmpty() && searchStatus.resultStatus == SearchStatus.ResultStatus.EMPTY) {
+                                item(key = "search-empty") {
+                                    Text(
+                                        text = stringResource(R.string.superuser_empty),
+                                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+                                        color = colorScheme.onSurfaceVariantSummary,
+                                    )
+                                }
+                            }
+                            items(visibleApps, key = { it.uid }, contentType = { "group" }) { group ->
+                                val expandedSet = if (isSearching) expandedSearchUids else expandedUids
+                                val expanded = expandedSet.value.contains(group.uid)
                                 Column {
                                     GroupItem(
                                         group = group,
                                         onToggleExpand = {
                                             if (group.apps.size > 1) {
-                                                expandedUids.value =
-                                                    if (expanded) expandedUids.value - group.uid else expandedUids.value + group.uid
+                                                expandedSet.value =
+                                                    if (expanded) expandedSet.value - group.uid else expandedSet.value + group.uid
                                             }
                                         }
                                     ) {
@@ -510,7 +402,10 @@ fun SuperUserPagerMiuix(
                                     ) {
                                         Column {
                                             group.apps.forEach { app ->
-                                                SimpleAppItem(app = app)
+                                                SimpleAppItem(
+                                                    app = app,
+                                                    matched = isSearching && group.matchedIdentifiers.contains(app.displayIdentifier),
+                                                )
                                             }
                                             Spacer(Modifier.height(6.dp))
                                         }
@@ -524,7 +419,6 @@ fun SuperUserPagerMiuix(
                     }
                 }
             }
-        }
     }
 }
 

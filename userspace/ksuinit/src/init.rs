@@ -114,19 +114,6 @@ pub fn init() -> Result<()> {
         }
     }
 
-    if access("/pathmask.ko", Access::EXISTS).is_ok() {
-        let params = std::fs::read("/pathmask_config").unwrap_or_default();
-        if params.is_empty() {
-            log::info!("pathmask.ko found but no /pathmask_config, defer loading to ksud");
-        } else {
-            log::info!("Loading pathmask.ko..");
-            let params = unsafe { CString::from_vec_unchecked(params) };
-            if let Err(e) = load_module_from_path("/pathmask.ko", &params) {
-                log::error!("Cannot load pathmask.ko: {:?}", e);
-            }
-        }
-    }
-
     // And now we should prepare the real init to transfer control to it
     unlink("/init")?;
 

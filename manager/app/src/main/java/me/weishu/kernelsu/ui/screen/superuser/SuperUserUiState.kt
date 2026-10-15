@@ -30,6 +30,7 @@ data class SuperUserUiState(
     val showSystemApps: Boolean = false,
     val showOnlyPrimaryUserApps: Boolean = false,
     val sortOption: Int = 0,
+    val updatingRootUids: Set<Int> = emptySet(),
     val error: Throwable? = null
 )
 
@@ -45,6 +46,7 @@ data class SuperUserActions(
     val onToggleShowOnlyPrimaryUserApps: () -> Unit,
     val onUpdateSortOption: (Int) -> Unit,
     val onOpenProfile: (GroupedApps) -> Unit,
+    val onSetRootAccess: (GroupedApps, Boolean) -> Unit,
 )
 
 @Immutable

@@ -28,6 +28,8 @@ enum class ManagerPlugin(
     val id: String,
     val slots: Set<PluginSlot>,
     val published: Boolean = true,
+    // Delisting a package must not revoke an already installed capability.
+    val availableInStore: Boolean = published,
 ) {
     RescueProtection("rescue-protection", setOf(PluginSlot.ToolboxRescue)),
     ImageTools("image-tools", setOf(PluginSlot.ToolboxImageTools), published = false),
@@ -42,7 +44,6 @@ enum class ManagerPlugin(
     ),
     AppIdManager("app-id-manager", setOf(PluginSlot.SuperuserAppIdManager)),
     AppFreeze("app-freeze", setOf(PluginSlot.SuperuserAppFreeze)),
-    PathmaskLkm("pathmask-lkm", setOf(PluginSlot.MountHidePathmaskLkm)),
     ;
 
     companion object {
@@ -50,7 +51,10 @@ enum class ManagerPlugin(
     }
 }
 
-internal fun publishedManagerPlugins(): List<ManagerPlugin> = ManagerPlugin.entries.filter { it.published }
+internal fun storeAvailableManagerPlugins(): List<ManagerPlugin> = ManagerPlugin.entries.filter { it.availableInStore }
+
+internal fun ManagerPluginCatalog.availableStorePackages(): List<ManagerPluginPackage> =
+    plugins.filter { ManagerPlugin.fromId(it.id)?.availableInStore == true }
 
 enum class PluginSlot(val id: String) {
     ToolboxRescue("toolbox.rescue"),
@@ -63,7 +67,6 @@ enum class PluginSlot(val id: String) {
     MaintenanceStealthMode("maintenance.stealth-mode"),
     SuperuserAppIdManager("superuser.app-id-manager"),
     SuperuserAppFreeze("superuser.app-freeze"),
-    MountHidePathmaskLkm("mount-hide.pathmask-lkm"),
     ;
 
     companion object {
@@ -113,7 +116,6 @@ internal enum class ManagerPluginCompatibilityIssue {
     KsudMissing,
     KsudVersionUnavailable,
     KsudTooOld,
-    LkmModeRequired,
 }
 
 internal data class ManagerPluginCompatibility(
@@ -413,7 +415,7 @@ class ManagerPluginInstaller(
         onProgress: (PluginDownloadProgress) -> Unit = {},
     ): InstalledManagerPlugin = withContext(Dispatchers.IO) {
         validatePlugin(plugin, requireDownload = true)
-        require(ManagerPlugin.fromId(plugin.id)?.published == true) {
+        require(ManagerPlugin.fromId(plugin.id)?.availableInStore == true) {
             "Plugin is no longer available"
         }
         require(plugin.minManagerVersionCode <= BuildConfig.VERSION_CODE) {
@@ -424,9 +426,6 @@ class ManagerPluginInstaller(
             installedKsud.versionCode != null &&
             installedKsud.versionCode >= plugin.minKsudVersionCode) {
             "Plugin requires installed ksud ${plugin.minKsudVersionCode} or newer"
-        }
-        require(plugin.id != ManagerPlugin.PathmaskLkm.id || isPathmaskLkmPluginSupported()) {
-            "Pathmask plugin requires LKM mode"
         }
         var failure: Throwable? = null
         for (url in resolvePluginDownloadUrls(plugin.downloadUrl, settings)) {
@@ -518,7 +517,6 @@ internal fun checkManagerPluginCompatibility(
     plugin: ManagerPluginPackage,
     managerVersionCode: Int = BuildConfig.VERSION_CODE,
     ksudStatus: InstalledKsudStatus,
-    pathmaskSupported: Boolean = plugin.id != ManagerPlugin.PathmaskLkm.id || isPathmaskLkmPluginSupported(),
 ): ManagerPluginCompatibility {
     if (managerVersionCode < plugin.minManagerVersionCode) {
         return ManagerPluginCompatibility(
@@ -546,23 +544,12 @@ internal fun checkManagerPluginCompatibility(
             ksudVersionCode = ksudVersion,
         )
     }
-    if (plugin.id == ManagerPlugin.PathmaskLkm.id && !pathmaskSupported) {
-        return ManagerPluginCompatibility(
-            issue = ManagerPluginCompatibilityIssue.LkmModeRequired,
-            managerVersionCode = managerVersionCode,
-            ksudVersionCode = ksudVersion,
-        )
-    }
     return ManagerPluginCompatibility(
         issue = ManagerPluginCompatibilityIssue.None,
         managerVersionCode = managerVersionCode,
         ksudVersionCode = ksudVersion,
     )
 }
-
-internal fun isPathmaskLkmPluginSupported(): Boolean = runCatching {
-    Natives.version > 0 && Natives.isLkmMode && !Natives.isLateLoadMode
-}.getOrDefault(false)
 
 internal fun InstalledManagerPlugin.isCompatibleWith(
     managerVersionCode: Int = BuildConfig.VERSION_CODE,
@@ -575,41 +562,23 @@ internal fun resolveCompatiblePluginIds(
     ksudStatus: InstalledKsudStatus,
 ): Set<String> = installed
     .asSequence()
-    .filter { ManagerPlugin.fromId(it.plugin.id)?.published != false }
+    .filter { ManagerPlugin.fromId(it.plugin.id)?.published == true }
     .filter { it.isCompatibleWith(managerVersionCode, ksudStatus) }
     .mapTo(linkedSetOf()) { it.plugin.id }
 
 internal enum class PluginRemovalResult {
-    Removed, NotInstalled, RequiresStealthDisabled, RemoteManagementStopFailed, PathmaskStopFailed,
-}
-
-internal suspend fun stopPathmaskPluginForRemoval(
-    readStatus: suspend () -> HiddenPathConfigReadResult,
-    disableAutoLoad: suspend () -> ToolCommandResult,
-    unload: suspend () -> ToolCommandResult,
-): Boolean {
-    val before = readStatus().config ?: return false
-    if (before.hasPendingCandidate) return false
-    if (!before.loaded && !before.autoLoadEnabled) return true
-    if (before.autoLoadEnabled && !disableAutoLoad().success) return false
-    if (before.loaded && !unload().success) return false
-    val after = readStatus().config ?: return false
-    return !after.autoLoadEnabled && !after.loaded && !after.hasPendingCandidate
+    Removed, NotInstalled, RequiresStealthDisabled, RemoteManagementStopFailed,
 }
 
 internal suspend fun removeManagerPlugin(
     pluginId: String,
     stealthEnabled: Boolean,
     stopRemoteManagement: () -> Boolean,
-    stopPathmask: suspend () -> Boolean,
     removeRecord: () -> Boolean,
 ): PluginRemovalResult {
     val remoteManagement = pluginId == ManagerPlugin.RemoteManagementSuite.id
     if (remoteManagement && stealthEnabled) return PluginRemovalResult.RequiresStealthDisabled
     if (remoteManagement && !stopRemoteManagement()) return PluginRemovalResult.RemoteManagementStopFailed
-    if (pluginId == ManagerPlugin.PathmaskLkm.id && !stopPathmask()) {
-        return PluginRemovalResult.PathmaskStopFailed
-    }
     return if (removeRecord()) PluginRemovalResult.Removed else PluginRemovalResult.NotInstalled
 }
 

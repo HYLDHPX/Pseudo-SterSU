@@ -136,12 +136,13 @@ import me.weishu.kernelsu.data.model.ModuleUpdateInfo
 import me.weishu.kernelsu.data.repository.isSoftRebootPreferred
 import me.weishu.kernelsu.ui.component.ObserveAsEvents
 import me.weishu.kernelsu.ui.component.ScrollToTopOnChange
+import me.weishu.kernelsu.ui.component.SearchStatus
 import me.weishu.kernelsu.ui.component.dialog.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.dialog.rememberLoadingDialog
 import me.weishu.kernelsu.ui.component.material.ExpressiveScaffold
 import me.weishu.kernelsu.ui.component.material.rememberExpressivePageScrollBehavior
 import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
-import me.weishu.kernelsu.ui.component.material.SearchAppBar
+import me.weishu.kernelsu.ui.component.material.InlineSearchAppBar
 import me.weishu.kernelsu.ui.component.material.SnackBarHost
 import me.weishu.kernelsu.ui.component.material.TonalCard
 import me.weishu.kernelsu.ui.component.statustag.StatusTag
@@ -167,7 +168,18 @@ fun ModulePagerMaterial(
     val pullToRefreshState = rememberPullToRefreshState()
 
     val listState = rememberLazyListState()
-    val searchListState = rememberLazyListState()
+    var scrollBeforeSearch by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    val searchText = uiState.searchStatus.searchText
+    LaunchedEffect(searchText) {
+        if (searchText.isNotBlank()) {
+            listState.scrollToItem(0)
+        } else {
+            scrollBeforeSearch?.let { (index, offset) ->
+                listState.scrollToItem(index, offset)
+                scrollBeforeSearch = null
+            }
+        }
+    }
     val refreshTick = remember { mutableIntStateOf(0) }
     val threshold = with(LocalDensity.current) { 100.dp.toPx() }
     val fabExpanded by remember {
@@ -276,12 +288,17 @@ fun ModulePagerMaterial(
 
     ExpressiveScaffold(
         topBar = {
-            SearchAppBar(
+            InlineSearchAppBar(
                 title = { Text(stringResource(R.string.module)) },
-                searchText = uiState.searchStatus.searchText,
-                onSearchTextChange = actions.onSearchTextChange,
+                searchText = searchText,
+                searchHint = stringResource(R.string.module_search_hint),
+                onSearchTextChange = {
+                    if (searchText.isBlank() && it.isNotBlank()) {
+                        scrollBeforeSearch = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+                    }
+                    actions.onSearchTextChange(it)
+                },
                 onClearClick = actions.onClearSearch,
-                snackbarHostState = snackBarHost,
                 navigationIcon = {
                     IconButton(
                         onClick = { actions.onOpenRepo() }
@@ -343,29 +360,6 @@ fun ModulePagerMaterial(
                     }
                 },
                 scrollBehavior = scrollBehavior,
-                searchContent = { bottomPadding, closeSearch ->
-                    val latestSearchResults = rememberUpdatedState(uiState.searchResults)
-                    ScrollToTopOnChange(
-                        searchListState,
-                        uiState.searchStatus.searchText,
-                    ) { latestSearchResults.value }
-                    ModuleList(
-                        bottomInnerPadding = bottomPadding,
-                        modifier = Modifier.fillMaxSize(),
-                        listState = searchListState,
-                        displayModules = uiState.searchResults,
-                        updateInfoMap = uiState.updateInfo,
-                        actions = actions,
-                        onClickModule = { module ->
-                            if (module.hasWebUi) {
-                                actions.onOpenWebUi(module)
-                                closeSearch()
-                            }
-                        },
-                        onModuleAddShortcut = { module, type -> onModuleAddShortcut(module, type) },
-                        closeSearch = closeSearch,
-                    )
-                }
             )
         },
         floatingActionButton = {
@@ -460,11 +454,17 @@ fun ModulePagerMaterial(
                 refreshTick.intValue,
                 isBusy = { latestRefreshing.value },
             ) { latestModuleList.value }
-            ModuleList(
+            val isSearching = searchText.isNotBlank()
+            val visibleModules = if (isSearching) uiState.searchResults else uiState.moduleList
+            if (isSearching && visibleModules.isEmpty() && uiState.searchStatus.resultStatus == SearchStatus.ResultStatus.EMPTY) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.module_search_empty))
+                }
+            } else ModuleList(
                 bottomInnerPadding = bottomInnerPadding,
                 modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                 listState = listState,
-                displayModules = uiState.moduleList,
+                displayModules = visibleModules,
                 updateInfoMap = uiState.updateInfo,
                 actions = actions,
                 onClickModule = { module ->
@@ -702,8 +702,18 @@ private fun ModuleItem(
     onEditWallpaper: () -> Unit,
     closeSearch: () -> Unit
 ) {
+    val wallpaperState = rememberModuleCardWallpaperState(module.id)
+    val wallpaperEntry = rememberModuleCardWallpaperFrame(wallpaperState, paused = false)
+    val wallpaperLoadState = rememberModuleCardWallpaperLoadState(wallpaperEntry)
+    val cardBackground = rememberModuleCardBackground(module, wallpaperEntry, wallpaperLoadState)
     TonalCard(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        backgroundContent = {
+            ModuleCardWallpaperBackground(
+                bitmap = cardBackground.bitmap,
+                entry = cardBackground.customEntry,
+            )
+        },
     ) {
         val haptic = LocalHapticFeedback.current
         val textDecoration = if (!module.remove) null else TextDecoration.LineThrough

@@ -265,3 +265,30 @@ Aster publishes a GPL version 3 license text. See its
 and the detailed [UI design attribution](./docs/ASTER_UI_DESIGN_NOTICE.md).
 This notice does not replace or relicense any source file or override the
 project's existing licenses and copyright notices.
+
+9. Optional LKM SUSFS guard
+---------------------------
+
+`kernel/susfs/` is a separate, optional SUSFS loadable kernel module. The
+immediate vendored source is `kernel/susfs` from
+[KernelSU-Next/KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
+at commit `4c706b5938665866ebe16944a481a7b91e3396af`. Its integration commit
+[`8f573af08333`](https://github.com/KernelSU-Next/KernelSU-Next/commit/8f573af08333)
+names [inforcqb/susfs4ksu-lkm](https://github.com/inforcqb/susfs4ksu-lkm)
+commit `faf696a050b1c64009a4898cae7bcc0c9079f1d3` as its source. The LKM
+port, in turn, credits `simonpunk/susfs4ksu` and SukiSU-Ultra for the SUSFS
+logic/hook points and supporting hook/symbol code, respectively.
+
+The LKM port and its kernel sources declare GPL-2.0. The full license text is
+in `kernel/LICENSE`; original source-file SPDX and copyright notices are kept.
+The `KernelSU-Next` root GPL-3.0 license does not change those kernel-file
+terms. Repository attributes normalize the line endings of `sus_path.c` to LF;
+the imported kernel code otherwise matches the pinned source. SterSU adds separate ksud loading,
+policy persistence, Manager status UI and KMI build wiring; those parts follow
+their own file-level licenses and do not replace the GKI SUSFS implementation.
+See `kernel/susfs/README.stersu.md` for the build and runtime boundaries.
+
+This attribution identifies upstream source; it does not imply affiliation or
+endorsement. Distributors of the LKM must preserve applicable notices and
+provide complete corresponding source, including modifications and build
+scripts, for the exact distributed binary.

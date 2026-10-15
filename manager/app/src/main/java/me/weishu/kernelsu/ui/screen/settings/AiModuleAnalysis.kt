@@ -77,7 +77,6 @@ internal fun buildModuleAnalysisReport(
         appendLine("- packaged/installed ksud: ${root.packagedKsudVersion.ifBlank { "unknown" }}/${root.installedKsudVersion.ifBlank { "unknown" }}")
         appendLine("- KMI: ${root.currentKmi.ifBlank { "unknown" }}")
         appendLine("- slot: ${root.currentSlot.ifBlank { "unknown" }}")
-        appendLine("- hidden-path LKM: ${root.hiddenPathLkm}")
         appendLine()
         appendLine("## Deterministic findings")
         if (findings.isEmpty()) {

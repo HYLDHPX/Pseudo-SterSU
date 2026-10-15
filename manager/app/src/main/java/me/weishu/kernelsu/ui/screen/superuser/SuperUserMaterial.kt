@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -26,7 +28,9 @@ import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CheckableDropdownMenuItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.Icon
@@ -37,7 +41,9 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.SelectableDropdownMenuItem
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -56,6 +62,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -68,8 +77,8 @@ import me.weishu.kernelsu.ui.component.ApkeLoadingState
 import me.weishu.kernelsu.ui.component.ScrollToTopOnChange
 import me.weishu.kernelsu.ui.component.material.ExpressiveScaffold
 import me.weishu.kernelsu.ui.component.material.rememberExpressivePageScrollBehavior
-import me.weishu.kernelsu.ui.component.material.SearchAppBar
-import me.weishu.kernelsu.ui.component.material.SegmentedColumn
+import me.weishu.kernelsu.ui.component.SearchStatus
+import me.weishu.kernelsu.ui.component.material.InlineSearchAppBar
 import me.weishu.kernelsu.ui.component.material.SegmentedItem
 import me.weishu.kernelsu.ui.component.material.SegmentedListItem
 import me.weishu.kernelsu.ui.component.statustag.StatusTag
@@ -80,10 +89,11 @@ fun SuperUserPagerMaterial(
     uiState: SuperUserUiState,
     actions: SuperUserActions,
     bottomInnerPadding: Dp,
+    showRootToggle: Boolean = false,
 ) {
     val scrollBehavior = rememberExpressivePageScrollBehavior()
     val listState = rememberLazyListState()
-    val searchListState = rememberLazyListState()
+    var scrollBeforeSearch by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val refreshTick = remember { mutableIntStateOf(0) }
     val pullToRefreshState = rememberPullToRefreshState()
 
@@ -91,17 +101,30 @@ fun SuperUserPagerMaterial(
     LaunchedEffect(uiState.searchStatus.searchText) {
         localSearchText = uiState.searchStatus.searchText
     }
+    LaunchedEffect(localSearchText) {
+        if (localSearchText.isNotBlank()) {
+            listState.scrollToItem(0)
+        } else {
+            scrollBeforeSearch?.let { (index, offset) ->
+                listState.scrollToItem(index, offset)
+                scrollBeforeSearch = null
+            }
+        }
+    }
 
     val haptic = LocalHapticFeedback.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     ExpressiveScaffold(
         topBar = {
-            SearchAppBar(
-                snackbarHostState = snackbarHostState,
+            InlineSearchAppBar(
                 title = { Text(stringResource(R.string.superuser)) },
                 searchText = localSearchText,
+                searchHint = stringResource(R.string.superuser_search_hint),
                 onSearchTextChange = {
+                    if (localSearchText.isBlank() && it.isNotBlank()) {
+                        scrollBeforeSearch = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+                    }
                     localSearchText = it
                     actions.onSearchTextChange(it)
                 },
@@ -246,75 +269,6 @@ fun SuperUserPagerMaterial(
                     }
                 },
                 scrollBehavior = scrollBehavior,
-                defaultContent = { bottomPadding, closeSearch ->
-                    LaunchedEffect(localSearchText) {
-                        searchListState.scrollToItem(0)
-                    }
-                    LazyColumn(
-                        state = searchListState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            bottom = 16.dp + bottomPadding
-                        ),
-                    ) {
-                        if (uiState.recentlyInstalledResults.isNotEmpty()) {
-                            item {
-                                SegmentedColumn(
-                                    title = stringResource(R.string.recently_installed),
-                                    content = uiState.recentlyInstalledResults.map { group ->
-                                        @Composable {
-                                            SearchGroupItem(
-                                                group = group,
-                                                closeSearch = closeSearch,
-                                                onOpenProfile = actions.onOpenProfile,
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                },
-                searchContent = { bottomPadding, closeSearch ->
-                    LaunchedEffect(localSearchText) {
-                        searchListState.scrollToItem(0)
-                    }
-                    LazyColumn(
-                        state = searchListState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 0.dp,
-                            bottom = 16.dp + bottomPadding
-                        ),
-                    ) {
-                        if (uiState.hasLoaded && uiState.searchResults.isEmpty()) {
-                            item(key = "search-empty") {
-                                ApkeEmptyState(
-                                    title = stringResource(R.string.superuser_empty),
-                                )
-                            }
-                        }
-                        itemsIndexed(uiState.searchResults, key = { _, item -> item.uid }) { index, group ->
-                            SegmentedItem(index = index, count = uiState.searchResults.size) {
-                                SearchGroupItem(
-                                    group = group,
-                                    closeSearch = closeSearch,
-                                    onOpenProfile = actions.onOpenProfile,
-                                )
-                            }
-                        }
-                    }
-                }
             )
         },
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
@@ -339,6 +293,8 @@ fun SuperUserPagerMaterial(
             },
         ) {
             val expandedSearchUids = remember { mutableStateOf(setOf<Int>()) }
+            val isSearching = localSearchText.isNotBlank()
+            val visibleApps = if (isSearching) uiState.searchResults else uiState.groupedApps
 
             val latestGroupedApps = rememberUpdatedState(uiState.groupedApps)
             val latestRefreshing = rememberUpdatedState(uiState.isRefreshing)
@@ -381,6 +337,16 @@ fun SuperUserPagerMaterial(
                         }
                     }
 
+                    isSearching && visibleApps.isEmpty() && uiState.searchStatus.resultStatus == SearchStatus.ResultStatus.LOAD -> {
+                        item(key = "search-loading") { ApkeLoadingState() }
+                    }
+
+                    isSearching && visibleApps.isEmpty() && uiState.searchStatus.resultStatus == SearchStatus.ResultStatus.EMPTY -> {
+                        item(key = "search-empty") {
+                            ApkeEmptyState(title = stringResource(R.string.superuser_empty))
+                        }
+                    }
+
                     uiState.groupedApps.isEmpty() -> {
                         item(key = "empty") {
                             ApkeEmptyState(
@@ -389,7 +355,7 @@ fun SuperUserPagerMaterial(
                         }
                     }
                 }
-                itemsIndexed(uiState.groupedApps, key = { _, item -> item.uid }) { index, group ->
+                itemsIndexed(visibleApps, key = { _, item -> item.uid }) { index, group ->
                     val expanded = expandedSearchUids.value.contains(group.uid)
                     val onToggleExpand = {
                         if (group.apps.size > 1) {
@@ -400,24 +366,38 @@ fun SuperUserPagerMaterial(
                             }
                         }
                     }
-                    SegmentedItem(index = index, count = uiState.groupedApps.size) {
-                        Column {
-                            GroupItem(
+                    SegmentedItem(index = index, count = visibleApps.size) {
+                        if (isSearching) {
+                            SearchGroupItem(
                                 group = group,
-                                selected = expanded,
-                                onToggleExpand = onToggleExpand,
-                            ) {
-                                actions.onOpenProfile(group)
-                            }
-                            AnimatedVisibility(
-                                visible = expanded && group.apps.size > 1,
-                                enter = expandVertically() + fadeIn(),
-                                exit = shrinkVertically() + fadeOut()
-                            ) {
-                                Column {
-                                    group.apps.forEach { app ->
-                                        SimpleAppItem(app = app) {
-                                            actions.onOpenProfile(group)
+                                closeSearch = {},
+                                onOpenProfile = actions.onOpenProfile,
+                                showRootToggle = showRootToggle,
+                                rootUpdating = group.uid in uiState.updatingRootUids,
+                                onSetRootAccess = actions.onSetRootAccess,
+                            )
+                        } else {
+                            Column {
+                                GroupItem(
+                                    group = group,
+                                    selected = expanded,
+                                    onToggleExpand = onToggleExpand,
+                                    showRootToggle = showRootToggle,
+                                    rootUpdating = group.uid in uiState.updatingRootUids,
+                                    onSetRootAccess = { enabled -> actions.onSetRootAccess(group, enabled) },
+                                ) {
+                                    actions.onOpenProfile(group)
+                                }
+                                AnimatedVisibility(
+                                    visible = expanded && group.apps.size > 1,
+                                    enter = expandVertically() + fadeIn(),
+                                    exit = shrinkVertically() + fadeOut()
+                                ) {
+                                    Column {
+                                        group.apps.forEach { app ->
+                                            SimpleAppItem(app = app) {
+                                                actions.onOpenProfile(group)
+                                            }
                                         }
                                     }
                                 }
@@ -435,16 +415,24 @@ private fun SearchGroupItem(
     group: GroupedApps,
     closeSearch: () -> Unit,
     onOpenProfile: (GroupedApps) -> Unit,
+    showRootToggle: Boolean,
+    rootUpdating: Boolean,
+    onSetRootAccess: (GroupedApps, Boolean) -> Unit,
 ) {
+    val openProfile = {
+        closeSearch()
+        onOpenProfile(group)
+    }
     Column {
         GroupItem(
             group = group,
             selected = false,
-            onToggleExpand = {},
-        ) {
-            closeSearch()
-            onOpenProfile(group)
-        }
+            onToggleExpand = openProfile,
+            showRootToggle = showRootToggle,
+            rootUpdating = rootUpdating,
+            onSetRootAccess = { enabled -> onSetRootAccess(group, enabled) },
+            onClickPrimary = openProfile,
+        )
         AnimatedVisibility(
             visible = group.apps.size > 1,
             enter = expandVertically() + fadeIn(),
@@ -507,6 +495,9 @@ private fun GroupItem(
     group: GroupedApps,
     selected: Boolean,
     onToggleExpand: () -> Unit,
+    showRootToggle: Boolean,
+    rootUpdating: Boolean,
+    onSetRootAccess: (Boolean) -> Unit,
     onClickPrimary: () -> Unit,
 ) {
     val bg = colorScheme.primary
@@ -519,9 +510,9 @@ private fun GroupItem(
     val otherFg = colorScheme.onTertiary
 
     val userId = group.uid / 100000
-    val tags = remember(group.anyAllowSu, group.shouldUmount, group.anyCustom, userId) {
+    val tags = remember(showRootToggle, group.anyAllowSu, group.shouldUmount, group.anyCustom, userId) {
         buildList {
-            if (group.anyAllowSu) add(StatusMeta("ROOT", bg, fg))
+            if (group.anyAllowSu && !showRootToggle) add(StatusMeta("ROOT", bg, fg))
             if (group.shouldUmount) add(StatusMeta("UMOUNT", umountBg, umountFg))
             if (group.anyCustom) add(StatusMeta("CUSTOM", customBg, customFg))
             if (userId != 0) add(StatusMeta("USER $userId", otherBg, otherFg))
@@ -534,8 +525,8 @@ private fun GroupItem(
     }
     SegmentedListItem(
         selected = selected,
-        onClick = onClickPrimary,
-        onLongClick = if (group.apps.size > 1) onToggleExpand else null,
+        onClick = if (showRootToggle && group.apps.size > 1) onToggleExpand else onClickPrimary,
+        onLongClick = if (showRootToggle) onClickPrimary else if (group.apps.size > 1) onToggleExpand else null,
         headlineContent = {
             Text(
                 text = if (group.apps.size > 1) ownerNameForUid(group.uid) else group.primary.label,
@@ -552,11 +543,19 @@ private fun GroupItem(
             )
         },
         trailingContent = {
-            if (tags.isNotEmpty()) {
+            if (showRootToggle || tags.isNotEmpty()) {
                 Column(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    if (showRootToggle) {
+                        QuickRootToggle(
+                            group = group,
+                            updating = rootUpdating,
+                            onToggle = onSetRootAccess,
+                            onOpenProfile = onClickPrimary,
+                        )
+                    }
                     tags.forEach { tag ->
                         StatusTag(
                             label = tag.label,
@@ -575,4 +574,71 @@ private fun GroupItem(
             )
         },
     )
+}
+
+@Composable
+private fun QuickRootToggle(
+    group: GroupedApps,
+    updating: Boolean,
+    onToggle: (Boolean) -> Unit,
+    onOpenProfile: () -> Unit,
+) {
+    var pendingCustomChange by remember(group.uid) { mutableStateOf<Boolean?>(null) }
+    val granted = group.anyAllowSu
+    val stateLabel = stringResource(if (granted) R.string.superuser_root_enabled else R.string.superuser_root_disabled)
+    val actionLabel = stringResource(if (granted) R.string.superuser_root_disable_action else R.string.superuser_root_enable_action)
+    val stateDescription = stringResource(R.string.superuser_root_state_for_app, group.primary.label, stateLabel)
+    val contentColor = if (granted) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant
+    Surface(
+        modifier = Modifier
+            .sizeIn(minWidth = 72.dp, minHeight = 48.dp)
+            .combinedClickable(
+                enabled = !updating && !group.primary.special,
+                role = Role.Button,
+                onClickLabel = actionLabel,
+                onLongClickLabel = stringResource(R.string.superuser_open_app_profile),
+                onLongClick = onOpenProfile,
+                onClick = {
+                    val enable = !granted
+                    if (group.anyCustom) pendingCustomChange = enable
+                    else onToggle(enable)
+                },
+            )
+            .semantics {
+                contentDescription = stateDescription
+            },
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        color = if (granted) colorScheme.primaryContainer else colorScheme.surfaceVariant,
+        contentColor = contentColor,
+    ) {
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (updating) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            } else {
+                Text(stateLabel, style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+    if (pendingCustomChange != null) {
+        val enable = pendingCustomChange == true
+        AlertDialog(
+            onDismissRequest = { pendingCustomChange = null },
+            title = { Text(stringResource(if (enable) R.string.superuser_custom_enable_title else R.string.superuser_custom_disable_title)) },
+            text = { Text(stringResource(if (enable) R.string.superuser_custom_enable_message else R.string.superuser_custom_disable_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingCustomChange = null
+                    onToggle(enable)
+                }) { Text(stringResource(if (enable) R.string.superuser_root_enable_action else R.string.superuser_root_disable_action)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCustomChange = null }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        )
+    }
 }

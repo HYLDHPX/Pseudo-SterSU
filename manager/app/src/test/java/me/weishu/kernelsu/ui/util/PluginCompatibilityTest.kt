@@ -8,9 +8,9 @@ import org.junit.Test
 class PluginCompatibilityTest {
     @Test
     fun resolveCompatiblePluginIdsExcludesMissingAndOldKsud() {
-        val compatible = InstalledManagerPlugin(plugin("compatible", 10, 20), 1L)
-        val oldKsud = InstalledManagerPlugin(plugin("old-ksud", 10, 21), 1L)
-        val oldManager = InstalledManagerPlugin(plugin("old-manager", 11, 20), 1L)
+        val compatible = InstalledManagerPlugin(plugin(ManagerPlugin.RescueProtection.id, 10, 20), 1L)
+        val oldKsud = InstalledManagerPlugin(plugin(ManagerPlugin.AppFreeze.id, 10, 21), 1L)
+        val oldManager = InstalledManagerPlugin(plugin(ManagerPlugin.AppIdManager.id, 11, 20), 1L)
 
         val ids = resolveCompatiblePluginIds(
             installed = listOf(compatible, oldKsud, oldManager),
@@ -18,7 +18,7 @@ class PluginCompatibilityTest {
             ksudStatus = InstalledKsudStatus(present = true, versionCode = 20),
         )
 
-        assertEquals(setOf("compatible"), ids)
+        assertEquals(setOf(ManagerPlugin.RescueProtection.id), ids)
         assertTrue(checkManagerPluginCompatibility(
             compatible.plugin,
             managerVersionCode = 10,
@@ -29,16 +29,6 @@ class PluginCompatibilityTest {
             managerVersionCode = 10,
             ksudStatus = InstalledKsudStatus(present = true, versionCode = 20),
         ).isCompatible)
-    }
-
-    @Test
-    fun pathmaskRequiresResolvedLkmMode() {
-        val pathmask = plugin(ManagerPlugin.PathmaskLkm.id, 10, 20)
-        val ksud = InstalledKsudStatus(present = true, versionCode = 20)
-
-        assertEquals(ManagerPluginCompatibilityIssue.LkmModeRequired,
-            checkManagerPluginCompatibility(pathmask, 10, ksud, pathmaskSupported = false).issue)
-        assertTrue(checkManagerPluginCompatibility(pathmask, 10, ksud, pathmaskSupported = true).isCompatible)
     }
 
     private fun plugin(id: String, minManager: Int, minKsud: Int) = ManagerPluginPackage(

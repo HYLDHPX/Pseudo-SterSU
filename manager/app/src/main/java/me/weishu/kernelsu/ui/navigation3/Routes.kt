@@ -122,11 +122,11 @@ sealed interface Route : NavKey, Parcelable {
 
     @Parcelize
     @Serializable
-    data object HiddenPathConfig : Route
+    data object SusfsPathConfig : Route
 
     @Parcelize
     @Serializable
-    data object SusfsPathConfig : Route
+    data object LkmSusfs : Route
 
     @Parcelize
     @Serializable

@@ -1,6 +1,5 @@
 package me.weishu.kernelsu.ui.screen.settings
 
-import me.weishu.kernelsu.ui.util.ManagerPlugin
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -20,15 +19,12 @@ class SettingsFeatureAvailabilityTest {
     }
 
     @Test
-    fun lkmModeNeedsPathmaskPlugin() {
+    fun lkmModeDoesNotExposeGkiSusfsPathConfig() {
         val state = SettingsUiState(isLkmMode = true, runtimeModeResolved = true)
 
-        assertEquals(PathConfigBackend.PathmaskLkm, state.pathConfigBackend)
+        assertEquals(PathConfigBackend.Disabled, state.pathConfigBackend)
         assertFalse(state.canOpenPathConfig)
         assertFalse(state.isPathConfigEntryVisible)
-        val installed = state.copy(installedPluginIds = setOf(ManagerPlugin.PathmaskLkm.id))
-        assertTrue(installed.canOpenPathConfig)
-        assertTrue(installed.isPathConfigEntryVisible)
         assertFalse(state.isGkiMode)
     }
 

@@ -70,6 +70,9 @@ internal object SettingsCatalog {
         entry("kpm", SettingsCategory.MountAndHide, R.string.kpm_title, R.string.kpm_settings_summary) {
             it.isKpmSettingsEntryVisible
         },
+        entry("susfs_lkm", SettingsCategory.MountAndHide, R.string.lkm_susfs_title, R.string.lkm_susfs_summary) {
+            it.runtimeModeResolved && it.isLkmMode && !it.isLateLoadMode
+        },
 
         entry("plugin_store", SettingsCategory.Plugins, R.string.plugin_store_title, R.string.settings_plugins_store_summary),
         pluginEntry("rescue", ManagerPlugin.RescueProtection, R.string.rescue_protection, R.string.rescue_protection_summary),
@@ -83,9 +86,6 @@ internal object SettingsCatalog {
         },
         pluginEntry("app_id_manager", ManagerPlugin.AppIdManager, R.string.app_id_manager_title, R.string.settings_plugin_app_id_summary),
         pluginEntry("app_freeze", ManagerPlugin.AppFreeze, R.string.app_freeze_title, R.string.settings_plugin_app_freeze_summary),
-        pluginEntry("pathmask_lkm", ManagerPlugin.PathmaskLkm, R.string.hidden_path_lkm_builtin_title, R.string.hidden_path_config_summary) {
-            it.pathConfigBackend == PathConfigBackend.PathmaskLkm
-        },
 
         entry("web_debugging", SettingsCategory.AppAndMaintenance, R.string.enable_web_debugging, R.string.enable_web_debugging_summary),
         entry("stealth_mode", SettingsCategory.AppAndMaintenance, R.string.stealth_mode_title, R.string.stealth_mode_summary),

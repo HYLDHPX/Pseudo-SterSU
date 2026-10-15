@@ -735,10 +735,6 @@ pub struct BootPatchArgs {
     #[arg(long, default_value = "false")]
     no_install: bool,
 
-    /// Add built-in pathmask LKM for hidden path patching
-    #[arg(long, default_value = "false")]
-    pathmask_lkm: bool,
-
     #[cfg(not(target_os = "android"))]
     #[arg(long, default_value = "aarch64")]
     arch: String,
@@ -871,7 +867,6 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
             enable_adbd,
             adb_debug_prop,
             no_install,
-            pathmask_lkm,
             #[cfg(target_os = "android")]
             ota,
             #[cfg(target_os = "android")]
@@ -912,11 +907,6 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
                 "init and module must not be specified."
             );
         }
-
-        ensure!(
-            !(pathmask_lkm && no_install),
-            "pathmask LKM patch cannot be used with no-install"
-        );
 
         // None means --no-install: preserve the marker for the existing LKM.
         let bundled_lkm = (!no_install).then_some(kmod.is_none());
@@ -1056,6 +1046,9 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
                 (Cpio::new(), None)
             };
 
+        // Drop the retired optional LKM from existing patched images in every mode.
+        cpio.rm("pathmask.ko", false);
+
         if !no_install {
             ensure!(
                 !cpio.is_magisk_patched(),
@@ -1071,7 +1064,6 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
 
             cpio.add("init", CpioEntry::regular(0o755, ksu_init))?;
             cpio.add("kernelsu.ko", CpioEntry::regular(0o755, kernelsu_ko))?;
-            apply_pathmask_lkm(&mut cpio, pathmask_lkm, &kmi)?;
 
             #[cfg(target_os = "android")]
             if (backup || (!is_kernelsu_patched && flash))
@@ -1383,19 +1375,4 @@ fn rebuild_without_ksu(
     let mut buf = Cursor::new(Vec::<u8>::with_capacity(boot_image.get_size()));
     patcher.patch(&mut buf)?;
     Ok(buf.into_inner())
-}
-
-fn apply_pathmask_lkm(cpio: &mut Cpio, enabled: bool, kmi: &str) -> Result<()> {
-    if !enabled {
-        cpio.rm("pathmask.ko", false);
-        return Ok(());
-    }
-
-    ensure!(!kmi.is_empty(), "KMI is required for pathmask LKM patch");
-    let name = format!("{kmi}_pathmask.ko");
-    let pathmask = assets::get_asset(&name)
-        .with_context(|| format!("Failed to load built-in pathmask LKM for {kmi}"))?;
-    println!("- Adding hidden path LKM: {name}");
-    cpio.add("pathmask.ko", CpioEntry::regular(0o755, pathmask))?;
-    Ok(())
 }

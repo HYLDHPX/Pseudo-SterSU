@@ -280,7 +280,7 @@ data class SettingsScreenActions(
     val onSetShellSuAdbOnlyEnabled: (Boolean) -> Unit,
     val onSetAvcSpoofEnabled: (Boolean) -> Unit,
     val onSetDefaultUmountModules: (Boolean) -> Unit,
-    val onOpenHiddenPathConfig: () -> Unit,
+    val onOpenSusfsPathConfig: () -> Unit,
     val onOpenAiChat: () -> Unit,
     val onOpenRescueProtection: () -> Unit,
     val onOpenCpuSpoof: () -> Unit,

@@ -172,6 +172,7 @@ class MainLayoutTest {
     @Test
     fun sidebarRailKeepsMainPagerModuleRepoAndSettingsAtTheSameWidth() {
         assertTrue(shouldHostSidebarRail(Route.Main, false, true, false))
+        assertTrue(shouldHostSidebarRail(Route.Sulog, false, true, false))
         assertTrue(shouldHostSidebarRail(Route.ModuleRepo, false, true, false))
         assertTrue(shouldHostSidebarRail(
             Route.ModuleRepoDetail(RepoModuleArg("test", "Test", "", emptyList(), "", 0, "", false)),
@@ -181,6 +182,8 @@ class MainLayoutTest {
         assertFalse(shouldHostSidebarRail(Route.ThemeStore, false, true, false))
         assertFalse(shouldHostSidebarRail(Route.Main, false, false, false))
         assertFalse(shouldHostSidebarRail(Route.Main, false, true, true))
+        assertFalse(shouldHostSidebarRail(Route.Sulog, false, false, false))
+        assertFalse(shouldHostSidebarRail(Route.Sulog, false, true, true))
         assertFalse(shouldHostSidebarRail(Route.ModuleRepo, false, false, false))
         assertFalse(shouldHostSidebarRail(Route.ModuleRepo, false, true, true))
     }

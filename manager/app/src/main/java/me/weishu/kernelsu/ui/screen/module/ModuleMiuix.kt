@@ -23,7 +23,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +40,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -72,20 +70,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.FixedScale
 import androidx.compose.ui.layout.SubcomposeLayout
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -121,9 +114,7 @@ import me.weishu.kernelsu.ui.component.liquid.isLiquidGlassTheme
 import me.weishu.kernelsu.ui.component.snow.isSnowInterfaceStyle
 import me.weishu.kernelsu.ui.component.snow.snowMiuixCardColors
 import me.weishu.kernelsu.ui.component.snow.snowMiuixCardSurface
-import me.weishu.kernelsu.ui.component.miuix.SearchBarFake
-import me.weishu.kernelsu.ui.component.miuix.SearchBox
-import me.weishu.kernelsu.ui.component.miuix.SearchPager
+import me.weishu.kernelsu.ui.component.miuix.SearchBar
 import me.weishu.kernelsu.ui.component.pixel.pixelMiuixCardSurface
 import me.weishu.kernelsu.ui.component.pixel.pixelAwareMiuixCardCornerRadius
 import me.weishu.kernelsu.ui.component.rebootlistpopup.RebootListPopupMiuix
@@ -186,7 +177,6 @@ fun ModulePagerMiuix(
 
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val density = LocalDensity.current
     val enableBlur = LocalEnableBlur.current
 
     val confirmDialog = rememberConfirmDialog(
@@ -271,6 +261,17 @@ fun ModulePagerMiuix(
     }
 
     val listState = rememberLazyListState()
+    var scrollBeforeSearch by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    LaunchedEffect(searchStatus.searchText) {
+        if (searchStatus.searchText.isNotBlank()) {
+            listState.scrollToItem(0)
+        } else {
+            scrollBeforeSearch?.let { (index, offset) ->
+                listState.scrollToItem(index, offset)
+                scrollBeforeSearch = null
+            }
+        }
+    }
     val nestedScrollConnection = remember(uiState.installButtonVisible) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -322,7 +323,6 @@ fun ModulePagerMiuix(
                 ) + fadeOut(animationSpec = tween(120)),
             ) {
                 BlurredBar(backdrop) {
-                    searchStatus.TopAppBarAnim(backgroundColor = topBarColors.container) {
                         TopAppBar(
                         color = topBarColors.container,
                         titleColor = topBarColors.content,
@@ -391,32 +391,18 @@ fun ModulePagerMiuix(
                         },
                         scrollBehavior = scrollBehavior,
                         bottomContent = {
-                            Box(
-                                modifier = Modifier
-                                    .alpha(if (searchStatus.isCollapsed()) 1f else 0f)
-                                    .onGloballyPositioned { coordinates ->
-                                        with(density) {
-                                            val newOffsetY = coordinates.positionInWindow().y.toDp()
-                                            if (searchStatus.offsetY != newOffsetY) {
-                                                actions.onSearchStatusChange(searchStatus.copy(offsetY = newOffsetY))
-                                            }
-                                        }
+                            SearchBar(
+                                searchStatus = searchStatus.copy(label = stringResource(R.string.module_search_hint)),
+                                onSearchStatusChange = { status ->
+                                    if (searchStatus.searchText.isBlank() && status.searchText.isNotBlank()) {
+                                        scrollBeforeSearch = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
                                     }
-                                    .then(
-                                        if (searchStatus.isCollapsed()) {
-                                            Modifier.pointerInput(Unit) {
-                                                detectTapGestures {
-                                                    actions.onSearchStatusChange(searchStatus.copy(current = SearchStatus.Status.EXPANDING))
-                                                }
-                                            }
-                                        } else Modifier,
-                                    ),
-                            ) {
-                                SearchBarFake(searchStatus.label, dynamicTopPadding)
-                            }
+                                    actions.onSearchStatusChange(status)
+                                },
+                                searchBarTopPadding = dynamicTopPadding,
+                            )
                         }
                         )
-                    }
                 }
             }
         },
@@ -458,30 +444,6 @@ fun ModulePagerMiuix(
                 )
             }
         },
-        popupHost = {
-            searchStatus.SearchPager(
-                onSearchStatusChange = actions.onSearchStatusChange,
-                defaultResult = {},
-                searchBarTopPadding = dynamicTopPadding,
-            ) {
-                val imeBottomPadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
-                ModuleList(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .overScrollVertical(),
-                    modules = uiState.searchResults,
-                    updateInfoMap = uiState.updateInfo,
-                    actions = actions,
-                    onModuleAddShortcut = ::onModuleAddShortcut,
-                    contentPadding = PaddingValues(
-                        top = 6.dp,
-                        start = 0.dp,
-                        end = 0.dp,
-                        bottom = maxOf(bottomInnerPadding, imeBottomPadding),
-                    ),
-                )
-            }
-        },
         snackbarHost = {
             SnackbarHost(
                 state = snackbarHostState,
@@ -507,7 +469,8 @@ fun ModulePagerMiuix(
             return@Scaffold
         }
         val layoutDirection = LocalLayoutDirection.current
-        searchStatus.SearchBox {
+        val isSearching = searchStatus.searchText.isNotBlank()
+        val visibleModules = if (isSearching) uiState.searchResults else modules
             val pullToRefreshState = rememberPullToRefreshState()
             val refreshTexts = listOf(
                 stringResource(R.string.refresh_pulling),
@@ -584,14 +547,22 @@ fun ModulePagerMiuix(
                                     .weight(1f)
                                     .then(if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier),
                             ) {
-                                ModuleList(
+                                if (isSearching && visibleModules.isEmpty() && searchStatus.resultStatus == SearchStatus.ResultStatus.EMPTY) {
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text(
+                                            stringResource(R.string.module_search_empty),
+                                            textAlign = TextAlign.Center,
+                                            color = colorScheme.onSurfaceVariantSummary,
+                                        )
+                                    }
+                                } else ModuleList(
                                     modifier = Modifier
                                         .fillMaxHeight()
                                         .scrollEndHaptic()
                                         .overScrollVertical()
                                         .nestedScroll(scrollBehavior.nestedScrollConnection)
                                         .nestedScroll(nestedScrollConnection),
-                                    modules = modules,
+                                    modules = visibleModules,
                                     updateInfoMap = uiState.updateInfo,
                                     actions = actions,
                                     onModuleAddShortcut = { module, type ->
@@ -605,7 +576,6 @@ fun ModulePagerMiuix(
                     }
                 }
             }
-        }
     }
     ModuleShortcutDialog(
         show = showShortcutDialog.value,
@@ -854,7 +824,8 @@ fun ModuleItem(
     )
     val wallpaperLoadState = rememberModuleCardWallpaperLoadState(wallpaperEntry)
     val wallpaperBitmap = wallpaperLoadState.bitmap
-    val hasWallpaper = wallpaperEntry != null
+    val cardBackground = rememberModuleCardBackground(module, wallpaperEntry, wallpaperLoadState)
+    val hasWallpaper = wallpaperEntry != null || cardBackground.bitmap != null
 
     Card(
         cornerRadius = pixelAwareMiuixCardCornerRadius(18.dp),
@@ -891,7 +862,10 @@ fun ModuleItem(
         }
     ) {
         Box {
-            ModuleCardWallpaperBackground(bitmap = wallpaperBitmap, entry = wallpaperEntry)
+            ModuleCardWallpaperBackground(
+                bitmap = cardBackground.bitmap,
+                entry = cardBackground.customEntry,
+            )
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

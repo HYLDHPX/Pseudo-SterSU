@@ -90,6 +90,13 @@ pub fn on_post_fs_data() -> Result<()> {
         return Ok(());
     }
 
+    // The LKM guard is optional and separate from built-in GKI SUSFS.
+    // Load before module scripts so their SUSFS commands can run this boot.
+    #[cfg(target_arch = "aarch64")]
+    if let Err(error) = crate::susfsd::load_if_autoload_enabled() {
+        warn!("SUSFS guard autoload failed: {error:#}");
+    }
+
     if let Err(e) = handle_updated_modules() {
         warn!("handle updated modules failed: {e}");
     }
@@ -128,7 +135,6 @@ pub fn on_post_fs_data() -> Result<()> {
     }
 
     crate::kpm::load_enabled_at_boot();
-    crate::pathmask::apply_if_configured();
 
     // execute metamodule post-fs-data script first (priority)
     if let Err(e) = metamodule::exec_stage_script("post-fs-data", wait) {
@@ -176,13 +182,6 @@ pub fn run_stage(stage: &str, wait: ScriptWait) {
     if crate::utils::is_safe_mode() {
         warn!("safe mode, skip {stage} scripts");
         return;
-    }
-
-    // post-fs-data is the earliest load window, but targets on late-mounted
-    // storage may not exist yet. Retry Pathmask during the later Android
-    // service milestones; apply_if_configured is idempotent once it is loaded.
-    if matches!(stage, "service" | "boot-completed") {
-        crate::pathmask::apply_if_configured();
     }
 
     if stage == "service" {

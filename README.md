@@ -39,6 +39,8 @@ SterSU 继承上游的许可边界，具体以各文件声明为准：
 - `kernel/` 以外的 KernelSU 衍生代码遵循 **GPL-3.0-or-later**。
 - 第三方文件保留各自的许可证与版权声明，详见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) 和 [NOTICE](./NOTICE)。
 
+可选的 LKM SUSFS guard 源码位于 `kernel/susfs/`，与 GKI 内置 SUSFS 分开。它取自 [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) 的固定提交，其 LKM 移植来源是 [susfs4ksu-lkm](https://github.com/inforcqb/susfs4ksu-lkm)。来源版本、集成范围和 GPL-2.0 声明见 [LKM SUSFS 来源说明](./kernel/susfs/README.stersu.md)；这些上游项目均未为 SterSU 背书。
+
 本仓库 [Pseudo-SterSU](https://github.com/fixz232/Pseudo-SterSU) 是 SterSU 的备用源码发布位置，不构成重新授权。根目录 [LICENSE](./LICENSE) 提供 GPL 第 3 版文本，不改变 `kernel/` 的许可。分发构建产物时，应遵守适用许可证、保留来源与声明，并提供完整对应源码。更多说明见 [GPL 合规说明](./GPL-COMPLIANCE.md)。
 
 界面设计参考了开源项目，但 SterSU 的 MIUI 风格不是小米官方产品，也未使用小米官方源码。侧栏相关设计来源见 [Aster UI 说明](./docs/ASTER_UI_DESIGN_NOTICE.md)。
@@ -55,6 +57,7 @@ SterSU 继承上游的许可边界，具体以各文件声明为准：
 
 - [KernelSU](https://github.com/tiann/KernelSU)：主上游项目，感谢 weishu 与所有贡献者。
 - [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) 与 [susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu)：SuSFS 集成与补丁来源。
+- [susfs4ksu-lkm](https://github.com/inforcqb/susfs4ksu-lkm)：将 SUSFS 移植为可加载内核模块；[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)：本仓库 LKM guard 源码的直接参考与集成来源。感谢两项目及其贡献者。
 - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU)：动态管理器设计与接口参考。
 - [FolkPatch](https://github.com/LyraVoid/FolkPatch)、[Aster](https://github.com/LyraVoid/Aster) 与 [SKRoot](https://github.com/abcz316/SKRoot-linuxKernelRoot)：界面代码与设计参考。
 - [KOWX712/KernelSU](https://github.com/KOWX712/KernelSU)：内核模块文件来源。

@@ -8,7 +8,6 @@ $activeIds = @(
     'remote-management-suite'
     'app-id-manager'
     'app-freeze'
-    'pathmask-lkm'
 )
 
 $entries = foreach ($id in $activeIds) {

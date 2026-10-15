@@ -69,9 +69,6 @@ private val DYNAMIC_MANAGER_CERTIFICATE_SHA256 = Regex("[0-9a-f]{64}")
 private var lastManagerRegistrationFailureKey: String? = null
 private var lastManagerRegistrationFailureAt = 0L
 const val KPATCH_NEXT_MODULE_ID = "KPatch-Next"
-const val HIDDEN_PATH_CONFIG_FILE_NAME = "apkesu_hidden_path_config.json"
-const val HIDDEN_PATH_CONFIG_MIME_TYPE = "application/json"
-const val HIDDEN_PATH_MAX_AUTO_LOAD_DELAY_SECONDS = 300
 private const val SUSFS_PATH_CONFIG_DIR = "/data/adb/ksu/susfs"
 private const val SUSFS_PATH_CONFIG_FILE = "$SUSFS_PATH_CONFIG_DIR/paths.txt"
 private const val SUSFS_PATH_LOOP_CONFIG_FILE = "$SUSFS_PATH_CONFIG_DIR/path_loop.txt"
@@ -237,79 +234,11 @@ internal fun mergeCpuSpoofStatus(
     }
 }
 
-data class HiddenPathConfigState(
-    val targetPaths: List<String> = emptyList(),
-    val appPackages: List<String> = emptyList(),
-    val useAppScope: Boolean = true,
-    val hideDirents: Boolean = true,
-    val hideIsolated: Boolean = true,
-    val autoLoadEnabled: Boolean = true,
-    val autoLoadDelaySeconds: Int = 0,
-    val autoLoadRemainingSeconds: Int = 0,
-    val loaded: Boolean = false,
-    val currentKmi: String = "",
-    val phase: String = "unconfigured",
-    val savedCount: Int = 0,
-    val availableCount: Int = 0,
-    val activeCount: Int = 0,
-    val resolvedCount: Int = 0,
-    val activeTargetPaths: String = "",
-    val missingTargetPaths: List<String> = emptyList(),
-    val unresolvedTargetCount: Int = 0,
-    val unresolvedTargetPaths: List<String> = emptyList(),
-    val requiresReload: Boolean = false,
-    val requiresReboot: Boolean = false,
-    val hasPendingCandidate: Boolean = false,
-    val lastErrorCode: String = "",
-    val lastErrorMessage: String = "",
-    val lastLog: String = "",
-    val resolvedAppUids: List<String> = emptyList(),
-    val unresolvedAppPackages: List<String> = emptyList(),
-) {
-    val pendingTargetCount: Int
-        get() = missingTargetPaths.size
-            .coerceAtLeast((savedCount - availableCount).coerceAtLeast(0))
-
-    val notEffectiveTargetCount: Int
-        get() = (missingTargetPaths.size + unresolvedTargetCount)
-            .coerceAtLeast((savedCount - activeCount).coerceAtLeast(0))
-
-    val isPartial: Boolean
-        get() = loaded && (phase == "partial" || unresolvedTargetCount > 0)
-}
-
-data class HiddenPathConfigReadResult(
-    val config: HiddenPathConfigState? = null,
-    val error: String = "",
-    val errorCode: String = "",
-)
-
-internal fun HiddenPathConfigState.editableEquals(other: HiddenPathConfigState): Boolean {
-    return targetPaths == other.targetPaths &&
-        appPackages == other.appPackages &&
-        useAppScope == other.useAppScope &&
-        hideDirents == other.hideDirents &&
-        hideIsolated == other.hideIsolated &&
-        autoLoadEnabled == other.autoLoadEnabled &&
-        autoLoadDelaySeconds == other.autoLoadDelaySeconds
-}
-
 data class ToolCommandResult(
     val success: Boolean = false,
     val errorCode: String = "",
     val errorMessage: String = "",
     val timedOut: Boolean = false,
-)
-
-data class HiddenPathVisibilityResult(
-    val uid: Int = -1,
-    val path: String = "",
-    val status: String = "probe_failed",
-    val visible: Boolean = false,
-    val rootExists: Boolean = false,
-    val moduleLoaded: Boolean = false,
-    val resolvedCount: String = "",
-    val error: String = "",
 )
 
 data class SusfsCapabilities(
@@ -416,7 +345,6 @@ data class RootDiagnosticInfo(
     val currentKmi: String = "",
     val currentSlot: String = "",
     val workMode: String = "unknown",
-    val hiddenPathLkm: Boolean = false,
 )
 
 data class SeccompSelfCheckProbe(
@@ -554,49 +482,6 @@ fun RescueConfigState.toConfigJson(): String {
         .put("allowDangerousAutoRestore", allowDangerousAutoRestore)
         .put("customPartitions", custom)
         .toString()
-}
-
-fun HiddenPathConfigState.toConfigJson(): String {
-    require(autoLoadDelaySeconds in 0..HIDDEN_PATH_MAX_AUTO_LOAD_DELAY_SECONDS) {
-        "Pathmask auto-load delay is out of range"
-    }
-    return JSONObject()
-        .put("schemaVersion", 3)
-        .put("targetPaths", JSONArray(targetPaths.cleanConfigList()))
-        .put("appPackages", JSONArray(appPackages.cleanConfigList()))
-        .put("useAppScope", useAppScope)
-        .put("hideDirents", hideDirents)
-        .put("hideIsolated", hideIsolated)
-        .put("autoLoadEnabled", autoLoadEnabled)
-        .put("autoLoadDelaySeconds", autoLoadDelaySeconds)
-        .toString(2)
-}
-
-fun parseHiddenPathConfigJson(content: String, current: HiddenPathConfigState = HiddenPathConfigState()): HiddenPathConfigState {
-    val obj = JSONObject(content)
-    return current.copy(
-        targetPaths = obj.optJSONArray("targetPaths").toStringList().cleanConfigList(),
-        appPackages = obj.optJSONArray("appPackages").toStringList().cleanConfigList(),
-        useAppScope = obj.optBoolean("useAppScope", current.useAppScope),
-        hideDirents = obj.optBoolean("hideDirents", current.hideDirents),
-        hideIsolated = obj.optBoolean("hideIsolated", current.hideIsolated),
-        autoLoadEnabled = obj.optBoolean("autoLoadEnabled", current.autoLoadEnabled),
-        // Older exports had no delay field and therefore always loaded immediately.
-        autoLoadDelaySeconds = obj.readAutoLoadDelaySeconds(0),
-    )
-}
-
-private fun JSONObject.readAutoLoadDelaySeconds(defaultValue: Int): Int {
-    if (!has("autoLoadDelaySeconds")) return defaultValue
-    val numeric = (opt("autoLoadDelaySeconds") as? Number)?.toDouble()
-    require(numeric != null && numeric.isFinite() && numeric % 1.0 == 0.0) {
-        "Pathmask auto-load delay must be an integer"
-    }
-    val seconds = numeric.toInt()
-    require(seconds in 0..HIDDEN_PATH_MAX_AUTO_LOAD_DELAY_SECONDS) {
-        "Pathmask auto-load delay must be between 0 and $HIDDEN_PATH_MAX_AUTO_LOAD_DELAY_SECONDS seconds"
-    }
-    return seconds
 }
 
 object KsuCli {
@@ -835,6 +720,103 @@ private suspend fun runKsudCommandWithOutput(
         stderr = stderr.joinToString("\n"),
     )
 }
+
+data class LkmSusfsStatus(
+    val kmi: String = "",
+    val supported: Boolean = false,
+    val loaded: Boolean = false,
+    val autoload: Boolean = false,
+    val version: String = "",
+    val lastError: String = "",
+    val policyError: String = "",
+    val features: Set<String> = emptySet(),
+    val paths: List<String> = emptyList(),
+    val logging: Boolean = false,
+    val hideMounts: Boolean = false,
+    val unameRelease: String = "",
+    val unameVersion: String = "",
+    val error: String = "",
+)
+
+enum class LkmSusfsAction(val command: String) {
+    Load("load"),
+    Enable("enable"),
+    Disable("disable"),
+    Unload("unload"),
+}
+
+internal fun parseLkmSusfsStatus(output: String): LkmSusfsStatus {
+    val fields = output.lineSequence().mapNotNull { line ->
+        val separator = line.indexOf('=')
+        if (separator <= 0) null else line.substring(0, separator) to line.substring(separator + 1)
+    }.toMap()
+    require(fields["mode"] == "lkm") { "SUSFS LKM requires normal LKM mode" }
+    fun flag(name: String): Boolean = when (fields[name]) {
+        "1" -> true
+        "0" -> false
+        else -> error("Invalid SUSFS LKM status field: $name")
+    }
+    return LkmSusfsStatus(
+        kmi = fields["kmi"].orEmpty(),
+        supported = flag("supported"),
+        loaded = flag("loaded"),
+        autoload = flag("autoload"),
+        version = fields["version"].orEmpty(),
+        lastError = fields["last_error"].orEmpty(),
+        policyError = fields["policy_error"].orEmpty(),
+        features = output.lineSequence().filter { it.startsWith("feature=") }
+            .map { it.substringAfter('=') }.filter(String::isNotBlank).toSet(),
+        paths = output.lineSequence().filter { it.startsWith("path=") }
+            .map { it.substringAfter('=') }.toList(),
+        logging = if ("logging" in fields) flag("logging") else false,
+        hideMounts = if ("hide_mounts" in fields) flag("hide_mounts") else false,
+        unameRelease = fields["uname_release"].orEmpty(),
+        unameVersion = fields["uname_version"].orEmpty(),
+    )
+}
+
+suspend fun getLkmSusfsStatus(): LkmSusfsStatus {
+    if (!Natives.isLkmMode || Natives.isLateLoadMode) {
+        return LkmSusfsStatus(error = "SUSFS guard is only available in normal LKM mode")
+    }
+    val result = runCatching { runKsudCommandWithOutput("susfs lkm status") }
+        .getOrElse { return LkmSusfsStatus(error = it.message.orEmpty()) }
+    if (!result.success) {
+        return LkmSusfsStatus(error = result.stderr.ifBlank { "ksud SUSFS LKM status failed" })
+    }
+    return runCatching { parseLkmSusfsStatus(result.stdout) }
+        .getOrElse { LkmSusfsStatus(error = it.message.orEmpty()) }
+}
+
+suspend fun runLkmSusfsAction(action: LkmSusfsAction): String? {
+    return runLkmSusfsCommand(action.command)
+}
+
+private suspend fun runLkmSusfsCommand(action: String, vararg arguments: String): String? {
+    if (!Natives.isLkmMode || Natives.isLateLoadMode) return "SUSFS guard requires normal LKM mode"
+    val result = runCatching {
+        runKsudCommandWithOutput(
+            "susfs lkm $action" + arguments.joinToString(separator = "", prefix = "") { " ${shellQuote(it)}" },
+            timeoutMillis = 30_000L,
+        )
+    }.getOrElse { return it.message.orEmpty().ifBlank { "SUSFS LKM command failed" } }
+    return if (result.success) null else result.stderr.ifBlank { result.stdout.ifBlank { "SUSFS LKM command failed" } }
+}
+
+suspend fun setLkmSusfsLogging(enabled: Boolean): String? =
+    runLkmSusfsCommand("set-log", if (enabled) "1" else "0")
+
+suspend fun setLkmSusfsHideMounts(enabled: Boolean): String? =
+    runLkmSusfsCommand("set-hide-mounts", if (enabled) "1" else "0")
+
+suspend fun setLkmSusfsUname(release: String, version: String): String? =
+    runLkmSusfsCommand("set-uname", release, version)
+
+suspend fun clearLkmSusfsUname(): String? = runLkmSusfsCommand("clear-uname")
+
+suspend fun addLkmSusfsPath(path: String): String? = runLkmSusfsCommand("add-path", path)
+
+suspend fun removeLkmSusfsPath(path: String): String? = runLkmSusfsCommand("remove-path", path)
 
 internal fun parseDynamicManagerStatusJson(content: String): DynamicManagerCliState {
     val json = JSONObject(content)
@@ -1735,197 +1717,6 @@ internal fun parseStructuredKsudError(raw: String, fallbackCode: String): ToolCo
     val message = payload.substringAfter(':', "").trim().ifBlank { raw.trim() }
     return ToolCommandResult(errorCode = code, errorMessage = message)
 }
-
-suspend fun readHiddenPathConfig(): HiddenPathConfigReadResult = withContext(Dispatchers.IO) {
-    if (shouldSkipUnsafeKsudCommand()) {
-        return@withContext HiddenPathConfigReadResult(error = "root shell unavailable")
-    }
-
-    runCatching {
-        val stdout = ArrayList<String>()
-        val stderr = ArrayList<String>()
-        val result = withTimeoutOrNull(STATUS_TIMEOUT_MILLIS) {
-            getRootShell().newJob()
-                .add("${getKsuDaemonPath()} pathmask status")
-                .to(stdout, stderr)
-                .exec()
-        }
-
-        if (result == null) {
-            Log.w(TAG, "pathmask status timed out")
-            KsuCli.reset()
-            return@runCatching HiddenPathConfigReadResult(error = "pathmask status timed out")
-        }
-
-        if (!result.isSuccess) {
-            val error = stderr.joinToString("\n").trim().ifBlank { "pathmask status failed" }
-            Log.w(TAG, "pathmask status failed: $error")
-            return@runCatching HiddenPathConfigReadResult(error = error)
-        }
-
-        val parsed = parseHiddenPathStatusJson(stdout.joinToString("\n"))
-        if (parsed.errorCode == "pathmask.status_parse_failed") {
-            Log.w(TAG, "pathmask status returned malformed output; resetting root shell")
-            KsuCli.reset()
-        }
-        parsed
-    }.getOrElse {
-        Log.w(TAG, "pathmask status unavailable", it)
-        KsuCli.reset()
-        HiddenPathConfigReadResult(
-            error = it.message ?: "pathmask status unavailable",
-            errorCode = "pathmask.status_unavailable",
-        )
-    }
-}
-
-internal fun parseHiddenPathStatusJson(raw: String): HiddenPathConfigReadResult {
-    val obj = runCatching { parseJsonObjectPayload(raw) }.getOrElse { error ->
-        return HiddenPathConfigReadResult(
-            error = error.message.orEmpty().ifBlank { "invalid pathmask status JSON" },
-            errorCode = "pathmask.status_parse_failed",
-        )
-    }
-    val statusError = obj.optString("error", "").trim()
-    if (statusError.isNotBlank()) {
-        return HiddenPathConfigReadResult(
-            error = statusError,
-            errorCode = obj.optString("errorCode", "pathmask.status_failed"),
-        )
-    }
-
-    return HiddenPathConfigReadResult(config = HiddenPathConfigState(
-        targetPaths = obj.optJSONArray("targetPaths").toStringList(),
-        appPackages = obj.optJSONArray("appPackages").toStringList(),
-        useAppScope = obj.optBoolean("useAppScope", true),
-        hideDirents = obj.optBoolean("hideDirents", true),
-        hideIsolated = obj.optBoolean("hideIsolated", true),
-        autoLoadEnabled = obj.optBoolean("autoLoadEnabled", true),
-        autoLoadDelaySeconds = obj.readNonNegativeInt("autoLoadDelaySeconds")
-            .coerceIn(0, HIDDEN_PATH_MAX_AUTO_LOAD_DELAY_SECONDS),
-        autoLoadRemainingSeconds = obj.readNonNegativeInt("autoLoadRemainingSeconds"),
-        loaded = obj.optBoolean("loaded", false),
-        currentKmi = obj.optString("currentKmi", ""),
-        phase = obj.optString("phase", "unconfigured"),
-        savedCount = obj.readNonNegativeInt("savedCount"),
-        availableCount = obj.readNonNegativeInt("availableCount"),
-        activeCount = obj.readNonNegativeInt("activeCount"),
-        resolvedCount = obj.readNonNegativeInt("resolvedCount"),
-        activeTargetPaths = obj.readStringOrArray("activeTargetPaths"),
-        missingTargetPaths = obj.optJSONArray("missingTargetPaths").toStringList(),
-        unresolvedTargetCount = obj.readNonNegativeInt("unresolvedTargetCount"),
-        unresolvedTargetPaths = obj.optJSONArray("unresolvedTargetPaths").toStringList(),
-        requiresReload = obj.optBoolean("requiresReload", false),
-        requiresReboot = obj.optBoolean("requiresReboot", false),
-        hasPendingCandidate = obj.optBoolean("hasPendingCandidate", false),
-        lastErrorCode = obj.optString("lastErrorCode", ""),
-        lastErrorMessage = obj.optString("lastErrorMessage", ""),
-        lastLog = obj.optString("lastLog", ""),
-        resolvedAppUids = obj.optJSONArray("resolvedAppUids").toStringList(),
-        unresolvedAppPackages = obj.optJSONArray("unresolvedAppPackages").toStringList(),
-    ))
-}
-
-private fun parseJsonObjectPayload(raw: String): JSONObject {
-    val trimmed = raw.trim()
-    runCatching { JSONObject(trimmed) }.getOrNull()?.let { return it }
-
-    var objectStart = -1
-    var depth = 0
-    var inString = false
-    var escaped = false
-    var lastObject: JSONObject? = null
-    raw.forEachIndexed { index, character ->
-        if (inString) {
-            when {
-                escaped -> escaped = false
-                character == '\\' -> escaped = true
-                character == '"' -> inString = false
-            }
-            return@forEachIndexed
-        }
-
-        when (character) {
-            '"' -> if (depth > 0) inString = true
-            '{' -> {
-                if (depth == 0) objectStart = index
-                depth += 1
-            }
-            '}' -> if (depth > 0) {
-                depth -= 1
-                if (depth == 0 && objectStart >= 0) {
-                    runCatching { JSONObject(raw.substring(objectStart, index + 1)) }
-                        .getOrNull()
-                        ?.let { lastObject = it }
-                    objectStart = -1
-                }
-            }
-        }
-    }
-    lastObject?.let { return it }
-    error("invalid pathmask status JSON")
-}
-
-private fun JSONObject.readNonNegativeInt(name: String): Int {
-    val value = opt(name)
-    val parsed = if (value is Number) {
-        value.toLong()
-    } else if (value is String) {
-        value.trim().toLongOrNull()
-    } else {
-        null
-    } ?: 0L
-    return parsed.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
-}
-
-private fun JSONObject.readStringOrArray(name: String): String {
-    val value = opt(name)
-    return if (value is JSONArray) {
-        value.toStringList().joinToString(",")
-    } else if (value is String) {
-        value.trim()
-    } else {
-        ""
-    }
-}
-
-suspend fun getHiddenPathConfig(): HiddenPathConfigState =
-    readHiddenPathConfig().config ?: HiddenPathConfigState()
-
-suspend fun saveAndApplyHiddenPathConfig(config: HiddenPathConfigState): ToolCommandResult {
-    return runStructuredKsudCommand(
-        area = "pathmask",
-        command = "pathmask apply-json ${shellQuote(config.toConfigJson())}",
-        timeoutMillis = LONG_IO_TIMEOUT_MILLIS,
-    )
-}
-
-suspend fun setHiddenPathAutoLoad(
-    enabled: Boolean,
-    delaySeconds: Int? = null,
-): ToolCommandResult {
-    val safeDelay = delaySeconds?.coerceIn(0, HIDDEN_PATH_MAX_AUTO_LOAD_DELAY_SECONDS)
-    val delayArgument = safeDelay?.let { " --delay-seconds $it" }.orEmpty()
-    return runStructuredKsudCommand(
-        area = "pathmask",
-        command = "pathmask set-auto-load $enabled$delayArgument",
-    )
-}
-
-suspend fun unloadHiddenPathKernelPaths(): ToolCommandResult = runStructuredKsudCommand(
-    area = "pathmask",
-    command = "pathmask unload",
-)
-
-suspend fun deleteHiddenPathConfig(): ToolCommandResult = runStructuredKsudCommand(
-    area = "pathmask",
-    command = "pathmask delete-config",
-)
-
-suspend fun getHiddenPathDiagnostics(): String = getKsudTextOutput(
-    command = "pathmask diagnostics",
-    timeoutMillis = DIAGNOSTIC_TIMEOUT_MILLIS,
-)
 
 private fun normalizeSusfsAbsolutePath(raw: String): String? {
     val trimmed = raw.trim()
@@ -3266,92 +3057,6 @@ log "SUSFS configuration timed out after ${'$'}MAX_ATTEMPTS attempt(s)"
 exit 0
 """
 
-suspend fun getHiddenPathLogs(): String = withContext(Dispatchers.IO) {
-    if (shouldSkipUnsafeKsudCommand()) {
-        return@withContext ""
-    }
-
-    runCatching {
-        val stdout = ArrayList<String>()
-        val stderr = ArrayList<String>()
-        val result = withTimeoutOrNull(SHELL_JOB_TIMEOUT_MILLIS) {
-            getRootShell().newJob()
-                .add("${getKsuDaemonPath()} pathmask logs")
-                .to(stdout, stderr)
-                .exec()
-        }
-
-        if (result == null) {
-            KsuCli.reset()
-            return@runCatching ""
-        }
-        if (result.isSuccess) stdout.joinToString("\n") else stderr.joinToString("\n")
-    }.getOrElse {
-        Log.w(TAG, "pathmask logs unavailable", it)
-        KsuCli.reset()
-        ""
-    }
-}
-
-suspend fun clearHiddenPathLogs(): ToolCommandResult = runStructuredKsudCommand(
-    area = "pathmask",
-    command = "pathmask clear-logs",
-)
-
-suspend fun testHiddenPathVisibility(uid: Int, path: String): HiddenPathVisibilityResult =
-    withContext(Dispatchers.IO) {
-        if (uid < 0 || path.isBlank()) {
-            return@withContext HiddenPathVisibilityResult(error = "invalid UID or path")
-        }
-        if (shouldSkipUnsafeKsudCommand()) {
-            return@withContext HiddenPathVisibilityResult(error = "root shell unavailable")
-        }
-
-        runCatching {
-            val stdout = ArrayList<String>()
-            val stderr = ArrayList<String>()
-            val command = "${shellQuote(getKsuDaemonPath())} pathmask test-visibility " +
-                "--uid $uid --path ${shellQuote(path)}"
-            val result = withTimeoutOrNull(SHELL_JOB_TIMEOUT_MILLIS) {
-                getRootShell().newJob()
-                    .add(command)
-                    .to(stdout, stderr)
-                    .exec()
-            }
-            if (result == null) {
-                KsuCli.reset()
-                return@runCatching HiddenPathVisibilityResult(
-                    uid = uid,
-                    path = path,
-                    error = "visibility probe timed out",
-                )
-            }
-            if (!result.isSuccess) {
-                return@runCatching HiddenPathVisibilityResult(
-                    uid = uid,
-                    path = path,
-                    error = stderr.joinToString("\n").ifBlank { "visibility probe failed" },
-                )
-            }
-
-            val obj = JSONObject(stdout.joinToString("\n"))
-            HiddenPathVisibilityResult(
-                uid = obj.optInt("uid", uid),
-                path = obj.optString("path", path),
-                status = obj.optString("status", "probe_failed"),
-                visible = obj.optBoolean("visible", false),
-                rootExists = obj.optBoolean("rootExists", false),
-                moduleLoaded = obj.optBoolean("moduleLoaded", false),
-                resolvedCount = obj.optString("resolvedCount", ""),
-                error = obj.optString("error", ""),
-            )
-        }.getOrElse {
-            Log.w(TAG, "pathmask visibility probe unavailable", it)
-            KsuCli.reset()
-            HiddenPathVisibilityResult(uid = uid, path = path, error = it.message.orEmpty())
-        }
-    }
-
 suspend fun getRescueStatus(): RescueStatus = withContext(Dispatchers.IO) {
     if (shouldSkipUnsafeKsudCommand()) {
         return@withContext RescueStatus(
@@ -3590,17 +3295,6 @@ suspend fun enableRescueModule(id: String): ToolCommandResult = runStructuredKsu
     command = "rescue enable-module ${shellQuote(id)}",
     timeoutMillis = STATUS_TIMEOUT_MILLIS,
 )
-
-fun isHiddenPathLkmMode(): Boolean {
-    return runCatching {
-        withNewRootShell(globalMnt = true) {
-            newJob()
-                .add("[ -f /pathmask.ko ] || grep -q '^pathmask ' /proc/modules")
-                .exec()
-                .isSuccess
-        }
-    }.getOrDefault(false)
-}
 
 suspend fun getFeatureStatus(feature: String): String = withContext(Dispatchers.IO) {
     if (shouldSkipUnsafeKsudCommand()) {
@@ -3964,9 +3658,6 @@ sealed class LkmSelection : Parcelable {
     data class KmiString(val value: String) : LkmSelection()
 
     @Parcelize
-    data class PathMaskKmiString(val value: String) : LkmSelection()
-
-    @Parcelize
     data object KmiNone : LkmSelection()
 }
 
@@ -4015,13 +3706,11 @@ private fun bootPatchFlags(
 
 enum class BootPatchMode {
     Normal,
-    HiddenPath,
     NativeKpm,
 }
 
 internal fun BootPatchMode.cliArguments(): String = when (this) {
     BootPatchMode.Normal -> ""
-    BootPatchMode.HiddenPath -> ""
     BootPatchMode.NativeKpm -> error("Native GKI KPM requires boot-patch-kpimg")
 }
 
@@ -4096,12 +3785,7 @@ suspend fun installBoot(
             cmd += " -u"
         }
 
-        val effectivePatchMode = if (lkm is LkmSelection.PathMaskKmiString) {
-            BootPatchMode.HiddenPath
-        } else {
-            patchMode
-        }
-        cmd += effectivePatchMode.cliArguments()
+        cmd += patchMode.cliArguments()
 
         when (lkm) {
             is LkmSelection.LkmUri -> {
@@ -4111,10 +3795,6 @@ suspend fun installBoot(
             }
 
             is LkmSelection.KmiString -> {
-                cmd += " --kmi ${shellQuote(lkm.value)}"
-            }
-
-            is LkmSelection.PathMaskKmiString -> {
                 cmd += " --kmi ${shellQuote(lkm.value)}"
             }
 
@@ -4257,14 +3937,9 @@ suspend fun downloadBoot(
             return@withContext FlashResult(-1, "Failed to determine KMI from the package", false)
         }
 
-        val effectivePatchMode = if (lkm is LkmSelection.PathMaskKmiString) {
-            BootPatchMode.HiddenPath
-        } else {
-            patchMode
-        }
         var cmd = "${shellQuote(getKsuDaemonPath())} boot-patch -b ${shellQuote(bootFile.absolutePath)}"
         cmd += bootPatchFlags(allowShell, enableAdb, forceBackup, blockModules)
-        cmd += effectivePatchMode.cliArguments()
+        cmd += patchMode.cliArguments()
 
         when (lkm) {
             is LkmSelection.LkmUri -> {
@@ -4273,7 +3948,6 @@ suspend fun downloadBoot(
                 cmd += " -m ${shellQuote(selectedLkmFile.absolutePath)}"
             }
             is LkmSelection.KmiString -> cmd += " --kmi ${shellQuote(lkm.value)}"
-            is LkmSelection.PathMaskKmiString -> cmd += " --kmi ${shellQuote(lkm.value)}"
             LkmSelection.KmiNone -> Unit
         }
         if (autoKmi != null) cmd += " --kmi ${shellQuote(autoKmi)}"
@@ -4601,11 +4275,6 @@ suspend fun collectRootDiagnosticInfo(): RootDiagnosticInfo = withContext(Dispat
         currentKmi = currentKmi,
         currentSlot = currentSlot,
         workMode = workMode,
-        hiddenPathLkm = if (fallbackRootShell && lkmMode) {
-            isHiddenPathLkmMode()
-        } else {
-            false
-        },
     )
 }
 
@@ -4919,17 +4588,6 @@ fun deleteAppProfileTemplate(id: String): Boolean {
 
 private fun shellQuote(value: String): String = "'${value.replace("'", "'\"'\"'")}'"
 
-private fun JSONArray?.toStringList(): List<String> {
-    if (this == null) {
-        return emptyList()
-    }
-    return buildList {
-        for (index in 0 until length()) {
-            optString(index).trim().takeIf { it.isNotEmpty() }?.let(::add)
-        }
-    }
-}
-
 private fun JSONObject?.toRescueImageState(): RescueImageState {
     if (this == null) {
         return RescueImageState()
@@ -5037,12 +4695,6 @@ private fun JSONArray?.toRescueImageList(): List<RescueImageState> {
             add(optJSONObject(index).toRescueImageState())
         }
     }
-}
-
-private fun List<String>.cleanConfigList(): List<String> {
-    return map(String::trim)
-        .filter(String::isNotEmpty)
-        .distinct()
 }
 
 fun forceStopApp(packageName: String, userId: Int? = null) {

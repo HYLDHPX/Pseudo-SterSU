@@ -336,12 +336,6 @@ pub fn install(libadbroot: Option<PathBuf>, data_path: Option<PathBuf>) -> Resul
 }
 
 pub fn uninstall(package_name: &str) -> Result<()> {
-    println!("- Unload hidden path runtime..");
-    if let Err(err) = crate::pathmask::unload() {
-        // Restoring the boot image removes Pathmask on the next boot even when it is busy now.
-        println!("- Warning: unable to unload Pathmask now: {err:#}");
-    }
-
     println!("- Restore boot image..");
     boot_patch::restore(BootRestoreArgs {
         boot: None,

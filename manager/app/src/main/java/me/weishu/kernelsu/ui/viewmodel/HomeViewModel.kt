@@ -50,7 +50,6 @@ import me.weishu.kernelsu.ui.util.getModuleCount
 import me.weishu.kernelsu.ui.util.getInstalledKsudStatus
 import me.weishu.kernelsu.ui.util.getSELinuxStatusRaw
 import me.weishu.kernelsu.ui.util.getSuperuserCount
-import me.weishu.kernelsu.ui.util.isHiddenPathLkmMode
 import me.weishu.kernelsu.ui.util.KsuCli
 import me.weishu.kernelsu.ui.util.ksuRootAvailable
 import me.weishu.kernelsu.ui.util.probeKpmSummary
@@ -203,9 +202,6 @@ class HomeViewModel(
             if (kernelVersion.isGKI()) lkmRuntime else null
         }
         val builtInGkiMode = driverConnected && kernelVersion.isGKI() && !lkmRuntime && !lateLoadMode
-        val hiddenPathLkmMode = lkmMode == true &&
-            ksuDaemonRoot &&
-            runCatching { isHiddenPathLkmMode() }.getOrDefault(false)
         val managerVersion = getManagerVersion(ksuApp)
         val requiresNewKernel = isManager && runCatching { Natives.requireNewKernel() }.getOrDefault(false)
         val uapiMismatch = isManager && runCatching { Natives.checkUAPIMismatch() }.getOrDefault(false)
@@ -259,7 +255,6 @@ class HomeViewModel(
             ksuVersion = ksuVersion,
             isKernelActive = driverConnected,
             lkmMode = lkmMode,
-            hiddenPathLkmMode = hiddenPathLkmMode,
             isManager = isManager,
             isManagerPrBuild = BuildConfig.IS_PR_BUILD,
             isKernelPrBuild = runCatching { Natives.isPrBuild }.getOrDefault(false),
@@ -525,7 +520,6 @@ class HomeViewModel(
                 )
             )
             appendLine(ksuApp.getString(R.string.root_diagnostic_work_mode, mode))
-            appendLine(ksuApp.getString(R.string.root_diagnostic_hidden_path_lkm, presentLabel(info.hiddenPathLkm)))
             if (state == RootRuntimeState.ManagerUnregistered) {
                 appendLine()
                 if (info.driverVersion > 0 && info.driverVersion != BuildConfig.VERSION_CODE) {

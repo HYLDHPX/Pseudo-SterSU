@@ -55,6 +55,7 @@ import me.weishu.kernelsu.ui.component.skrootpro.SkrootproColors
 import me.weishu.kernelsu.ui.component.skrootpro.SkrootproButton
 import me.weishu.kernelsu.ui.component.skrootpro.SkrootproEmptyText
 import me.weishu.kernelsu.ui.component.skrootpro.SkrootproScreen
+import me.weishu.kernelsu.ui.component.skrootpro.SkrootproSearchField
 import me.weishu.kernelsu.ui.component.skrootpro.skrootproSp
 import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
 import me.weishu.kernelsu.ui.theme.LocalModuleTopBarAutoHide
@@ -117,7 +118,8 @@ fun ModulePagerSkrootpro(
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
-    val modules = if (uiState.searchStatus.isExpand()) uiState.searchResults else uiState.moduleList
+    val searchText = uiState.searchStatus.searchText
+    val modules = if (searchText.isBlank()) uiState.moduleList else uiState.searchResults
     val moduleListState = rememberLazyListState()
     val topBarVisible = rememberModuleTopBarVisible(
         enabled = LocalModuleTopBarAutoHide.current,
@@ -149,6 +151,14 @@ fun ModulePagerSkrootpro(
                 modifier = Modifier.padding(horizontal = 32.dp, vertical = 12.dp),
             )
 
+            SkrootproSearchField(
+                searchText = searchText,
+                onSearchTextChange = actions.onSearchTextChange,
+                onClearSearch = actions.onClearSearch,
+                placeholderRes = R.string.module_search_hint,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+            )
+
             if (uiState.loadError != null) {
                 SkrootproModuleLoadError(
                     onRetry = actions.onRefresh,
@@ -158,10 +168,10 @@ fun ModulePagerSkrootpro(
 
             if (modules.isEmpty() && uiState.loadError == null) {
                 SkrootproEmptyText(
-                    text = if (uiState.hasLoaded) {
-                        stringResource(R.string.skrootpro_module_empty)
-                    } else {
-                        stringResource(R.string.refresh_refresh)
+                    text = when {
+                        searchText.isNotBlank() -> stringResource(R.string.module_search_empty)
+                        uiState.hasLoaded -> stringResource(R.string.skrootpro_module_empty)
+                        else -> stringResource(R.string.refresh_refresh)
                     },
                     modifier = Modifier.weight(1f),
                 )
@@ -308,6 +318,7 @@ private fun SkrootproModuleCard(
     )
     val wallpaperLoadState = rememberModuleCardWallpaperLoadState(wallpaperEntry)
     val wallpaperBitmap = wallpaperLoadState.bitmap
+    val cardBackground = rememberModuleCardBackground(module, wallpaperEntry, wallpaperLoadState)
 
     Box(
         modifier = Modifier
@@ -317,9 +328,8 @@ private fun SkrootproModuleCard(
             .background(SkrootproColors.Surface),
     ) {
         ModuleCardWallpaperBackground(
-            bitmap = wallpaperBitmap,
-            entry = wallpaperEntry,
-            contentIsLight = true,
+            bitmap = cardBackground.bitmap,
+            entry = cardBackground.customEntry,
         )
         Box(
             modifier = Modifier.padding(start = 20.dp, top = 9.dp, end = 14.dp, bottom = 9.dp)

@@ -12,10 +12,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -139,6 +141,7 @@ fun StyledSwitch(
     Canvas(
         modifier = modifier
             .size(width = 74.dp, height = 38.dp)
+            .then(if (resolvedStyle == SwitchStyle.CloudStar) Modifier.clip(RoundedCornerShape(percent = 50)) else Modifier)
             .then(toggleModifier)
     ) {
         val alpha = if (enabled) 1f else activeCustomStyle?.disabledAlpha ?: 0.45f

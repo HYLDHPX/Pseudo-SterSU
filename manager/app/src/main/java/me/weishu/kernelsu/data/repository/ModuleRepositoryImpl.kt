@@ -59,7 +59,8 @@ class ModuleRepositoryImpl : ModuleRepository {
             hasActionScript = obj.optBoolean("action", false),
             metamodule = (obj.optInt("metamodule") != 0) || obj.optBoolean("metamodule", false),
             actionIconPath = obj.optString("actionIcon").takeIf { it.isNotBlank() },
-            webUiIconPath = obj.optString("webuiIcon").takeIf { it.isNotBlank() }
+            webUiIconPath = obj.optString("webuiIcon").takeIf { it.isNotBlank() },
+            banner = obj.optString("banner"),
         )
     }
 

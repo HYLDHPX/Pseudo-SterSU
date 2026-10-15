@@ -3,10 +3,8 @@ package me.weishu.kernelsu.ui.screen.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import me.weishu.kernelsu.R
-import me.weishu.kernelsu.ui.util.ManagerPlugin
 
 internal enum class PathConfigBackend {
-    PathmaskLkm,
     SusfsGki,
     Disabled,
     Unknown,
@@ -19,7 +17,7 @@ internal fun resolvePathConfigBackend(
 ): PathConfigBackend = when {
     !runtimeModeResolved -> PathConfigBackend.Unknown
     isLateLoadMode -> PathConfigBackend.Disabled
-    isLkmMode -> PathConfigBackend.PathmaskLkm
+    isLkmMode -> PathConfigBackend.Disabled
     else -> PathConfigBackend.SusfsGki
 }
 
@@ -30,31 +28,27 @@ internal val SettingsUiState.isGkiMode: Boolean
     get() = pathConfigBackend == PathConfigBackend.SusfsGki
 
 internal val SettingsUiState.canOpenPathConfig: Boolean
-    get() = (pathConfigBackend == PathConfigBackend.PathmaskLkm && hasPlugin(ManagerPlugin.PathmaskLkm)) ||
-        pathConfigBackend == PathConfigBackend.SusfsGki
+    get() = pathConfigBackend == PathConfigBackend.SusfsGki
 
 internal val SettingsUiState.isPathConfigEntryVisible: Boolean
-    get() = pathConfigBackend != PathConfigBackend.PathmaskLkm || hasPlugin(ManagerPlugin.PathmaskLkm)
+    get() = !isLkmMode
 
-// LKM path hiding belongs to the downloaded plugin, not the built-in category.
 internal val SettingsUiState.isBuiltinPathConfigEntryVisible: Boolean
-    get() = !isLkmMode && isPathConfigEntryVisible
+    get() = isPathConfigEntryVisible
 
 @Composable
 internal fun pathConfigTitle(uiState: SettingsUiState): String = stringResource(
     when (uiState.pathConfigBackend) {
-        PathConfigBackend.SusfsGki -> R.string.settings_susfs_path_config
-        PathConfigBackend.PathmaskLkm,
+        PathConfigBackend.SusfsGki,
         PathConfigBackend.Disabled,
         PathConfigBackend.Unknown,
-        -> R.string.hidden_path_config
+        -> R.string.settings_susfs_path_config
     }
 )
 
 @Composable
 internal fun pathConfigSummary(uiState: SettingsUiState): String = stringResource(
     when (uiState.pathConfigBackend) {
-        PathConfigBackend.PathmaskLkm -> R.string.hidden_path_config_summary
         PathConfigBackend.SusfsGki -> R.string.settings_susfs_path_config_summary
         PathConfigBackend.Disabled -> R.string.settings_hidden_path_jailbreak_disabled_summary
         PathConfigBackend.Unknown -> R.string.settings_runtime_mode_detecting

@@ -58,6 +58,7 @@ import me.weishu.kernelsu.ui.component.delta.DeltaColors
 import me.weishu.kernelsu.ui.component.delta.DeltaEmptyCard
 import me.weishu.kernelsu.ui.component.delta.DeltaPillButton
 import me.weishu.kernelsu.ui.component.delta.DeltaScreen
+import me.weishu.kernelsu.ui.component.delta.DeltaSearchField
 import me.weishu.kernelsu.ui.component.delta.DeltaSwitch
 import me.weishu.kernelsu.ui.component.delta.deltaSp
 import me.weishu.kernelsu.ui.component.dialog.rememberConfirmDialog
@@ -156,6 +157,14 @@ fun ModulePagerDelta(
                 ),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
+                item(key = "module-search") {
+                    DeltaSearchField(
+                        searchText = searchText,
+                        onSearchTextChange = actions.onSearchTextChange,
+                        onClearSearch = actions.onClearSearch,
+                        placeholderRes = R.string.module_search_hint,
+                    )
+                }
                 if (uiState.loadError != null) {
                     item {
                         DeltaModuleLoadError(onRetry = actions.onRefresh)
@@ -164,19 +173,21 @@ fun ModulePagerDelta(
                 if (modules.isEmpty() && uiState.loadError == null) {
                     item {
                         DeltaEmptyCard(
-                            text = if (uiState.hasLoaded) {
-                                stringResource(R.string.module_empty)
-                            } else {
-                                stringResource(R.string.refresh_refresh)
+                            text = when {
+                                searchText.isNotBlank() -> stringResource(R.string.module_search_empty)
+                                uiState.hasLoaded -> stringResource(R.string.module_empty)
+                                else -> stringResource(R.string.refresh_refresh)
                             },
                         )
                     }
-                    item {
-                        DeltaPillButton(
-                            text = stringResource(R.string.module_repos),
-                            onClick = actions.onOpenRepo,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                    if (searchText.isBlank()) {
+                        item {
+                            DeltaPillButton(
+                                text = stringResource(R.string.module_repos),
+                                onClick = actions.onOpenRepo,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                     }
                 } else {
                     items(modules, key = { it.id }) { module ->
@@ -238,12 +249,16 @@ private fun DeltaModuleCard(
     val textDecoration = if (module.remove) TextDecoration.LineThrough else TextDecoration.None
     val wallpaperState = rememberModuleCardWallpaperState(module.id)
     val wallpaperEntry = rememberModuleCardWallpaperFrame(wallpaperState, paused = wallpaperPaused)
-    val wallpaperBitmap = rememberModuleCardWallpaperLoadState(wallpaperEntry).bitmap
+    val wallpaperLoadState = rememberModuleCardWallpaperLoadState(wallpaperEntry)
+    val cardBackground = rememberModuleCardBackground(module, wallpaperEntry, wallpaperLoadState)
 
     DeltaCard(
         contentPadding = PaddingValues(0.dp),
         backgroundContent = {
-            ModuleCardWallpaperBackground(bitmap = wallpaperBitmap, entry = wallpaperEntry)
+            ModuleCardWallpaperBackground(
+                bitmap = cardBackground.bitmap,
+                entry = cardBackground.customEntry,
+            )
         },
     ) {
         Column {

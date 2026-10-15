@@ -75,9 +75,7 @@ import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.util.InstalledManagerPlugin
 import me.weishu.kernelsu.ui.util.InstalledKsudStatus
 import me.weishu.kernelsu.ui.util.ManagerPluginCatalogRepository
-import me.weishu.kernelsu.ui.util.ManagerPlugin
 import me.weishu.kernelsu.ui.util.ManagerPluginCompatibility
-import me.weishu.kernelsu.ui.util.ManagerPluginCompatibilityIssue
 import me.weishu.kernelsu.ui.util.ManagerPluginInstaller
 import me.weishu.kernelsu.ui.util.ManagerPluginPackage
 import me.weishu.kernelsu.ui.util.ManagerPluginRegistry
@@ -85,15 +83,12 @@ import me.weishu.kernelsu.ui.util.PluginRemovalResult
 import me.weishu.kernelsu.ui.util.PluginCatalogSource
 import me.weishu.kernelsu.ui.util.PluginDownloadProgress
 import me.weishu.kernelsu.ui.util.PluginSlot
+import me.weishu.kernelsu.ui.util.availableStorePackages
 import me.weishu.kernelsu.ui.util.checkManagerPluginCompatibility
 import me.weishu.kernelsu.ui.util.execKsud
 import me.weishu.kernelsu.ui.util.getInstalledKsudStatus
 import me.weishu.kernelsu.ui.util.hasPluginUpdate
 import me.weishu.kernelsu.ui.util.removeManagerPlugin
-import me.weishu.kernelsu.ui.util.readHiddenPathConfig
-import me.weishu.kernelsu.ui.util.setHiddenPathAutoLoad
-import me.weishu.kernelsu.ui.util.stopPathmaskPluginForRemoval
-import me.weishu.kernelsu.ui.util.unloadHiddenPathKernelPaths
 
 @Composable
 fun PluginStoreScreen() {
@@ -212,13 +207,6 @@ fun PluginStoreScreen() {
                         pluginId = plugin.id,
                         stealthEnabled = StealthModeStore.isEnabled(context),
                         stopRemoteManagement = { execKsud("web-manager disable", newShell = true) },
-                        stopPathmask = {
-                            stopPathmaskPluginForRemoval(
-                                readStatus = ::readHiddenPathConfig,
-                                disableAutoLoad = { setHiddenPathAutoLoad(false) },
-                                unload = ::unloadHiddenPathKernelPaths,
-                            )
-                        },
                         removeRecord = { registry.remove(plugin.id) },
                     )
                 }
@@ -240,8 +228,6 @@ fun PluginStoreScreen() {
                         Toast.makeText(context, R.string.plugin_store_disable_stealth_first, Toast.LENGTH_LONG).show()
                     PluginRemovalResult.RemoteManagementStopFailed ->
                         Toast.makeText(context, R.string.plugin_store_stop_failed, Toast.LENGTH_LONG).show()
-                    PluginRemovalResult.PathmaskStopFailed ->
-                        Toast.makeText(context, R.string.plugin_store_pathmask_stop_failed, Toast.LENGTH_LONG).show()
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -261,16 +247,13 @@ fun PluginStoreScreen() {
     val details = (catalog as? ManagerPluginCatalogSnapshotState.Ready)
         ?.snapshot
         ?.catalog
-        ?.plugins
-        ?.firstOrNull { it.id == detailsId && ManagerPlugin.fromId(it.id)?.published == true }
+        ?.availableStorePackages()
+        ?.firstOrNull { it.id == detailsId }
     BackHandler(enabled = detailsId != null) { detailsId = null }
 
     val visiblePlugins = remember(catalog, installed, query, selectedFilter) {
         val normalized = query.trim().lowercase()
-        (catalog as? ManagerPluginCatalogSnapshotState.Ready)?.snapshot?.catalog?.plugins.orEmpty()
-            .filter { plugin ->
-                ManagerPlugin.fromId(plugin.id)?.published == true
-            }
+        (catalog as? ManagerPluginCatalogSnapshotState.Ready)?.snapshot?.catalog?.availableStorePackages().orEmpty()
             .filter { plugin ->
                 val local = installed.firstOrNull { it.plugin.id == plugin.id }
                 (normalized.isBlank() || listOf(plugin.name, plugin.summary, plugin.description)
@@ -347,7 +330,7 @@ fun PluginStoreScreen() {
                                 PluginStoreStatusBand(message, isError = true)
                             } }
                             item { StoreSectionHeading(stringResource(R.string.store_redesign_results, visiblePlugins.size)) }
-                            if (state.snapshot.catalog.plugins.isEmpty()) item { PluginStoreEmptyState() }
+                            if (state.snapshot.catalog.availableStorePackages().isEmpty()) item { PluginStoreEmptyState() }
                             else if (visiblePlugins.isEmpty()) item {
                                 StoreEmptyState(Icons.Rounded.Search, stringResource(R.string.store_redesign_no_results),
                                     stringResource(R.string.store_redesign_no_results_summary),
@@ -437,7 +420,7 @@ private fun PluginDetailContent(
                 Text(stringResource(R.string.plugin_store_version, plugin.version),
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (installed != null) StoreTag(stringResource(if (updateAvailable) R.string.store_redesign_updates else R.string.plugin_store_installed), true)
-                if (incompatible) Text(pluginCompatibilityMessage(compatibility), color = MaterialTheme.colorScheme.error)
+                if (incompatible) Text(pluginCompatibilityMessage(), color = MaterialTheme.colorScheme.error)
                 if (installed == null || updateAvailable) {
                     Button(onClick = onInstall, enabled = !busy && compatibilityResolved && !incompatible,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
@@ -502,18 +485,11 @@ private fun pluginSlotLabel(slot: PluginSlot): String = stringResource(
         PluginSlot.MaintenanceStealthMode -> R.string.stealth_mode_title
         PluginSlot.SuperuserAppIdManager -> R.string.app_id_manager_title
         PluginSlot.SuperuserAppFreeze -> R.string.app_freeze_title
-        PluginSlot.MountHidePathmaskLkm -> R.string.hidden_path_config
     },
 )
 
 @Composable
-private fun pluginCompatibilityMessage(compatibility: ManagerPluginCompatibility?): String = stringResource(
-    if (compatibility?.issue == ManagerPluginCompatibilityIssue.LkmModeRequired) {
-        R.string.plugin_store_lkm_required
-    } else {
-        R.string.plugin_store_incompatible
-    }
-)
+private fun pluginCompatibilityMessage(): String = stringResource(R.string.plugin_store_incompatible)
 
 private sealed interface ManagerPluginCatalogSnapshotState {
     data object Loading : ManagerPluginCatalogSnapshotState
@@ -647,7 +623,7 @@ private fun PluginCard(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(stringResource(R.string.plugin_store_version, plugin.version), style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (incompatible) Text(pluginCompatibilityMessage(compatibility),
+                    if (incompatible) Text(pluginCompatibilityMessage(),
                         style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
                     else if (installed != null) StoreTag(stringResource(if (updateAvailable) R.string.store_redesign_updates
                         else R.string.plugin_store_installed), emphasized = updateAvailable)

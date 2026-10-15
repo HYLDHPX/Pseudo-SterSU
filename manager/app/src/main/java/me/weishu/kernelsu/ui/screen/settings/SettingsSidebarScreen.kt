@@ -6,7 +6,18 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,16 +76,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -86,6 +100,7 @@ import me.weishu.kernelsu.ui.component.dialog.rememberLoadingDialog
 import me.weishu.kernelsu.ui.component.material.ExpressiveScaffold
 import me.weishu.kernelsu.ui.component.miuix.SendLogDialog
 import me.weishu.kernelsu.ui.component.uninstalldialog.UninstallDialog
+import me.weishu.kernelsu.ui.component.rememberSystemAnimationsEnabled
 import me.weishu.kernelsu.ui.navigation3.Navigator
 import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.theme.ColorMode
@@ -137,128 +152,155 @@ internal fun SettingsSidebarScreen(
         }
     }
     BackHandler(showAllSettings) { showAllSettings = false }
-    if (showAllSettings) {
-        SettingsHubScreen(
-            uiState = uiState,
-            bottomInnerPadding = bottomInnerPadding,
-            onOpenCategory = onOpenCategory,
-            onPageModeChange = onPageModeChange,
-            isSidebarMoreSettings = true,
-            onNavigateBack = { showAllSettings = false },
-        )
-    } else {
-        ExpressiveScaffold(
-            modifier = Modifier.fillMaxSize(),
-            contentMaxWidth = SidebarUiTokens.DetailMaxWidth,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout)
-                .only(WindowInsetsSides.Top),
-            topBar = {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.settings), fontWeight = FontWeight.SemiBold) },
-                    actions = {
-                        SettingsPageModeButton(SettingsPageMode.Categories, onPageModeChange)
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+    val animationsEnabled = rememberSystemAnimationsEnabled()
+    val layoutDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
+    AnimatedContent(
+        targetState = showAllSettings,
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).clipToBounds(),
+        transitionSpec = {
+            if (!animationsEnabled) {
+                ContentTransform(EnterTransition.None, ExitTransition.None, sizeTransform = null)
+            } else {
+                val direction = if (targetState) layoutDirection else -layoutDirection
+                ContentTransform(
+                    targetContentEnter = fadeIn(tween(110)) + slideInHorizontally(
+                        animationSpec = tween(280, easing = FastOutSlowInEasing),
+                        initialOffsetX = { width -> width * direction / 4 },
+                    ),
+                    initialContentExit = fadeOut(tween(70)) + slideOutHorizontally(
+                        animationSpec = tween(280, easing = FastOutSlowInEasing),
+                        targetOffsetX = { width -> -width * direction / 10 },
+                    ),
+                    targetContentZIndex = 1f,
+                    sizeTransform = null,
                 )
-            },
-        ) { padding ->
-            LazyColumn(
+            }
+        },
+        label = "sidebarSettingsPage",
+    ) { isMoreSettings ->
+        if (isMoreSettings) {
+            SettingsHubScreen(
+                uiState = uiState,
+                bottomInnerPadding = bottomInnerPadding,
+                onOpenCategory = onOpenCategory,
+                onPageModeChange = onPageModeChange,
+                isSidebarMoreSettings = true,
+                onNavigateBack = { showAllSettings = false },
+            )
+        } else {
+            ExpressiveScaffold(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 16.dp, end = 16.dp,
-                    top = padding.calculateTopPadding() + 4.dp,
-                    bottom = padding.calculateBottomPadding() + bottomInnerPadding + 20.dp,
-                ),
-                verticalArrangement = Arrangement.spacedBy(SidebarUiTokens.SectionSpacing),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                item(key = "sidebar_settings_intro") {
-                    SidebarSettingsCard {
-                        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("SterSU", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.weight(1f))
-                                Icon(Icons.AutoMirrored.Rounded.ViewSidebar, null, Modifier.size(30.dp))
-                            }
-                            Text(stringResource(R.string.settings_sidebar_intro), style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold)
-                            Text(stringResource(R.string.settings_sidebar_version, BuildConfig.VERSION_NAME),
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            TextButton(onClick = openSidebar, contentPadding = PaddingValues(horizontal = 0.dp)) {
-                                Text(stringResource(R.string.sidebar_widget_settings_title))
-                                Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.padding(start = 8.dp).size(18.dp))
+                contentMaxWidth = SidebarUiTokens.DetailMaxWidth,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout)
+                    .only(WindowInsetsSides.Top),
+                topBar = {
+                    TopAppBar(
+                        title = { Text(stringResource(R.string.settings), fontWeight = FontWeight.SemiBold) },
+                        actions = {
+                            SettingsPageModeButton(SettingsPageMode.Categories, onPageModeChange)
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+                    )
+                },
+            ) { padding ->
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp, end = 16.dp,
+                        top = padding.calculateTopPadding() + 4.dp,
+                        bottom = padding.calculateBottomPadding() + bottomInnerPadding + 20.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(SidebarUiTokens.SectionSpacing),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    item(key = "sidebar_settings_intro") {
+                        SidebarSettingsCard {
+                            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("SterSU", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f))
+                                    Icon(Icons.AutoMirrored.Rounded.ViewSidebar, null, Modifier.size(30.dp))
+                                }
+                                Text(stringResource(R.string.settings_sidebar_intro), style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.settings_sidebar_version, BuildConfig.VERSION_NAME),
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                TextButton(onClick = openSidebar, contentPadding = PaddingValues(horizontal = 0.dp)) {
+                                    Text(stringResource(R.string.sidebar_widget_settings_title))
+                                    Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.padding(start = 8.dp).size(18.dp))
+                                }
                             }
                         }
                     }
-                }
-                item(key = "sidebar_settings_device") {
-                    SettingsDeviceCard(
-                        state = device,
-                        onEditPhoto = {
-                            if (device.photo == null) choosePhoto() else showPhotoActions = true
-                        },
-                        onEditText = {
-                            modelDraft = device.customModel.orEmpty()
-                            processorDraft = device.customProcessor.orEmpty()
-                            showDeviceTextEditor = true
-                        },
-                    )
-                }
-                item(key = "sidebar_settings_navigation") {
-                    SidebarSettingsCard {
-                        SidebarSettingsEntry(
-                            stringResource(R.string.settings_sidebar_appearance),
-                            stringResource(R.string.settings_sidebar_appearance_summary),
-                            Icons.Rounded.Palette,
-                        ) { onOpenCategory(SettingsCategory.Appearance) }
-                        HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant)
-                        SidebarSettingsEntry(
-                            stringResource(R.string.settings_sidebar_more),
-                            stringResource(R.string.settings_sidebar_more_summary),
-                            Icons.Rounded.Tune,
-                        ) { showAllSettings = true }
+                    item(key = "sidebar_settings_device") {
+                        SettingsDeviceCard(
+                            state = device,
+                            onEditPhoto = {
+                                if (device.photo == null) choosePhoto() else showPhotoActions = true
+                            },
+                            onEditText = {
+                                modelDraft = device.customModel.orEmpty()
+                                processorDraft = device.customProcessor.orEmpty()
+                                showDeviceTextEditor = true
+                            },
+                        )
                     }
-                }
-                item(key = "sidebar_settings_shortcuts") {
-                    val repository = stringResource(R.string.home_learn_kernelsu_url).trimEnd('/')
-                    SidebarSettingsCard {
-                        BoxWithConstraints(Modifier.fillMaxWidth().padding(8.dp)) {
-                            val columns = settingsShortcutColumns(maxWidth.value, LocalDensity.current.fontScale)
-                            val shortcuts = listOf(
-                                SettingsShortcut(R.string.settings_shortcut_color_mode, Icons.Rounded.DarkMode, { showColorMode = true }),
-                                SettingsShortcut(R.string.settings_shortcut_share, Icons.Rounded.Share, {
-                                    launchExternal(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_TEXT, "SterSU ${BuildConfig.VERSION_NAME}\n$repository")
-                                    }, context.getString(R.string.settings_shortcut_share)))
-                                }),
-                                SettingsShortcut(R.string.settings_shortcut_releases, Icons.Rounded.SystemUpdate, {
-                                    launchExternal(Intent(Intent.ACTION_VIEW, "$repository/releases".toUri()))
-                                }),
-                                SettingsShortcut(R.string.settings_uninstall, Icons.Rounded.DeleteOutline, {
-                                    if (uiState.runtimeModeResolved && uiState.isLkmMode) showUninstall = true
-                                    else Toast.makeText(context, R.string.settings_shortcut_uninstall_unavailable, Toast.LENGTH_LONG).show()
-                                }),
-                                SettingsShortcut(R.string.settings_shortcut_logs, Icons.Rounded.BugReport, { showLogs = true }),
-                                SettingsShortcut(R.string.about, Icons.Rounded.Info, openAbout),
-                            )
-                            Column {
-                                shortcuts.chunked(columns).forEach { row ->
-                                    Row(Modifier.fillMaxWidth()) {
-                                        row.forEach { shortcut ->
-                                            Column(
-                                                Modifier.weight(1f).clickable(role = Role.Button, onClick = shortcut.onClick)
-                                                    .heightIn(min = 88.dp).padding(horizontal = 3.dp, vertical = 14.dp),
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.spacedBy(7.dp),
-                                            ) {
-                                                Icon(shortcut.icon, null, Modifier.size(27.dp))
-                                                Text(stringResource(shortcut.label), style = MaterialTheme.typography.labelMedium,
-                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    item(key = "sidebar_settings_navigation") {
+                        SidebarSettingsCard {
+                            SidebarSettingsEntry(
+                                stringResource(R.string.settings_sidebar_appearance),
+                                stringResource(R.string.settings_sidebar_appearance_summary),
+                                Icons.Rounded.Palette,
+                            ) { onOpenCategory(SettingsCategory.Appearance) }
+                            HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                            SidebarSettingsEntry(
+                                stringResource(R.string.settings_sidebar_more),
+                                stringResource(R.string.settings_sidebar_more_summary),
+                                Icons.Rounded.Tune,
+                            ) { showAllSettings = true }
+                        }
+                    }
+                    item(key = "sidebar_settings_shortcuts") {
+                        val repository = stringResource(R.string.home_learn_kernelsu_url).trimEnd('/')
+                        SidebarSettingsCard {
+                            BoxWithConstraints(Modifier.fillMaxWidth().padding(8.dp)) {
+                                val columns = settingsShortcutColumns(maxWidth.value, LocalDensity.current.fontScale)
+                                val shortcuts = listOf(
+                                    SettingsShortcut(R.string.settings_shortcut_color_mode, Icons.Rounded.DarkMode, { showColorMode = true }),
+                                    SettingsShortcut(R.string.settings_shortcut_share, Icons.Rounded.Share, {
+                                        launchExternal(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, "SterSU ${BuildConfig.VERSION_NAME}\n$repository")
+                                        }, context.getString(R.string.settings_shortcut_share)))
+                                    }),
+                                    SettingsShortcut(R.string.settings_shortcut_releases, Icons.Rounded.SystemUpdate, {
+                                        launchExternal(Intent(Intent.ACTION_VIEW, "$repository/releases".toUri()))
+                                    }),
+                                    SettingsShortcut(R.string.settings_uninstall, Icons.Rounded.DeleteOutline, {
+                                        if (uiState.runtimeModeResolved && uiState.isLkmMode) showUninstall = true
+                                        else Toast.makeText(context, R.string.settings_shortcut_uninstall_unavailable, Toast.LENGTH_LONG).show()
+                                    }),
+                                    SettingsShortcut(R.string.settings_shortcut_logs, Icons.Rounded.BugReport, { showLogs = true }),
+                                    SettingsShortcut(R.string.about, Icons.Rounded.Info, openAbout),
+                                )
+                                Column {
+                                    shortcuts.chunked(columns).forEach { row ->
+                                        Row(Modifier.fillMaxWidth()) {
+                                            row.forEach { shortcut ->
+                                                Column(
+                                                    Modifier.weight(1f).clickable(role = Role.Button, onClick = shortcut.onClick)
+                                                        .heightIn(min = 88.dp).padding(horizontal = 3.dp, vertical = 14.dp),
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.spacedBy(7.dp),
+                                                ) {
+                                                    Icon(shortcut.icon, null, Modifier.size(27.dp))
+                                                    Text(stringResource(shortcut.label), style = MaterialTheme.typography.labelMedium,
+                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                                }
                                             }
+                                            repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                                         }
-                                        repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                                     }
                                 }
                             }

@@ -7,11 +7,8 @@ import androidx.compose.ui.res.stringResource
 import me.weishu.kernelsu.KernelVersion
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
-import me.weishu.kernelsu.ksuApp
 
 private const val LKM_MODE_LABEL = "LKM"
-private val HIDDEN_PATH_LKM_MODE_LABEL: String
-    get() = ksuApp.getString(R.string.home_work_mode_hidden_path_lkm)
 private const val GKI_MODE_LABEL = "GKI"
 
 enum class RootRuntimeState(@StringRes val labelRes: Int) {
@@ -83,7 +80,6 @@ data class HomeUiState(
     val managerUAPIVersion: Int,
     val kernelUAPIVersion: Int?,
     val lkmMode: Boolean?,
-    val hiddenPathLkmMode: Boolean = false,
     val isManager: Boolean,
     val isManagerPrBuild: Boolean,
     val isKernelPrBuild: Boolean,
@@ -119,7 +115,7 @@ data class HomeUiState(
         get() = showGkiWarningSetting && isKernelActive && lkmMode == false
 
     val lkmModeLabel: String
-        get() = if (hiddenPathLkmMode) HIDDEN_PATH_LKM_MODE_LABEL else LKM_MODE_LABEL
+        get() = LKM_MODE_LABEL
 
     val workingModeLabel: String?
         get() = when (lkmMode) {
@@ -168,7 +164,6 @@ internal fun HomeUiState.asStealthModeState(): HomeUiState = copy(
     isKernelActive = false,
     kernelUAPIVersion = null,
     lkmMode = null,
-    hiddenPathLkmMode = false,
     isManager = false,
     isKernelPrBuild = false,
     requiresNewKernel = false,

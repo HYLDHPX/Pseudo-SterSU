@@ -9,11 +9,6 @@ class BootPatchModeTest {
         assertEquals("", BootPatchMode.Normal.cliArguments())
     }
 
-    @Test
-    fun legacyHiddenPathModeDoesNotRequestPathmaskEmbedding() {
-        assertEquals("", BootPatchMode.HiddenPath.cliArguments())
-    }
-
     @Test(expected = IllegalStateException::class)
     fun nativeKpmCannotUseTheLkmCommand() {
         BootPatchMode.NativeKpm.cliArguments()

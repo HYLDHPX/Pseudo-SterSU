@@ -102,11 +102,19 @@ jobs:
         llvm-strip -d "$OUT_DIR/$OUTPUT_NAME"
         echo "Size after stripping: $(du -h "$OUT_DIR/$OUTPUT_NAME" | cut -f1)"
 
-    - name: Upload kernelsu.ko artifact
+        # SUSFS is a separate optional LKM; it never replaces kernelsu.ko.
+        cd susfs
+        make -C "$KDIR" M="$PWD" ARCH=arm64 CC=clang LLVM=1 LLVM_IAS=1 modules -j"$(nproc)"
+        SUSFS_OUTPUT="$OUT_DIR/${{ inputs.kmi }}_susfs_guard_lkm.ko"
+        cp susfs_guard_lkm.ko "$SUSFS_OUTPUT"
+        llvm-strip -d "$SUSFS_OUTPUT"
+        test -s "$SUSFS_OUTPUT"
+
+    - name: Upload arm64 LKM artifacts
       uses: actions/upload-artifact@v7
       with:
         name: aarch64-${{ inputs.kmi }}-lkm
-        path: /github/workspace/out/aarch64/${{ inputs.kmi }}_kernelsu.ko
+        path: /github/workspace/out/aarch64/${{ inputs.kmi }}_*.ko
 
     - name: Build kernelsu.ko for x64
       env:

@@ -69,6 +69,7 @@ fun SuperUserPager(
         onToggleShowOnlyPrimaryUserApps = onToggleShowOnlyPrimaryUserApps,
         onUpdateSortOption = { viewModel.updateSortOption(it) },
         onOpenProfile = onOpenProfile,
+        onSetRootAccess = viewModel::setRootAccess,
     )
 
     when (LocalInterfaceStyle.current) {
@@ -78,6 +79,7 @@ fun SuperUserPager(
                 uiState = uiState,
                 actions = actions,
                 bottomInnerPadding = bottomInnerPadding,
+                showRootToggle = LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value,
             )
             return
         }

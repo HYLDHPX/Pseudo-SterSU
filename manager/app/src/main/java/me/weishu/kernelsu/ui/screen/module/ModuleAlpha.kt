@@ -185,10 +185,10 @@ fun ModulePagerAlpha(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = if (uiState.hasLoaded) {
-                                    stringResource(R.string.module_empty)
-                                } else {
-                                    stringResource(R.string.refresh_refresh)
+                                text = when {
+                                    searchText.isNotBlank() -> stringResource(R.string.module_search_empty)
+                                    uiState.hasLoaded -> stringResource(R.string.module_empty)
+                                    else -> stringResource(R.string.refresh_refresh)
                                 },
                                 color = AlphaColors.Muted,
                                 fontSize = alphaSp(14f),
@@ -272,7 +272,7 @@ private fun AlphaModuleSearch(
                 Box(contentAlignment = Alignment.CenterStart) {
                     if (searchText.isBlank()) {
                         Text(
-                            text = stringResource(R.string.superuser_search_hint),
+                            text = stringResource(R.string.module_search_hint),
                             color = AlphaColors.Muted,
                             fontSize = alphaSp(14f),
                             maxLines = 1,
@@ -314,12 +314,16 @@ private fun AlphaModuleCard(
     val textDecoration = if (module.remove) TextDecoration.LineThrough else TextDecoration.None
     val wallpaperState = rememberModuleCardWallpaperState(module.id)
     val wallpaperEntry = rememberModuleCardWallpaperFrame(wallpaperState, paused = wallpaperPaused)
-    val wallpaperBitmap = rememberModuleCardWallpaperLoadState(wallpaperEntry).bitmap
+    val wallpaperLoadState = rememberModuleCardWallpaperLoadState(wallpaperEntry)
+    val cardBackground = rememberModuleCardBackground(module, wallpaperEntry, wallpaperLoadState)
 
     AlphaCard(
         contentPadding = PaddingValues(0.dp),
         backgroundContent = {
-            ModuleCardWallpaperBackground(bitmap = wallpaperBitmap, entry = wallpaperEntry)
+            ModuleCardWallpaperBackground(
+                bitmap = cardBackground.bitmap,
+                entry = cardBackground.customEntry,
+            )
         },
     ) {
         Column {

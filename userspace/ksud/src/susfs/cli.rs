@@ -27,6 +27,9 @@ pub fn run(args: &[String]) -> Result<()> {
     let Some(command) = args.first() else {
         bail!("SUSFS command is required");
     };
+    if command == "lkm" {
+        return crate::susfsd::run(&args[1..]);
+    }
     let command = command.replace('-', "_");
     if command == "show" {
         expect_len(args, 2)?;

@@ -300,6 +300,13 @@ fun SearchBar(
                     tint = colorScheme.onSurfaceContainerHigh,
                 )
                 Box(modifier = Modifier.weight(1f)) {
+                    if (searchStatus.searchText.isEmpty()) {
+                        Text(
+                            text = searchStatus.label,
+                            color = colorScheme.onSurfaceContainerHigh,
+                            fontSize = 17.sp,
+                        )
+                    }
                     innerTextField()
                 }
                 AnimatedVisibility(

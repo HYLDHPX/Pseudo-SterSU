@@ -3,6 +3,7 @@ package me.weishu.kernelsu.ui.viewmodel
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.util.Log
+import android.widget.Toast
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,6 +18,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.Natives
+import me.weishu.kernelsu.R
 import me.weishu.kernelsu.data.model.AppInfo
 import me.weishu.kernelsu.data.repository.SuperUserRepository
 import me.weishu.kernelsu.data.repository.SuperUserRepositoryImpl
@@ -25,8 +27,11 @@ import me.weishu.kernelsu.ui.component.SearchStatus
 import me.weishu.kernelsu.ui.screen.superuser.GroupedApps
 import me.weishu.kernelsu.ui.screen.superuser.SuperUserUiState
 import me.weishu.kernelsu.ui.util.PinyinUtil
+import me.weishu.kernelsu.ui.util.ensureManagerRegistered
+import me.weishu.kernelsu.ui.util.getSepolicy
 import me.weishu.kernelsu.ui.util.ownerNameForUid
 import me.weishu.kernelsu.ui.util.pickPrimary
+import me.weishu.kernelsu.ui.util.setSepolicy
 import java.text.Collator
 import java.util.Locale
 
@@ -95,6 +100,49 @@ class SuperUserViewModel(
 
     fun markNeedRefresh() {
         isNeedRefresh = true
+    }
+
+    fun setRootAccess(group: GroupedApps, enabled: Boolean) {
+        val uid = group.uid
+        if (uid in _uiState.value.updatingRootUids || group.anyAllowSu == enabled) return
+        if (group.primary.special || (enabled && uid < 2000 && uid != 1000)) {
+            Toast.makeText(ksuApp, ksuApp.getString(R.string.su_not_allowed, group.primary.label), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        _uiState.update { it.copy(updatingRootUids = it.updatingRootUids + uid) }
+        viewModelScope.launch {
+            val updated = withContext(Dispatchers.IO) {
+                runCatching {
+                    val key = group.primary.profileKey
+                    val current = Natives.getAppProfileStrict(key, uid)
+                        ?: if (!group.anyAllowSu && !group.anyCustom) Natives.Profile(key, uid) else return@runCatching false
+                    val policyKey = current.name
+                    val previousRules = if (current.rootUseDefault) "" else getSepolicy(policyKey)
+                    val desiredRules = if (enabled) previousRules else ""
+                    val updateRules = !current.rootUseDefault && (!enabled || previousRules.isNotEmpty())
+                    if (updateRules && !setSepolicy(policyKey, desiredRules)) return@runCatching false
+
+                    val profile = current.copy(allowSu = enabled)
+                    val saved = Natives.setAppProfile(profile) ||
+                        (ensureManagerRegistered() && Natives.setAppProfile(profile))
+                    if (!saved && updateRules) setSepolicy(policyKey, previousRules)
+                    saved
+                }.onFailure { Log.e(TAG, "Failed to change root access for uid $uid", it) }
+                    .getOrDefault(false)
+            }
+            if (updated) {
+                refreshAppList(resort = false)
+            } else {
+                Toast.makeText(
+                    ksuApp,
+                    ksuApp.getString(R.string.failed_to_update_app_profile, group.primary.label),
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+        }.invokeOnCompletion {
+            _uiState.update { it.copy(updatingRootUids = it.updatingRootUids - uid) }
+        }
     }
 
     fun initializePreferences() {
@@ -381,13 +429,7 @@ class SuperUserViewModel(
                         visible
                     } else {
                         val byUid = visible.associateBy { it.uid }
-                        _uiState.value.groupedApps.map { group ->
-                            byUid[group.uid] ?: group.copy(
-                                shouldUmount = runCatching {
-                                    Natives.uidShouldUmount(group.uid)
-                                }.getOrDefault(false)
-                            )
-                        }
+                        _uiState.value.groupedApps.mapNotNull { group -> byUid[group.uid] }
                     }
                     cached to result
                 }

@@ -39,6 +39,8 @@ SterSU retains the upstream licensing boundaries. File-level notices take preced
 - KernelSU-derived code outside `kernel/` is **GPL-3.0-or-later**.
 - Third-party files retain their respective licenses and copyright notices; see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) and [NOTICE](./NOTICE).
 
+The optional LKM SUSFS guard in `kernel/susfs/` is separate from built-in GKI SUSFS. Its immediate source is a pinned [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) revision, whose LKM port originates from [susfs4ksu-lkm](https://github.com/inforcqb/susfs4ksu-lkm). See the [LKM SUSFS source notice](./kernel/susfs/README.stersu.md) for revisions, integration scope, and GPL-2.0 terms. Neither upstream project endorses SterSU.
+
 [Pseudo-SterSU](https://github.com/fixz232/Pseudo-SterSU) is a backup publication of SterSU source, not a relicensed edition. The root [LICENSE](./LICENSE) contains the GPL version 3 text and does not change the license of `kernel/`. When distributing builds, comply with applicable licenses, preserve attribution and notices, and provide complete corresponding source. See the [GPL compliance notes](./GPL-COMPLIANCE.md).
 
 The UI draws on open-source designs. SterSU's MIUI-style interface is not an official Xiaomi product and does not use Xiaomi source code. See the [Aster UI attribution](./docs/ASTER_UI_DESIGN_NOTICE.md) for sidebar design references.
@@ -55,6 +57,7 @@ The UI draws on open-source designs. SterSU's MIUI-style interface is not an off
 
 - [KernelSU](https://github.com/tiann/KernelSU): primary upstream project; thanks to weishu and all contributors.
 - [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) and [susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu): SuSFS integration and patch sources.
+- [susfs4ksu-lkm](https://github.com/inforcqb/susfs4ksu-lkm): the loadable-kernel-module port of SUSFS; [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next): immediate reference and integration source for this repository's LKM guard. Thanks to both projects and their contributors.
 - [ReSukiSU](https://github.com/ReSukiSU/ReSukiSU): Dynamic Manager design and interface reference.
 - [FolkPatch](https://github.com/LyraVoid/FolkPatch), [Aster](https://github.com/LyraVoid/Aster), and [SKRoot](https://github.com/abcz316/SKRoot-linuxKernelRoot): UI code and design references.
 - [KOWX712/KernelSU](https://github.com/KOWX712/KernelSU): kernel module file source.

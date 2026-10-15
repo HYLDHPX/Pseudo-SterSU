@@ -1,5 +1,8 @@
 package me.weishu.kernelsu.ui.component.material
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.surfaceColorAtElevation
@@ -45,6 +48,7 @@ fun TonalCard(
     modifier: Modifier = Modifier,
     containerColor: Color = tonalCardContainerColor(),
     shape: Shape = MaterialTheme.shapes.large,
+    backgroundContent: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     Card(
@@ -53,6 +57,13 @@ fun TonalCard(
         colors = liquidGlassMaterialCardColors(containerColor = containerColor),
         shape = shape
     ) {
-        content()
+        if (backgroundContent == null) {
+            content()
+        } else {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                backgroundContent()
+                content()
+            }
+        }
     }
 }

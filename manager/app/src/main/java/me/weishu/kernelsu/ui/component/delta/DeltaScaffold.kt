@@ -503,6 +503,7 @@ fun DeltaSearchField(
     searchText: String,
     onSearchTextChange: (String) -> Unit,
     onClearSearch: () -> Unit,
+    placeholderRes: Int = R.string.superuser_search_hint,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -537,7 +538,7 @@ fun DeltaSearchField(
                 Box(contentAlignment = Alignment.CenterStart) {
                     if (searchText.isBlank()) {
                         Text(
-                            text = stringResource(R.string.superuser_search_hint),
+                            text = stringResource(placeholderRes),
                             color = DeltaColors.Muted,
                             fontSize = deltaSp(13f),
                             maxLines = 1,

@@ -209,10 +209,10 @@ import me.weishu.kernelsu.ui.screen.settings.CpuSpoofScreen
 import me.weishu.kernelsu.ui.screen.settings.DeviceIdentityScreen
 import me.weishu.kernelsu.ui.screen.settings.DynamicManagerScreen
 import me.weishu.kernelsu.ui.screen.settings.GraphicsRendererScreen
-import me.weishu.kernelsu.ui.screen.settings.HiddenPathConfigScreen
 import me.weishu.kernelsu.ui.screen.settings.ForegroundToolProtectionScreen
 import me.weishu.kernelsu.ui.screen.settings.ImageToolScreen
 import me.weishu.kernelsu.ui.screen.settings.KpmScreen
+import me.weishu.kernelsu.ui.screen.settings.LkmSusfsScreen
 import me.weishu.kernelsu.ui.screen.settings.SusfsPathConfigScreen
 import me.weishu.kernelsu.ui.util.captureSusfsRecoverySnapshot
 import me.weishu.kernelsu.ui.util.getSusfsPathConfig
@@ -686,14 +686,8 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.PreInstallStyleSettings> { PreInstallStyleSettingsScreen() }
                                 entry<Route.VisualEffects> { VisualEffectsScreen() }
                                 entry<Route.SwitchStyleCreator> { SwitchStyleCreatorScreen() }
-                                entry<Route.HiddenPathConfig> {
-                                    if (!Natives.isLkmMode && !Natives.isLateLoadMode) {
-                                        SusfsPathConfigScreen()
-                                    } else {
-                                        PluginRouteGate(ManagerPlugin.PathmaskLkm) { HiddenPathConfigScreen() }
-                                    }
-                                }
                                 entry<Route.SusfsPathConfig> { SusfsPathConfigScreen() }
+                                entry<Route.LkmSusfs> { LkmSusfsScreen() }
                                 entry<Route.SusfsApplications> { SusfsApplicationsScreen() }
                                 entry<Route.SusfsGuide> { SusfsGuideScreen() }
                                 entry<Route.ForegroundToolProtection> { ForegroundToolProtectionScreen() }
@@ -999,6 +993,7 @@ class MainActivity : ComponentActivity() {
                                                             destinations = mainDestinations(mainPagerState.kpmActive),
                                                             selectedDestination = when {
                                                                 currentRoute.hostsMainPager() -> mainPagerState.destinationForPage()
+                                                                currentRoute == Route.Sulog -> MainDestination.SuperUser
                                                                 currentRoute == Route.ModuleRepo || currentRoute is Route.ModuleRepoDetail -> MainDestination.Module
                                                                 else -> MainDestination.Settings
                                                             },
@@ -1889,7 +1884,8 @@ internal fun shouldHostSidebarRail(
     fullFeatured: Boolean,
     stealthModeEnabled: Boolean,
 ): Boolean = fullFeatured && !stealthModeEnabled && (
-    route.hostsMainPager() || route == Route.ModuleRepo || route is Route.ModuleRepoDetail || settingsSidebarActive
+    route.hostsMainPager() || route == Route.Sulog || route == Route.ModuleRepo ||
+        route is Route.ModuleRepoDetail || settingsSidebarActive
 )
 
 internal fun shouldReturnMainPagerBackToHome(

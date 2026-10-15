@@ -23,13 +23,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,6 +48,7 @@ import me.weishu.kernelsu.ui.component.AppIconImage
 import me.weishu.kernelsu.ui.component.skrootpro.SkrootproColors
 import me.weishu.kernelsu.ui.component.skrootpro.SkrootproButton
 import me.weishu.kernelsu.ui.component.skrootpro.SkrootproScreen
+import me.weishu.kernelsu.ui.component.skrootpro.SkrootproSearchField
 import me.weishu.kernelsu.ui.component.skrootpro.skrootproSp
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 
@@ -92,7 +89,7 @@ fun SuperUserPagerSkrootpro(
                 SkrootproGrantOverview(groups = uiState.groupedApps)
             }
             item {
-                SkrootproGrantSearch(
+                SkrootproSearchField(
                     searchText = searchText,
                     onSearchTextChange = actions.onSearchTextChange,
                     onClearSearch = actions.onClearSearch,
@@ -277,73 +274,6 @@ private fun SkrootproGrantStat(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-    }
-}
-
-@Composable
-private fun SkrootproGrantSearch(
-    searchText: String,
-    onSearchTextChange: (String) -> Unit,
-    onClearSearch: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp)
-            .clip(RoundedCornerShape(26.dp))
-            .background(SkrootproColors.SurfaceStrong)
-            .padding(start = 18.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.Search,
-            contentDescription = null,
-            tint = SkrootproColors.Muted,
-            modifier = Modifier.size(23.dp),
-        )
-        Spacer(Modifier.width(10.dp))
-        BasicTextField(
-            value = searchText,
-            onValueChange = onSearchTextChange,
-            singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(
-                color = SkrootproColors.Text,
-                fontSize = skrootproSp(15f, maxScale = 1.05f),
-                fontWeight = FontWeight.Medium,
-            ),
-            cursorBrush = SolidColor(SkrootproColors.Purple),
-            modifier = Modifier.weight(1f),
-            decorationBox = { innerTextField ->
-                Box(contentAlignment = Alignment.CenterStart) {
-                    if (searchText.isBlank()) {
-                        Text(
-                            text = stringResource(R.string.superuser_search_hint),
-                            color = SkrootproColors.Muted,
-                            fontSize = skrootproSp(15f, maxScale = 1.05f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    innerTextField()
-                }
-            },
-        )
-        if (searchText.isNotBlank()) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .clickable(onClick = onClearSearch),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Close,
-                    contentDescription = null,
-                    tint = SkrootproColors.Muted,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
     }
 }
 

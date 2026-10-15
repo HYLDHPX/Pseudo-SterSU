@@ -315,6 +315,17 @@ fn replace_module_vermagic(buffer: &mut Vec<u8>, required_vermagic: &str) -> Res
 /// Relocate undefined symbols in an ELF kernel module buffer using /proc/kallsyms,
 /// then load it via init_module syscall.
 pub fn load_module(data: &[u8], params: &CStr) -> Result<()> {
+    load_module_inner(data, params, false)
+}
+
+/// Load a module only when every undefined ELF symbol was resolved from kallsyms.
+/// This is required for modules whose unresolved data imports could fault during
+/// the kernel's module-init cleanup path.
+pub fn load_module_strict(data: &[u8], params: &CStr) -> Result<()> {
+    load_module_inner(data, params, true)
+}
+
+fn load_module_inner(data: &[u8], params: &CStr, strict: bool) -> Result<()> {
     let mut buffer = data.to_vec();
     let elf = Elf::parse(&buffer)?;
     let ctx = *elf.syms.ctx();
@@ -329,7 +340,10 @@ pub fn load_module(data: &[u8], params: &CStr) -> Result<()> {
             continue;
         }
 
-        let Some(name) = elf.strtab.get_at(sym.st_name) else {
+        let Some(name) = elf.strtab.get_at(sym.st_name).filter(|name| !name.is_empty()) else {
+            if strict {
+                bail!("Cannot load module: undefined ELF symbol {index} has no name");
+            }
             continue;
         };
 
@@ -339,6 +353,9 @@ pub fn load_module(data: &[u8], params: &CStr) -> Result<()> {
 
     if !unresolved_symbols.is_empty() {
         for_each_kernel_symbols(|(symbol, addr)| {
+            if strict && *addr == 0 {
+                return Ok(true);
+            }
             if let Some((mut sym, offset)) = unresolved_symbols.remove(symbol) {
                 sym.st_shndx = section_header::SHN_ABS as usize;
                 sym.st_value = *addr;
@@ -348,6 +365,12 @@ pub fn load_module(data: &[u8], params: &CStr) -> Result<()> {
             Ok(!unresolved_symbols.is_empty())
         })
         .context("Cannot parse kallsyms")?;
+    }
+
+    if strict && !unresolved_symbols.is_empty() {
+        let mut names: Vec<_> = unresolved_symbols.keys().collect();
+        names.sort_unstable();
+        bail!("Cannot load module: unresolved kernel symbols: {}", names.into_iter().map(String::as_str).collect::<Vec<_>>().join(", "));
     }
 
     for name in unresolved_symbols.keys() {

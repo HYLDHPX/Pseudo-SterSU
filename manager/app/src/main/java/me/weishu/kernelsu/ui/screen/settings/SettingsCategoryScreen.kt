@@ -221,7 +221,6 @@ fun SettingsCategoryScreen(routeValue: String) {
                 onSetAvcSpoof = viewModel::setAvcSpoofEnabled,
                 onOpenPathConfig = {
                     when (uiState.pathConfigBackend) {
-                        PathConfigBackend.PathmaskLkm -> navigator.push(Route.HiddenPathConfig)
                         PathConfigBackend.SusfsGki -> navigator.push(Route.SusfsPathConfig)
                         PathConfigBackend.Disabled,
                         PathConfigBackend.Unknown,
@@ -230,6 +229,7 @@ fun SettingsCategoryScreen(routeValue: String) {
                 },
                 onSetEpkesuHide = viewModel::setEpkesuHideEnabled,
                 onOpenKpm = { navigator.push(Route.Kpm) },
+                onOpenLkmSusfs = { navigator.push(Route.LkmSusfs) },
             )
             SettingsCategory.Plugins -> PluginSettingsContent(
                 uiState = uiState,
@@ -584,15 +584,27 @@ private fun MountHideSettingsContent(
     onOpenPathConfig: () -> Unit,
     onSetEpkesuHide: (Boolean) -> Unit,
     onOpenKpm: () -> Unit,
+    onOpenLkmSusfs: () -> Unit,
 ) {
-    if (uiState.isKpmSettingsEntryVisible) {
+    if (uiState.isKpmSettingsEntryVisible ||
+        (uiState.runtimeModeResolved && uiState.isLkmMode && !uiState.isLateLoadMode)) {
         SettingsGroup(stringResource(R.string.settings_group_kernel_modules)) {
-            SettingsActionRow(
-                title = stringResource(R.string.kpm_title),
-                summary = stringResource(R.string.kpm_settings_summary),
-                icon = Icons.Rounded.Bolt,
-                onClick = onOpenKpm,
-            )
+            if (uiState.isKpmSettingsEntryVisible) {
+                SettingsActionRow(
+                    title = stringResource(R.string.kpm_title),
+                    summary = stringResource(R.string.kpm_settings_summary),
+                    icon = Icons.Rounded.Bolt,
+                    onClick = onOpenKpm,
+                )
+            }
+            if (uiState.runtimeModeResolved && uiState.isLkmMode && !uiState.isLateLoadMode) {
+                SettingsActionRow(
+                    title = stringResource(R.string.lkm_susfs_title),
+                    summary = stringResource(R.string.lkm_susfs_summary),
+                    icon = Icons.Rounded.Shield,
+                    onClick = onOpenLkmSusfs,
+                )
+            }
         }
     }
     SettingsGroup(stringResource(R.string.settings_group_mounting)) {
@@ -711,7 +723,6 @@ private fun PluginSettingsContent(
                             ManagerPlugin.GraphicsRenderer -> Route.GraphicsRenderer to Icons.Rounded.Tune
                             ManagerPlugin.AppIdManager -> Route.AppIdManager to Icons.Rounded.Badge
                             ManagerPlugin.AppFreeze -> Route.AppFreeze to Icons.Rounded.Apps
-                            ManagerPlugin.PathmaskLkm -> Route.HiddenPathConfig to Icons.Rounded.Visibility
                             ManagerPlugin.RemoteManagementSuite, null -> null
                         }
                         destination?.let { (route, icon) ->

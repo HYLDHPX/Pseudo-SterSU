@@ -634,7 +634,7 @@ fun SettingPagerMiuix(
                                     summary = pathConfigSummary(uiState),
                                     icon = Icons.Rounded.Visibility,
                                     enabled = uiState.canOpenPathConfig,
-                                    onClick = actions.onOpenHiddenPathConfig,
+                                    onClick = actions.onOpenSusfsPathConfig,
                                 )
                             }
                             CategorizedMiuixSwitchRow(

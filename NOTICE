@@ -9,6 +9,11 @@ LICENSE contains the GPL version 3 text and does not relicense kernel/.
 Redistributions must preserve the applicable notices and provide complete
 corresponding source. See README.md and THIRD_PARTY_NOTICES.md.
 
+Optional SUSFS guard LKM: kernel/susfs/ contains GPL-2.0 kernel sources from
+KernelSU-Next, based on inforcqb/susfs4ksu-lkm. Preserve their SPDX and
+copyright notices and see kernel/susfs/README.stersu.md for pinned revisions
+and THIRD_PARTY_NOTICES.md for the source and license chain.
+
 ApkeSU copyright and licensing notice
 =====================================
 

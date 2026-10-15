@@ -269,7 +269,7 @@ fun SettingPagerSkrootpro(
                         summary = pathConfigSummary(uiState),
                         leadingIcon = Icons.Rounded.Visibility,
                         enabled = uiState.canOpenPathConfig,
-                        onClick = actions.onOpenHiddenPathConfig,
+                        onClick = actions.onOpenSusfsPathConfig,
                     )
                 }
                 SkrootproSwitchRow(

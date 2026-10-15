@@ -11,8 +11,8 @@ use crate::lkm_image::BootPatchV2Args;
 use crate::module::regenerate_preinit_rc;
 use crate::{
     apk_sign, assets, cpu_spoof, debug, defs, dynamic_manager, epkesu_hide, init_event,
-    kpatch_next, kpm, ksu_uapi, ksucalls, module, module_config, pathmask, rescue,
-    stealth_recovery, sulog, utils, web_manager,
+    kpatch_next, kpm, ksu_uapi, ksucalls, module, module_config, rescue, stealth_recovery, sulog,
+    utils, web_manager,
 };
 
 /// KernelSU userspace cli
@@ -60,12 +60,6 @@ enum Commands {
     CpuSpoof {
         #[command(subcommand)]
         command: CpuSpoof,
-    },
-
-    /// Manage built-in pathmask LKM
-    Pathmask {
-        #[command(subcommand)]
-        command: Pathmask,
     },
 
     /// Manage boot rescue protection
@@ -669,68 +663,6 @@ enum CpuSpoof {
 }
 
 #[derive(clap::Subcommand, Debug)]
-enum Pathmask {
-    /// Print pathmask config and runtime status as JSON
-    Status,
-
-    /// Atomically import and apply pathmask config JSON from file
-    Import {
-        /// config JSON file path
-        file: PathBuf,
-    },
-
-    /// Atomically import and apply pathmask config JSON from an argument
-    ImportJson {
-        /// config JSON content
-        json: String,
-    },
-
-    /// Apply saved config by hot-reloading pathmask LKM
-    Apply,
-
-    /// Atomically validate, apply, and commit config JSON
-    ApplyJson {
-        /// config JSON content
-        json: String,
-    },
-
-    /// Persistently enable or disable pathmask auto-load
-    SetAutoLoad {
-        /// true to auto-load, false to keep the saved config disabled
-        enabled: bool,
-        /// optional boot delay in seconds (0 applies immediately)
-        #[arg(long)]
-        delay_seconds: Option<u64>,
-    },
-
-    /// Probe whether a path is visible after dropping to an Android UID
-    TestVisibility {
-        /// Android application UID to probe as
-        #[arg(long)]
-        uid: u32,
-
-        /// Absolute path to probe
-        #[arg(long)]
-        path: String,
-    },
-
-    /// Unload current pathmask LKM and clear kernel hidden paths
-    Unload,
-
-    /// Delete saved, candidate, and last-good pathmask configurations
-    DeleteConfig,
-
-    /// Print manager and kernel pathmask logs
-    Logs,
-
-    /// Clear manager pathmask logs
-    ClearLogs,
-
-    /// Print status and logs as a diagnostic bundle
-    Diagnostics,
-}
-
-#[derive(clap::Subcommand, Debug)]
 enum Profile {
     /// get root profile's selinux policy of <package-name>
     GetSepolicy {
@@ -1082,35 +1014,6 @@ pub fn run() -> Result<()> {
                 CpuSpoof::Enable => cpu_spoof::enable(),
                 CpuSpoof::Disable => cpu_spoof::disable(),
                 CpuSpoof::RestoreDefault => cpu_spoof::restore_default(),
-            }
-        }
-        Commands::Pathmask { command } => {
-            utils::switch_mnt_ns(1)?;
-            match command {
-                Pathmask::Status => {
-                    pathmask::print_status();
-                    Ok(())
-                }
-                Pathmask::Import { file } => pathmask::import_config(&file),
-                Pathmask::ImportJson { json } => pathmask::import_config_text(&json),
-                Pathmask::Apply => pathmask::apply(),
-                Pathmask::ApplyJson { json } => pathmask::apply_config_text(&json),
-                Pathmask::SetAutoLoad {
-                    enabled,
-                    delay_seconds,
-                } => pathmask::set_auto_load(enabled, delay_seconds),
-                Pathmask::TestVisibility { uid, path } => pathmask::test_visibility(uid, &path),
-                Pathmask::Unload => pathmask::unload(),
-                Pathmask::DeleteConfig => pathmask::delete_config(),
-                Pathmask::Logs => {
-                    pathmask::print_logs();
-                    Ok(())
-                }
-                Pathmask::ClearLogs => pathmask::clear_logs(),
-                Pathmask::Diagnostics => {
-                    pathmask::print_diagnostics();
-                    Ok(())
-                }
             }
         }
         Commands::Rescue { command } => {

@@ -136,14 +136,13 @@ class SettingsCatalogTest {
     }
 
     @Test
-    fun lkmPathConfigAppearsOnlyInPluginsAfterInstallation() {
+    fun lkmPathConfigStaysSeparateFromGkiSusfs() {
         val lkm = SettingsUiState(isLkmMode = true, runtimeModeResolved = true)
-        val installed = lkm.copy(installedPluginIds = setOf(ManagerPlugin.PathmaskLkm.id))
-        assertEquals(false, SettingsCatalog.entriesFor(SettingsCategory.MountAndHide, installed).any { it.key == "path_config" })
-        assertEquals(false, SettingsCatalog.entriesFor(SettingsCategory.Plugins, lkm).any { it.key == "pathmask_lkm" })
-        assertEquals(true, SettingsCatalog.entriesFor(SettingsCategory.Plugins, installed).any { it.key == "pathmask_lkm" })
+        assertEquals(false, SettingsCatalog.entriesFor(SettingsCategory.MountAndHide, lkm).any { it.key == "path_config" })
         assertEquals(true, SettingsCatalog.entriesFor(SettingsCategory.MountAndHide, lkm.copy(isLkmMode = false)).any { it.key == "path_config" })
-        assertEquals(false, SettingsCatalog.entriesFor(SettingsCategory.Plugins, installed.copy(isLkmMode = false)).any { it.key == "pathmask_lkm" })
+        assertEquals(true, SettingsCatalog.entriesFor(SettingsCategory.MountAndHide, lkm).any { it.key == "susfs_lkm" })
+        assertEquals(false, SettingsCatalog.entriesFor(SettingsCategory.MountAndHide, lkm.copy(isLkmMode = false)).any { it.key == "susfs_lkm" })
+        assertEquals(false, SettingsCatalog.entriesFor(SettingsCategory.MountAndHide, lkm.copy(isLateLoadMode = true)).any { it.key == "susfs_lkm" })
     }
 
 }
