@@ -15,6 +15,7 @@ import kotlin.concurrent.thread
 
 const val STEALTH_MODE_ENABLED_KEY = "stealth_mode_enabled"
 const val STEALTH_MODE_CODE_KEY = "stealth_mode_code"
+private const val STEALTH_MODE_CODE_V2_KEY = "stealth_mode_code_v2"
 const val DEFAULT_STEALTH_MODE_CODE = "*#*#4211#*#*"
 const val STEALTH_MODE_DISABLED_ACTION = "me.weishu.kernelsu.action.STEALTH_MODE_DISABLED"
 const val STEALTH_MODE_CHANGED_ACTION = "me.weishu.kernelsu.action.STEALTH_MODE_CHANGED"
@@ -23,7 +24,9 @@ const val STEALTH_RECOVERY_URL = "http://127.0.0.1:10241/"
 private const val SETTINGS_PREFS = "settings"
 private const val STEALTH_CODE_PATH = "/data/adb/ksu/hansu_code"
 private const val STEALTH_MODE_PATH = "/data/adb/ksu/hansu_mode"
+private const val STEALTH_CODE_V2_MARKER = "SterSU-stealth-code-v2:09e7997f"
 private const val RECOVERY_MAX_BODY_BYTES = 4096
+private const val HEX_DIGITS = "0123456789abcdef"
 
 enum class StealthCodeValidation { Valid, Invalid, TooLong }
 
@@ -52,19 +55,21 @@ object StealthModeStore {
     fun isEnabled(context: Context = ksuApp): Boolean = preferences(context)
         .getBoolean(STEALTH_MODE_ENABLED_KEY, false)
 
-    fun code(context: Context = ksuApp): String = normalizeCode(
-        preferences(context).getString(STEALTH_MODE_CODE_KEY, DEFAULT_STEALTH_MODE_CODE).orEmpty()
-    ) ?: DEFAULT_STEALTH_MODE_CODE
-
-    fun normalizeCode(value: String): String? {
-        val trimmed = value.trim()
-        return trimmed.takeIf {
-            it.isNotEmpty() && '\u0000' !in it && '\n' !in it && '\r' !in it
-        }
+    fun code(context: Context = ksuApp): String {
+        val prefs = preferences(context)
+        val encoded = prefs.getString(STEALTH_MODE_CODE_V2_KEY, null)
+        return encoded?.let(::decodeCodeFromStorage)
+            ?: normalizeCode(prefs.getString(STEALTH_MODE_CODE_KEY, DEFAULT_STEALTH_MODE_CODE).orEmpty())
+            ?: DEFAULT_STEALTH_MODE_CODE
     }
+
+    fun normalizeCode(value: String): String? = value.takeIf(String::isNotEmpty)
 
     fun validateCode(value: String): StealthCodeValidation {
         val normalized = normalizeCode(value) ?: return StealthCodeValidation.Invalid
+        if (normalized.toByteArray(Charsets.UTF_8).toString(Charsets.UTF_8) != normalized) {
+            return StealthCodeValidation.Invalid
+        }
         return if (recoveryRequestBodyBytes(normalized) <= RECOVERY_MAX_BODY_BYTES) {
             StealthCodeValidation.Valid
         } else {
@@ -79,7 +84,8 @@ object StealthModeStore {
         while (index < code.length && size <= RECOVERY_MAX_BODY_BYTES) {
             val char = code[index]
             size += when {
-                char == '"' || char == '\\' || char == '\b' || char == '\t' || char == '\u000c' -> 2
+                char == '"' || char == '\\' || char == '\b' || char == '\t' ||
+                    char == '\n' || char == '\r' || char == '\u000c' -> 2
                 char.code < 0x20 -> 6
                 char.code < 0x80 -> 1
                 char.code < 0x800 -> 2
@@ -116,6 +122,34 @@ object StealthModeStore {
         return requested == configured
     }
 
+    internal fun encodeCodeForStorage(value: String): String = buildString {
+        value.toByteArray(Charsets.UTF_8).forEach { byte ->
+            val unsigned = byte.toInt() and 0xff
+            append(HEX_DIGITS[unsigned ushr 4])
+            append(HEX_DIGITS[unsigned and 0x0f])
+        }
+    }
+
+    internal fun decodeCodeFromStorage(hex: String): String? {
+        if (hex.length % 2 != 0) return null
+        val bytes = ByteArray(hex.length / 2)
+        for (index in bytes.indices) {
+            val high = HEX_DIGITS.indexOf(hex[index * 2])
+            val low = HEX_DIGITS.indexOf(hex[index * 2 + 1])
+            if (high < 0 || low < 0) return null
+            bytes[index] = ((high shl 4) or low).toByte()
+        }
+        val code = bytes.toString(Charsets.UTF_8)
+        return code.takeIf { it.isNotEmpty() && it.toByteArray(Charsets.UTF_8).contentEquals(bytes) }
+    }
+
+    internal fun codeFromRootLines(lines: List<String>): String? {
+        val first = lines.firstOrNull() ?: return null
+        if (first != STEALTH_CODE_V2_MARKER) return normalizeCode(first.trim())
+        val encoded = lines.getOrNull(1) ?: return null
+        return decodeCodeFromStorage(encoded)
+    }
+
     fun setEnabledBlocking(
         enabled: Boolean,
         requestedCode: String = code(),
@@ -125,6 +159,7 @@ object StealthModeStore {
         if (enabled) check(validateCode(normalizedCode) == StealthCodeValidation.Valid) {
             "secret code is too long for the recovery page"
         }
+        val encodedCode = encodeCodeForStorage(normalizedCode)
         val recoveryCommand = shellQuote("${context.applicationInfo.nativeLibraryDir}/libksud.so") +
             " stealth-recovery"
         val temporaryCodePath = "$STEALTH_CODE_PATH.tmp.${Process.myPid()}"
@@ -132,7 +167,9 @@ object StealthModeStore {
         val command = buildString {
             append("umask 077; mkdir -p /data/adb/ksu && ")
             append("printf '%s\\n' ")
-            append(shellQuote(normalizedCode))
+            append(shellQuote(STEALTH_CODE_V2_MARKER))
+            append(" ")
+            append(shellQuote(encodedCode))
             append(" > ")
             append(temporaryCodePath)
             append(" && chmod 600 ")
@@ -228,16 +265,17 @@ object StealthModeStore {
         check(validateCode(normalizedCode) == StealthCodeValidation.Valid) {
             "secret code is too long for the recovery page"
         }
-        check(!readRootState().getOrThrow().enabled) {
-            "stealth mode must be disabled before changing its code in the Manager"
-        }
+        val encodedCode = encodeCodeForStorage(normalizedCode)
         val temporaryCodePath = "$STEALTH_CODE_PATH.tmp.${Process.myPid()}"
         val command = "umask 077; [ ! -f $STEALTH_MODE_PATH ] && " +
             "mkdir -p /data/adb/ksu && " +
-            "printf '%s\\n' ${shellQuote(normalizedCode)} > $temporaryCodePath && " +
+            "printf '%s\\n' ${shellQuote(STEALTH_CODE_V2_MARKER)} ${shellQuote(encodedCode)} > $temporaryCodePath && " +
             "chmod 600 $temporaryCodePath && mv -f $temporaryCodePath $STEALTH_CODE_PATH"
         val saved = withNewRootShell {
             check(isRoot) { "root shell unavailable" }
+            check(ShellUtils.fastCmdResult(this, "test ! -f $STEALTH_MODE_PATH")) {
+                "stealth mode must be disabled before changing its code in the Manager"
+            }
             ShellUtils.fastCmdResult(this, command)
         }
         check(saved) { "could not back up stealth code" }
@@ -307,13 +345,17 @@ object StealthModeStore {
             ShellUtils.fastCmd(
                 this,
                 "if [ -f $STEALTH_MODE_PATH ]; then echo enabled; else echo disabled; fi; " +
-                    "if [ -f $STEALTH_CODE_PATH ]; then sed -n '1p' $STEALTH_CODE_PATH; fi",
+                    "if [ -f $STEALTH_CODE_PATH ]; then sed -n '1,2p' $STEALTH_CODE_PATH; fi",
             )
-        }.lineSequence().map(String::trim).filter(String::isNotEmpty).toList()
-        val mode = output.firstOrNull()
+        }.lineSequence().toList()
+        val mode = output.firstOrNull()?.trim()
         check(mode == "enabled" || mode == "disabled") { "invalid root stealth state" }
         val enabled = mode == "enabled"
-        val rootCode = output.getOrNull(1)?.let(::normalizeCode)
+        val codeLines = output.drop(1)
+        val rootCode = codeFromRootLines(codeLines)
+        check(codeLines.firstOrNull() != STEALTH_CODE_V2_MARKER || rootCode != null) {
+            "invalid root stealth code backup"
+        }
         StealthModeRootState(
             enabled = enabled,
             codeBackedUp = rootCode != null,
@@ -326,9 +368,11 @@ object StealthModeStore {
         enabled: Boolean,
         normalizedCode: String = code(context),
     ) {
+        val storedCode = normalizeCode(normalizedCode) ?: DEFAULT_STEALTH_MODE_CODE
         preferences(context).edit(commit = true) {
             putBoolean(STEALTH_MODE_ENABLED_KEY, enabled)
-            putString(STEALTH_MODE_CODE_KEY, normalizeCode(normalizedCode) ?: DEFAULT_STEALTH_MODE_CODE)
+            putString(STEALTH_MODE_CODE_V2_KEY, encodeCodeForStorage(storedCode))
+            remove(STEALTH_MODE_CODE_KEY)
         }
     }
 

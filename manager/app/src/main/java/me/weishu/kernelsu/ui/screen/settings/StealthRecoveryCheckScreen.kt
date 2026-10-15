@@ -3,6 +3,7 @@ package me.weishu.kernelsu.ui.screen.settings
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import me.weishu.kernelsu.stealth.STEALTH_RECOVERY_URL
 import me.weishu.kernelsu.stealth.StealthCodeValidation
 import me.weishu.kernelsu.stealth.StealthModeStore
 import me.weishu.kernelsu.stealth.StealthRecoveryPreflight
+import me.weishu.kernelsu.ui.MainActivity
 import me.weishu.kernelsu.ui.component.ApkeSecondaryScaffold
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.viewmodel.SettingsViewModel
@@ -133,7 +135,8 @@ fun StealthRecoveryCheckScreen() {
                 },
                 label = { Text(stringResource(R.string.stealth_mode_code_title)) },
                 visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
+                singleLine = false,
+                maxLines = 4,
                 isError = validation != StealthCodeValidation.Valid,
                 supportingText = {
                     Text(stringResource(when (validation) {
@@ -149,7 +152,8 @@ fun StealthRecoveryCheckScreen() {
                 onValueChange = { confirmedCode = it },
                 label = { Text(stringResource(R.string.stealth_recovery_confirm_code)) },
                 visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
+                singleLine = false,
+                maxLines = 4,
                 isError = confirmedCode.isNotEmpty() && confirmedCode != code,
                 supportingText = {
                     if (confirmedCode.isNotEmpty() && confirmedCode != code) {
@@ -194,7 +198,14 @@ fun StealthRecoveryCheckScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Button(
-                onClick = { viewModel.setStealthMode(true, code) },
+                onClick = {
+                    viewModel.setStealthMode(true, code) {
+                        val restart = Intent(context, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        }
+                        context.startActivity(restart)
+                    }
+                },
                 enabled = checks?.ready == true && validation == StealthCodeValidation.Valid &&
                     confirmedCode == code && (dialerLikelyUsable || webOnlyAcknowledged) &&
                     !checking && !uiState.stealthModeBusy,

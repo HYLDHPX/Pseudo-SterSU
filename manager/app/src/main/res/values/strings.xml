@@ -3294,8 +3294,8 @@
     <string name="stealth_mode_title">Stealth mode</string>
     <string name="stealth_mode_summary">Make Home look uninstalled and hide management pages. Disable it using your code at http://127.0.0.1:10241/ on this device, or with the dialer code.</string>
     <string name="stealth_mode_code_title">Stealth secret code</string>
-    <string name="stealth_mode_code_format">The code may use any characters, but must fit the 4 KiB recovery request. It is backed up to /data/adb/ksu/hansu_code. Dialer recovery requires a code your dialer can enter.</string>
-    <string name="stealth_mode_code_invalid">The code cannot be empty.</string>
+    <string name="stealth_mode_code_format">Use any non-empty code. Spaces, line breaks and symbols are kept exactly. It must fit the 4 KiB recovery request and is backed up to /data/adb/ksu/hansu_code. Dialer recovery requires a code your dialer can enter.</string>
+    <string name="stealth_mode_code_invalid">The code cannot be empty or contain invalid Unicode.</string>
     <string name="stealth_mode_code_too_long">The code is too long for the local recovery page. Shorten it before saving or enabling stealth mode.</string>
     <string name="stealth_mode_code_saved_toast">Stealth code saved and backed up.</string>
     <string name="stealth_recovery_check_title">Recovery channel check</string>

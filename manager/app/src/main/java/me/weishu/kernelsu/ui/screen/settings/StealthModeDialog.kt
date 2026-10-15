@@ -44,7 +44,8 @@ internal fun StealthModeCodeDialog(
                     value = draft,
                     onValueChange = { draft = it },
                     enabled = !busy,
-                    singleLine = true,
+                    singleLine = false,
+                    maxLines = 4,
                     label = { Text(stringResource(R.string.stealth_mode_code_title)) },
                     isError = draft.isNotBlank() && !valid,
                     supportingText = {

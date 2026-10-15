@@ -16,6 +16,9 @@
     <form id="recovery-form">
       <label for="code">隐身密令</label>
       <input id="code" name="code" type="password" autocomplete="off" spellcheck="false" required>
+      <label class="multiline-option" for="multiline"><input id="multiline" type="checkbox">密令包含换行</label>
+      <textarea id="code-multiline" name="code-multiline" aria-label="隐身密令（多行）" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" hidden></textarea>
+      <p id="multiline-warning" class="input-warning" hidden>部分浏览器可能明文显示多行密令，请留意周围环境。</p>
       <button id="submit" type="submit">确认关闭</button>
     </form>
     <p id="message" role="status" aria-live="polite"></p>

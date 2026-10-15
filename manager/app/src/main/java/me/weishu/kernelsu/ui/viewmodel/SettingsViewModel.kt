@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -1068,7 +1069,7 @@ class SettingsViewModel(
         _uiState.update { it.copy(enableWebDebugging = enabled) }
     }
 
-    fun setStealthMode(enabled: Boolean, code: String) {
+    fun setStealthMode(enabled: Boolean, code: String, afterSave: (() -> Unit)? = null) {
         if (_uiState.value.stealthModeBusy) return
         val normalizedCode = StealthModeStore.normalizeCode(code)
         val validation = StealthModeStore.validateCode(code)
@@ -1097,12 +1098,13 @@ class SettingsViewModel(
                             stealthModeBusy = false,
                         )
                     }
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            ksuApp,
-                            if (enabled) R.string.stealth_mode_enabled_toast else R.string.stealth_mode_code_saved_toast,
-                            Toast.LENGTH_LONG,
-                        ).show()
+                    // The stealth preference can remove this screen and cancel its ViewModel
+                    // before the restart callback reaches the main thread.
+                    withContext(Dispatchers.Main + NonCancellable) {
+                        if (!enabled) {
+                            Toast.makeText(ksuApp, R.string.stealth_mode_code_saved_toast, Toast.LENGTH_LONG).show()
+                        }
+                        afterSave?.invoke()
                     }
                 }
                 .onFailure { error ->

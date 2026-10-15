@@ -21,6 +21,7 @@ const ADDRESS: &str = "127.0.0.1:10241";
 const ORIGIN: &str = "http://127.0.0.1:10241";
 const MODE_PATH: &str = "/data/adb/ksu/hansu_mode";
 const CODE_PATH: &str = "/data/adb/ksu/hansu_code";
+const CODE_V2_MARKER: &str = "SterSU-stealth-code-v2:09e7997f";
 const LOCK_PATH: &str = "/data/adb/ksu/stealth_recovery.lock";
 const STOP_PATH: &str = "/data/adb/ksu/stealth_recovery.stop";
 const BOOT_SCRIPT: &str = "/data/adb/service.d/99-stersu-stealth-recovery.sh";
@@ -450,12 +451,7 @@ fn handle_client(stream: &mut TcpStream, failures: &mut FailedAttempts) -> Resul
 }
 
 fn normalized_code(value: &str) -> Option<&str> {
-    let value = value.trim();
-    if value.is_empty()
-        || value
-            .chars()
-            .any(|character| matches!(character, '\0' | '\n' | '\r'))
-    {
+    if value.is_empty() {
         return None;
     }
     Some(
@@ -469,12 +465,34 @@ fn normalized_code(value: &str) -> Option<&str> {
 
 fn stored_code() -> Result<String> {
     let value = fs::read_to_string(CODE_PATH).context("read stealth code backup")?;
-    let code = value.lines().next().unwrap_or_default().trim();
-    ensure!(
-        normalized_code(code).is_some(),
-        "invalid stealth code backup"
-    );
-    Ok(code.to_string())
+    decode_stored_code(&value)
+}
+
+fn decode_stored_code(value: &str) -> Result<String> {
+    let mut lines = value.lines();
+    let first = lines.next().unwrap_or_default();
+    let code = if first == CODE_V2_MARKER {
+        let encoded = lines.next().context("missing encoded stealth code")?;
+        ensure!(lines.next().is_none(), "invalid stealth code backup");
+        let bytes = encoded.as_bytes();
+        ensure!(bytes.len() % 2 == 0, "invalid encoded stealth code");
+        let mut decoded = Vec::with_capacity(bytes.len() / 2);
+        for pair in bytes.chunks_exact(2) {
+            let digit = |byte: u8| match byte {
+                b'0'..=b'9' => Some(byte - b'0'),
+                b'a'..=b'f' => Some(byte - b'a' + 10),
+                _ => None,
+            };
+            let high = digit(pair[0]).context("invalid encoded stealth code")?;
+            let low = digit(pair[1]).context("invalid encoded stealth code")?;
+            decoded.push((high << 4) | low);
+        }
+        String::from_utf8(decoded).context("invalid UTF-8 stealth code")?
+    } else {
+        first.trim().to_owned()
+    };
+    ensure!(!code.is_empty(), "invalid stealth code backup");
+    Ok(code)
 }
 
 fn code_matches(configured: &str, supplied: &str) -> bool {
@@ -543,6 +561,25 @@ mod tests {
         assert!(code_matches("*#*#4211#*#*", "4211"));
         assert!(!code_matches("*#*#4211#*#*", "4212"));
         assert!(!code_matches("", "4211"));
+    }
+
+    #[test]
+    fn encoded_code_preserves_whitespace_unicode_and_control_characters() {
+        let code = "  密令\nwith\0symbols'  ";
+        let encoded = code
+            .as_bytes()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        let stored = format!("{CODE_V2_MARKER}\n{encoded}\n");
+        assert_eq!(decode_stored_code(&stored).unwrap(), code);
+        assert!(code_matches(code, code));
+        assert!(!code_matches(code, code.trim()));
+        assert_eq!(
+            decode_stored_code("*#*#4211#*#*\n").unwrap(),
+            "*#*#4211#*#*"
+        );
+        assert!(decode_stored_code(&format!("{CODE_V2_MARKER}\nzz\n")).is_err());
     }
 
     #[test]

@@ -10,18 +10,38 @@ class StealthModeStoreTest {
     @Test
     fun acceptsArbitraryNonEmptyCodesWithoutChangingThem() {
         assertEquals("4211", StealthModeStore.normalizeCode("4211"))
-        assertEquals("*#*#987654#*#*", StealthModeStore.normalizeCode(" *#*#987654#*#* "))
+        assertEquals(" *#*#987654#*#* ", StealthModeStore.normalizeCode(" *#*#987654#*#* "))
         assertEquals("letters, symbols !@'中文", StealthModeStore.normalizeCode("letters, symbols !@'中文"))
+        assertEquals("  ", StealthModeStore.normalizeCode("  "))
+        assertEquals("line one\nline two\u0000", StealthModeStore.normalizeCode("line one\nline two\u0000"))
         assertEquals("1", StealthModeStore.normalizeCode("1"))
         assertEquals("4211", StealthModeStore.secretCodeHost(DEFAULT_STEALTH_MODE_CODE))
     }
 
     @Test
-    fun onlyRejectsEmptyOrMultiLineStorageValues() {
+    fun onlyRejectsAnEmptyCode() {
         assertNull(StealthModeStore.normalizeCode(""))
-        assertNull(StealthModeStore.normalizeCode("   "))
-        assertNull(StealthModeStore.normalizeCode("line one\nline two"))
-        assertNull(StealthModeStore.normalizeCode("nul\u0000value"))
+        assertEquals(StealthCodeValidation.Invalid, StealthModeStore.validateCode(""))
+        assertEquals(
+            StealthCodeValidation.Invalid,
+            StealthModeStore.validateCode(charArrayOf(0xD800.toChar()).concatToString()),
+        )
+        assertEquals(StealthCodeValidation.Valid, StealthModeStore.validateCode("   "))
+        assertEquals(StealthCodeValidation.Valid, StealthModeStore.validateCode("line one\nline two"))
+    }
+
+    @Test
+    fun encodedBackupRoundTripsArbitraryCodeWithoutTrimming() {
+        val code = "  中文\nwith\r\u0000'\\\"  "
+        val encoded = StealthModeStore.encodeCodeForStorage(code)
+        assertEquals(code, StealthModeStore.decodeCodeFromStorage(encoded))
+        assertEquals(
+            code,
+            StealthModeStore.codeFromRootLines(listOf("SterSU-stealth-code-v2:09e7997f", encoded)),
+        )
+        assertEquals("legacy", StealthModeStore.codeFromRootLines(listOf("legacy")))
+        assertNull(StealthModeStore.decodeCodeFromStorage("zz"))
+        assertNull(StealthModeStore.codeFromRootLines(listOf("SterSU-stealth-code-v2:09e7997f")))
     }
 
     @Test
@@ -34,12 +54,13 @@ class StealthModeStoreTest {
     @Test
     fun requestedCodeMustNormalizeAndMatchExactly() {
         assertTrue(StealthModeStore.matchesRequestedCode("4211", DEFAULT_STEALTH_MODE_CODE))
-        assertTrue(
+        assertFalse(
             StealthModeStore.matchesRequestedCode(
                 " *#*#4211#*#* ",
                 DEFAULT_STEALTH_MODE_CODE,
             )
         )
+        assertTrue(StealthModeStore.matchesRequestedCode("  secret  ", "  secret  "))
         assertFalse(StealthModeStore.matchesRequestedCode("42110", DEFAULT_STEALTH_MODE_CODE))
         assertTrue(StealthModeStore.matchesRequestedCode("custom !@'中文", "custom !@'中文"))
         assertFalse(StealthModeStore.matchesRequestedCode(null, DEFAULT_STEALTH_MODE_CODE))
@@ -59,6 +80,8 @@ class StealthModeStoreTest {
         assertEquals(StealthCodeValidation.Valid, StealthModeStore.validateCode("a".repeat(4085)))
         assertEquals(StealthCodeValidation.TooLong, StealthModeStore.validateCode("a".repeat(4086)))
         assertEquals(13, StealthModeStore.recoveryRequestBodyBytes("\\"))
+        assertEquals(13, StealthModeStore.recoveryRequestBodyBytes("\n"))
+        assertEquals(17, StealthModeStore.recoveryRequestBodyBytes("\u0000"))
         assertEquals(17, StealthModeStore.recoveryRequestBodyBytes("\u0001"))
         assertEquals(15, StealthModeStore.recoveryRequestBodyBytes("😀"))
         assertEquals(StealthCodeValidation.TooLong, StealthModeStore.validateCode("\u0001".repeat(681)))

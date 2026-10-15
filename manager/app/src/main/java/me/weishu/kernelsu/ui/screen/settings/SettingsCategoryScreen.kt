@@ -279,8 +279,9 @@ fun SettingsCategoryScreen(routeValue: String) {
         busy = uiState.stealthModeBusy,
         onDismissRequest = { showStealthModeDialog = false },
         onConfirm = { code ->
-            viewModel.setStealthMode(stealthModeDialogEnablesMode, code)
-            showStealthModeDialog = false
+            viewModel.setStealthMode(stealthModeDialogEnablesMode, code) {
+                showStealthModeDialog = false
+            }
         },
     )
 }

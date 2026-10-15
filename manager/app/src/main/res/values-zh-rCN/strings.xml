@@ -3242,8 +3242,8 @@
     <string name="stealth_mode_title">隐身模式</string>
     <string name="stealth_mode_summary">主页伪装成“未安装”并隐藏管理页面；启用后在本机打开 http://127.0.0.1:10241/ 输入密令，或通过拨号密令关闭。</string>
     <string name="stealth_mode_code_title">隐身密钥</string>
-    <string name="stealth_mode_code_format">密令可使用任意字符，但必须能放进 4 KiB 的恢复请求，并会备份到 /data/adb/ksu/hansu_code；拨号恢复需使用拨号盘能输入的密令。</string>
-    <string name="stealth_mode_code_invalid">密令不能为空。</string>
+    <string name="stealth_mode_code_format">可输入任意非空密令，空格、换行和符号会原样保存；恢复请求须在 4 KiB 内，并备份到 /data/adb/ksu/hansu_code。拨号恢复需使用拨号盘能输入的密令。</string>
+    <string name="stealth_mode_code_invalid">密令不能为空，也不能包含无效的 Unicode 字符。</string>
     <string name="stealth_mode_code_too_long">密令过长，恢复网页无法提交。请缩短后再保存或启用隐身模式。</string>
     <string name="stealth_mode_code_saved_toast">隐身密令已保存并备份。</string>
     <string name="stealth_recovery_check_title">恢复通道自检</string>

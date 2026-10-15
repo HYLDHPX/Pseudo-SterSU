@@ -664,8 +664,8 @@
     <string name="stealth_mode_title">隱身模式</string>
     <string name="stealth_mode_summary">首頁偽裝為「未安裝」並隱藏管理頁面；啟用後在本機開啟 http://127.0.0.1:10241/ 輸入密令，或使用撥號密令關閉。</string>
     <string name="stealth_mode_code_title">隱身密令</string>
-    <string name="stealth_mode_code_format">密令可使用任意字元，但必須符合 4 KiB 恢復請求上限，並備份至 /data/adb/ksu/hansu_code；撥號恢復需要撥號盤能輸入的密令。</string>
-    <string name="stealth_mode_code_invalid">密令不可為空。</string>
+    <string name="stealth_mode_code_format">可輸入任意非空密令，空格、換行和符號會原樣儲存；恢復請求須在 4 KiB 內，並備份至 /data/adb/ksu/hansu_code。撥號恢復需使用撥號盤能輸入的密令。</string>
+    <string name="stealth_mode_code_invalid">密令不可為空，也不可包含無效的 Unicode 字元。</string>
     <string name="stealth_mode_code_too_long">密令過長，恢復網頁無法提交。請縮短後再儲存或啟用。</string>
     <string name="stealth_mode_code_saved_toast">隱身密令已儲存並備份。</string>
     <string name="stealth_recovery_check_title">恢復通道自檢</string>
