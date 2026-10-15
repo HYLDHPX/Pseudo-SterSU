@@ -156,6 +156,7 @@ fun saveLog(
     context: Context,
     logContent: StringBuilder,
     scope: CoroutineScope,
+    fileNamePrefix: String = "KernelSU_module_action_log",
     showMessage: (String) -> Unit
 ): () -> Unit {
     return {
@@ -165,7 +166,7 @@ fun saveLog(
             val result = runCatching {
                 saveTextToDownloads(
                     context = context,
-                    displayName = "KernelSU_module_action_log_${date}.log",
+                    displayName = "${fileNamePrefix}_${date}.log",
                     text = logContent.toString(),
                 )
             }

@@ -227,6 +227,7 @@ import me.weishu.kernelsu.ui.screen.settings.InstallCardWallpaperScreen
 import me.weishu.kernelsu.ui.screen.settings.LanguageSettingsScreen
 import me.weishu.kernelsu.ui.screen.settings.StealthRecoveryCheckScreen
 import me.weishu.kernelsu.ui.screen.settings.PreInstallStyleSettingsScreen
+import me.weishu.kernelsu.ui.screen.scriptrun.ScriptRunScreen
 import me.weishu.kernelsu.ui.screen.settings.SettingPager
 import me.weishu.kernelsu.ui.screen.settings.SettingsCategoryScreen
 import me.weishu.kernelsu.ui.screen.settings.SoundEffectsScreen
@@ -609,6 +610,11 @@ class MainActivity : ComponentActivity() {
                     val flashRoute = navigator.current() as? Route.Flash
                     var flashBackEnabled by remember(flashRoute) { mutableStateOf(false) }
                     var sidebarNavigationBadge by remember { mutableStateOf(NavigationBadgeState()) }
+                    val scriptRunRoute = navigator.current() as? Route.ScriptRun
+                    var scriptRunBackEnabled by remember(scriptRunRoute) { mutableStateOf(true) }
+                    // Read here, not inside the NavDisplay builder: NavDisplay only rebuilds its entries
+                    // (and their swipeDismiss) when the builder lambda changes, so it must capture the value.
+                    val scriptRunSwipeDismiss = if (scriptRunBackEnabled) swipeDismiss else NavSwipeDirection.None
                     val mainScreenEntry = @Composable {
                         MainScreen(
                             onDestinationChanged = viewModel::setSelectedMainDestination,
