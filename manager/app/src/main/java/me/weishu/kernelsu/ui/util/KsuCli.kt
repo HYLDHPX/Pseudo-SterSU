@@ -44,6 +44,7 @@ import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
+import java.util.zip.ZipFile
 
 /**
  * @author weishu
@@ -3599,11 +3600,28 @@ fun flashModule(
         val cmd = "module install ${shellQuote(file.absolutePath)}"
         val result = flashWithIO("${shellQuote(getKsuDaemonPath())} $cmd", onStdout, onStderr)
         Log.i("KernelSU", "install module $uri result: $result")
-
-        return FlashResult(result)
+        return FlashResult(result, result.isSuccess && moduleNeedsReboot(file))
     } finally {
         file.delete()
     }
+}
+
+private val MODULE_ID_REGEX = Regex("^[a-zA-Z][a-zA-Z0-9._-]+$")
+
+// A hot installed module goes live without leaving the "update" flag behind
+private fun moduleNeedsReboot(zip: File): Boolean {
+    val id = runCatching {
+        ZipFile(zip).use { archive ->
+            val entry = archive.getEntry("module.prop") ?: return@use null
+            archive.getInputStream(entry).bufferedReader().useLines { lines ->
+                lines.map { it.trim() }.firstOrNull { it.startsWith("id=") }?.substringAfter('=')?.trim()
+            }
+        }
+    }.getOrNull()
+    if (id == null || !MODULE_ID_REGEX.matches(id)) return true
+    val dir = "/data/adb/modules/$id"
+    // Any failure to check counts as needing a reboot
+    return !ShellUtils.fastCmdResult(getRootShell(), "[ -d $dir ] && [ ! -e $dir/update ]")
 }
 
 fun runModuleAction(

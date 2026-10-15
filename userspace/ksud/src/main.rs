@@ -31,6 +31,8 @@ mod epkesu_hide;
 mod feature;
 mod feature_id;
 #[cfg(target_os = "android")]
+mod hot_install;
+#[cfg(target_os = "android")]
 mod init_event;
 #[cfg(target_os = "android")]
 mod kpatch_next;
