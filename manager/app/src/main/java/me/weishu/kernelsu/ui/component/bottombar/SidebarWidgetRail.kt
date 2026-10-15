@@ -230,7 +230,7 @@ internal fun SidebarRailLayout(
     val appearance = remember(colors, animations, config.material) {
         SidebarAppearance(colors, animations, config.material)
     }
-    val railWidth = (if (tablet) 96.dp else 80.dp) * LocalDensity.current.fontScale.coerceIn(1f, 1.2f)
+    val railWidth = (if (tablet) 96.dp else 72.dp) * LocalDensity.current.fontScale.coerceIn(1f, 1.2f)
     CompositionLocalProvider(
         LocalContentColor provides contentColor,
         LocalSidebarAppearance provides appearance,

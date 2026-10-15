@@ -25,7 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
+import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
@@ -468,7 +468,7 @@ private fun WallpaperCropTools(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Switch(
+            ExpressiveSwitch(
                 checked = smartSubjectEnabled,
                 onCheckedChange = onSmartSubjectEnabledChange,
             )

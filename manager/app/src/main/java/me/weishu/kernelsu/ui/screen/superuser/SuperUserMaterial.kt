@@ -7,18 +7,23 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -41,7 +46,6 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.SelectableDropdownMenuItem
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -76,10 +80,12 @@ import me.weishu.kernelsu.ui.component.ApkeErrorState
 import me.weishu.kernelsu.ui.component.ApkeLoadingState
 import me.weishu.kernelsu.ui.component.ScrollToTopOnChange
 import me.weishu.kernelsu.ui.component.material.ExpressiveScaffold
+import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import me.weishu.kernelsu.ui.component.material.rememberExpressivePageScrollBehavior
 import me.weishu.kernelsu.ui.component.SearchStatus
 import me.weishu.kernelsu.ui.component.material.InlineSearchAppBar
 import me.weishu.kernelsu.ui.component.material.SegmentedItem
+import me.weishu.kernelsu.ui.component.material.SegmentedItemContainer
 import me.weishu.kernelsu.ui.component.material.SegmentedListItem
 import me.weishu.kernelsu.ui.component.statustag.StatusTag
 import me.weishu.kernelsu.ui.util.ownerNameForUid
@@ -510,18 +516,28 @@ private fun GroupItem(
     val otherFg = colorScheme.onTertiary
 
     val userId = group.uid / 100000
-    val tags = remember(showRootToggle, group.anyAllowSu, group.shouldUmount, group.anyCustom, userId) {
-        buildList {
-            if (group.anyAllowSu && !showRootToggle) add(StatusMeta("ROOT", bg, fg))
-            if (group.shouldUmount) add(StatusMeta("UMOUNT", umountBg, umountFg))
-            if (group.anyCustom) add(StatusMeta("CUSTOM", customBg, customFg))
-            if (userId != 0) add(StatusMeta("USER $userId", otherBg, otherFg))
-        }
+    val tags = buildList {
+        if (group.anyAllowSu && !showRootToggle) add(StatusMeta("ROOT", bg, fg))
+        if (group.shouldUmount) add(StatusMeta("UMOUNT", umountBg, umountFg))
+        if (group.anyCustom) add(StatusMeta("CUSTOM", customBg, customFg))
+        if (userId != 0) add(StatusMeta("USER $userId", otherBg, otherFg))
     }
     val summaryText = if (group.apps.size > 1) {
         stringResource(R.string.group_contains_apps, group.apps.size)
     } else {
         group.primary.displayIdentifier
+    }
+    if (showRootToggle) {
+        CompactRootItem(
+            group = group,
+            summaryText = summaryText,
+            tags = tags,
+            rootUpdating = rootUpdating,
+            onToggleExpand = onToggleExpand,
+            onSetRootAccess = onSetRootAccess,
+            onOpenProfile = onClickPrimary,
+        )
+        return
     }
     SegmentedListItem(
         selected = selected,
@@ -543,19 +559,11 @@ private fun GroupItem(
             )
         },
         trailingContent = {
-            if (showRootToggle || tags.isNotEmpty()) {
+            if (tags.isNotEmpty()) {
                 Column(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    if (showRootToggle) {
-                        QuickRootToggle(
-                            group = group,
-                            updating = rootUpdating,
-                            onToggle = onSetRootAccess,
-                            onOpenProfile = onClickPrimary,
-                        )
-                    }
                     tags.forEach { tag ->
                         StatusTag(
                             label = tag.label,
@@ -577,48 +585,89 @@ private fun GroupItem(
 }
 
 @Composable
-private fun QuickRootToggle(
+private fun CompactRootItem(
     group: GroupedApps,
-    updating: Boolean,
-    onToggle: (Boolean) -> Unit,
+    summaryText: String,
+    tags: List<StatusMeta>,
+    rootUpdating: Boolean,
+    onToggleExpand: () -> Unit,
+    onSetRootAccess: (Boolean) -> Unit,
     onOpenProfile: () -> Unit,
 ) {
     var pendingCustomChange by remember(group.uid) { mutableStateOf<Boolean?>(null) }
     val granted = group.anyAllowSu
+    val canToggle = !rootUpdating && !group.primary.special
     val stateLabel = stringResource(if (granted) R.string.superuser_root_enabled else R.string.superuser_root_disabled)
-    val actionLabel = stringResource(if (granted) R.string.superuser_root_disable_action else R.string.superuser_root_enable_action)
     val stateDescription = stringResource(R.string.superuser_root_state_for_app, group.primary.label, stateLabel)
-    val contentColor = if (granted) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant
-    Surface(
-        modifier = Modifier
-            .sizeIn(minWidth = 72.dp, minHeight = 48.dp)
-            .combinedClickable(
-                enabled = !updating && !group.primary.special,
-                role = Role.Button,
-                onClickLabel = actionLabel,
-                onLongClickLabel = stringResource(R.string.superuser_open_app_profile),
-                onLongClick = onOpenProfile,
-                onClick = {
-                    val enable = !granted
-                    if (group.anyCustom) pendingCustomChange = enable
-                    else onToggle(enable)
-                },
-            )
-            .semantics {
-                contentDescription = stateDescription
-            },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        color = if (granted) colorScheme.primaryContainer else colorScheme.surfaceVariant,
-        contentColor = contentColor,
-    ) {
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (updating) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            } else {
-                Text(stateLabel, style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
+    val requestChange: (Boolean) -> Unit = { enabled ->
+        if (canToggle && enabled != granted) {
+            if (group.anyCustom) pendingCustomChange = enabled else onSetRootAccess(enabled)
+        }
+    }
+
+    SegmentedItemContainer {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        role = Role.Button,
+                        onClick = {
+                            if (group.apps.size > 1) onToggleExpand() else requestChange(!granted)
+                        },
+                        onLongClickLabel = stringResource(R.string.superuser_open_app_profile),
+                        onLongClick = onOpenProfile,
+                    )
+                    .heightIn(min = 64.dp)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AppIconImage(
+                    packageInfo = group.primary.packageInfo,
+                    label = group.primary.label,
+                    modifier = Modifier.size(40.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = if (group.apps.size > 1) ownerNameForUid(group.uid) else group.primary.label,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = summaryText,
+                        color = colorScheme.onSurfaceVariant,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                if (rootUpdating) {
+                    Box(Modifier.size(width = 64.dp, height = 48.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    }
+                } else {
+                    ExpressiveSwitch(
+                        checked = granted,
+                        onCheckedChange = requestChange,
+                        enabled = canToggle,
+                        modifier = Modifier.semantics { contentDescription = stateDescription },
+                        showThumbIcon = false,
+                        compact = true,
+                    )
+                }
+            }
+            if (tags.isNotEmpty()) {
+                FlowRow(
+                    modifier = Modifier.padding(start = 62.dp, end = 12.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    tags.forEach { tag ->
+                        StatusTag(tag.label, backgroundColor = tag.bg, contentColor = tag.fg)
+                    }
+                }
             }
         }
     }
@@ -631,7 +680,7 @@ private fun QuickRootToggle(
             confirmButton = {
                 TextButton(onClick = {
                     pendingCustomChange = null
-                    onToggle(enable)
+                    onSetRootAccess(enable)
                 }) { Text(stringResource(if (enable) R.string.superuser_root_enable_action else R.string.superuser_root_disable_action)) }
             },
             dismissButton = {

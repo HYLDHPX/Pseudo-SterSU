@@ -57,7 +57,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -805,7 +805,7 @@ private fun VisualSettingsEditor(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(stringResource(R.string.module_wallpaper_auto_contrast), modifier = Modifier.weight(1f))
-            Switch(checked = autoContrast, onCheckedChange = onAutoContrastChange)
+            ExpressiveSwitch(checked = autoContrast, onCheckedChange = onAutoContrastChange)
         }
     }
 }
@@ -852,7 +852,7 @@ private fun CarouselSettings(
         Text(stringResource(R.string.module_wallpaper_carousel_settings), style = MaterialTheme.typography.titleMedium)
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.module_wallpaper_carousel_enable), modifier = Modifier.weight(1f))
-            Switch(
+            ExpressiveSwitch(
                 checked = collection.carouselEnabled,
                 onCheckedChange = { onChange(collection.copy(carouselEnabled = it)) },
             )

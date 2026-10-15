@@ -49,7 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -259,7 +259,7 @@ fun SusfsApplicationsScreen() {
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             Text(stringResource(R.string.susfs_applications_show_system), Modifier.weight(1f))
-                            Switch(checked = showSystem, onCheckedChange = null)
+                            ExpressiveSwitch(checked = showSystem, onCheckedChange = null)
                         }
                     }
                     Text(
@@ -369,7 +369,7 @@ private fun SusfsApplicationRow(app: SusfsApplication, busy: Boolean, onChange: 
                     Text(app.label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(description, style = MaterialTheme.typography.bodySmall, color = if (app.policy.known) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
                 }
-                Switch(
+                ExpressiveSwitch(
                     checked = app.policy.effectiveHidden == true,
                     onCheckedChange = { onChange(if (it) SusfsHideMode.Enabled else SusfsHideMode.Disabled) },
                     enabled = enabled,

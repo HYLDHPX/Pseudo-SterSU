@@ -57,7 +57,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -1149,7 +1149,7 @@ private fun PolicyToggle(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
+        ExpressiveSwitch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }
 

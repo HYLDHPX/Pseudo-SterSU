@@ -10,12 +10,15 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
@@ -30,6 +33,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.R
+import me.weishu.kernelsu.ui.InterfaceStyle
+import me.weishu.kernelsu.ui.LocalInterfaceStyle
 import me.weishu.kernelsu.ui.component.custom.LocalCustomSwitchStyle
 import me.weishu.kernelsu.ui.component.custom.PixelMotionRule
 import me.weishu.kernelsu.ui.component.custom.drawCustomSwitchStyle
@@ -80,10 +85,15 @@ fun StyledSwitch(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     style: SwitchStyle = LocalSwitchStyle.current,
+    compact: Boolean = false,
 ) {
+    if (style == SwitchStyle.Original) {
+        Switch(checked = checked, onCheckedChange = onCheckedChange, modifier = modifier, enabled = enabled)
+        return
+    }
+    val useCompact = compact || LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
     val customStyle = LocalCustomSwitchStyle.current
     val resolvedStyle = when (style) {
-        SwitchStyle.Original -> SwitchStyle.CloudStar
         SwitchStyle.Custom -> if (customStyle == null) SwitchStyle.CloudStar else SwitchStyle.Custom
         else -> style
     }
@@ -138,80 +148,91 @@ fun StyledSwitch(
         Modifier
     }
 
-    Canvas(
+    val switchWidth = if (useCompact) 64.dp else 74.dp
+    val switchHeight = if (useCompact) 36.dp else 38.dp
+    Box(
         modifier = modifier
-            .size(width = 74.dp, height = 38.dp)
-            .then(if (resolvedStyle == SwitchStyle.CloudStar) Modifier.clip(RoundedCornerShape(percent = 50)) else Modifier)
-            .then(toggleModifier)
+            .size(width = switchWidth, height = 48.dp)
+            .then(toggleModifier),
+        contentAlignment = Alignment.Center,
     ) {
-        val alpha = if (enabled) 1f else activeCustomStyle?.disabledAlpha ?: 0.45f
+        Canvas(
+            modifier = Modifier
+                .size(width = switchWidth, height = switchHeight)
+                .then(
+                    if (resolvedStyle == SwitchStyle.CloudStar) Modifier.clip(RoundedCornerShape(percent = 50))
+                    else Modifier
+                )
+        ) {
+            val alpha = if (enabled) 1f else activeCustomStyle?.disabledAlpha ?: 0.45f
 
-        if (resolvedStyle == SwitchStyle.Custom && customStyle != null) {
-            drawCustomSwitchStyle(
-                style = customStyle,
-                checkedProgress = knobProgress,
-                enabledAlpha = alpha,
-                motionProgress = customMotionProgress,
-                images = customImages,
-            )
-            return@Canvas
-        }
+            if (resolvedStyle == SwitchStyle.Custom && customStyle != null) {
+                drawCustomSwitchStyle(
+                    style = customStyle,
+                    checkedProgress = knobProgress,
+                    enabledAlpha = alpha,
+                    motionProgress = customMotionProgress,
+                    images = customImages,
+                )
+                return@Canvas
+            }
 
-        when (resolvedStyle) {
-            SwitchStyle.Custom -> Unit
-            SwitchStyle.Capsule -> drawCapsuleTrack(trackColor, checked, alpha)
-            SwitchStyle.CloudStar -> drawCloudStarTrack(
-                trackColor = trackColor,
-                nightProgress = knobProgress,
-                ambientMotion = ambientMotion,
-                alpha = alpha,
-            )
-            SwitchStyle.Bb8 -> drawBb8Track(
-                trackColor = trackColor,
-                nightProgress = knobProgress,
-                ambientMotion = ambientMotion,
-                alpha = alpha,
-            )
-            SwitchStyle.Sparkle -> drawSparkleTrack(
-                trackColor = trackColor,
-                activeProgress = knobProgress,
-                alpha = alpha,
-            )
-            SwitchStyle.Original -> Unit
-        }
+            when (resolvedStyle) {
+                SwitchStyle.Custom -> Unit
+                SwitchStyle.Capsule -> drawCapsuleTrack(trackColor, checked, alpha)
+                SwitchStyle.CloudStar -> drawCloudStarTrack(
+                    trackColor = trackColor,
+                    nightProgress = knobProgress,
+                    ambientMotion = ambientMotion,
+                    alpha = alpha,
+                )
+                SwitchStyle.Bb8 -> drawBb8Track(
+                    trackColor = trackColor,
+                    nightProgress = knobProgress,
+                    ambientMotion = ambientMotion,
+                    alpha = alpha,
+                )
+                SwitchStyle.Sparkle -> drawSparkleTrack(
+                    trackColor = trackColor,
+                    activeProgress = knobProgress,
+                    alpha = alpha,
+                )
+                SwitchStyle.Original -> Unit
+            }
 
-        val inset = 3.dp.toPx()
-        val radius = size.height / 2f - inset
-        val startX = inset + radius
-        val endX = size.width - inset - radius
-        val center = Offset(startX + (endX - startX) * knobProgress, size.height / 2f)
+            val inset = 3.dp.toPx()
+            val radius = size.height / 2f - inset
+            val startX = inset + radius
+            val endX = size.width - inset - radius
+            val center = Offset(startX + (endX - startX) * knobProgress, size.height / 2f)
 
-        when (resolvedStyle) {
-            SwitchStyle.Custom -> Unit
-            SwitchStyle.Capsule -> drawCircle(
-                color = Color.White.copy(alpha = alpha),
-                radius = radius,
-                center = center,
-            )
-            SwitchStyle.CloudStar -> drawCloudStarKnob(
-                center = center,
-                radius = radius,
-                nightProgress = knobProgress,
-                alpha = alpha,
-            )
-            SwitchStyle.Bb8 -> drawBb8Droid(
-                movementProgress = knobProgress,
-                ambientMotion = ambientMotion,
-                alpha = alpha,
-            )
-            SwitchStyle.Sparkle -> drawSparkleKnob(
-                center = center,
-                radius = radius,
-                activeProgress = knobProgress,
-                ambientMotion = ambientMotion,
-                alpha = alpha,
-            )
-            SwitchStyle.Original -> Unit
+            when (resolvedStyle) {
+                SwitchStyle.Custom -> Unit
+                SwitchStyle.Capsule -> drawCircle(
+                    color = Color.White.copy(alpha = alpha),
+                    radius = radius,
+                    center = center,
+                )
+                SwitchStyle.CloudStar -> drawCloudStarKnob(
+                    center = center,
+                    radius = radius,
+                    nightProgress = knobProgress,
+                    alpha = alpha,
+                )
+                SwitchStyle.Bb8 -> drawBb8Droid(
+                    movementProgress = knobProgress,
+                    ambientMotion = ambientMotion,
+                    alpha = alpha,
+                )
+                SwitchStyle.Sparkle -> drawSparkleKnob(
+                    center = center,
+                    radius = radius,
+                    activeProgress = knobProgress,
+                    ambientMotion = ambientMotion,
+                    alpha = alpha,
+                )
+                SwitchStyle.Original -> Unit
+            }
         }
     }
 }

@@ -40,7 +40,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -820,7 +820,7 @@ private fun AudioToggleRow(
                 )
             }
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        ExpressiveSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -870,7 +870,7 @@ private fun SoundEditorCard(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                Switch(
+                ExpressiveSwitch(
                     checked = enabled,
                     onCheckedChange = onEnabledChange,
                 )

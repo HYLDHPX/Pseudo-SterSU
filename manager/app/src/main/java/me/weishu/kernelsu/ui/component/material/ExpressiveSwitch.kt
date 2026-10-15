@@ -27,6 +27,7 @@ fun ExpressiveSwitch(
     colors: SwitchColors = SwitchDefaults.colors(),
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     showThumbIcon: Boolean = true,
+    compact: Boolean = false,
 ) {
     val switchStyle = LocalSwitchStyle.current
     if (switchStyle == SwitchStyle.Original) {
@@ -64,6 +65,7 @@ fun ExpressiveSwitch(
             modifier = modifier,
             enabled = enabled,
             style = switchStyle,
+            compact = compact,
         )
     }
 }

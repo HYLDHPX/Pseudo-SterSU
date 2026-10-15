@@ -64,7 +64,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
+import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.IconButton
@@ -805,7 +805,7 @@ private fun StoreDownloadSettingsCard() {
                     Text(stringResource(R.string.store_download_acceleration_summary),
                         style = MaterialTheme.typography.bodySmall, color = themeStoreMutedColor())
                 }
-                Switch(
+                ExpressiveSwitch(
                     checked = settings.accelerated,
                     onCheckedChange = { enabled ->
                         settings = settings.copy(accelerated = enabled)

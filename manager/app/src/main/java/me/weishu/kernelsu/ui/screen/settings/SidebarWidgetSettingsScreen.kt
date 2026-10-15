@@ -56,7 +56,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -420,7 +420,7 @@ private fun SidebarWidgetControls(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Switch(
+                    ExpressiveSwitch(
                         checked = config.iconOnlyNavigation,
                         onCheckedChange = { onUpdate(config.copy(iconOnlyNavigation = it)) },
                         modifier = Modifier.semantics { contentDescription = iconOnlyTitle },
@@ -543,7 +543,7 @@ private fun ClockOptions(config: SidebarWidgetConfig, onUpdate: (SidebarWidgetCo
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Switch(
+            ExpressiveSwitch(
                 checked = config.clockWeatherEnabled,
                 onCheckedChange = { onUpdate(config.copy(clockWeatherEnabled = it)) },
             )

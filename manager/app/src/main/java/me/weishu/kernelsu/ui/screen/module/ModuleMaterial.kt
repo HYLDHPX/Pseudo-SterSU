@@ -134,6 +134,8 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.data.model.Module
 import me.weishu.kernelsu.data.model.ModuleUpdateInfo
 import me.weishu.kernelsu.data.repository.isSoftRebootPreferred
+import me.weishu.kernelsu.ui.InterfaceStyle
+import me.weishu.kernelsu.ui.LocalInterfaceStyle
 import me.weishu.kernelsu.ui.component.ObserveAsEvents
 import me.weishu.kernelsu.ui.component.ScrollToTopOnChange
 import me.weishu.kernelsu.ui.component.SearchStatus
@@ -506,13 +508,14 @@ private fun ModuleList(
     closeSearch: () -> Unit? = {},
 ) {
     val loadingDialog = rememberLoadingDialog()
+    val compact = LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
     LazyColumn(
         state = listState,
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(13.dp),
+        verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 13.dp),
         contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
+            start = if (compact) 12.dp else 16.dp,
+            end = if (compact) 12.dp else 16.dp,
             bottom = 16.dp + bottomInnerPadding + 56.dp + 16.dp
         ),
     ) {
@@ -706,6 +709,7 @@ private fun ModuleItem(
     val wallpaperEntry = rememberModuleCardWallpaperFrame(wallpaperState, paused = false)
     val wallpaperLoadState = rememberModuleCardWallpaperLoadState(wallpaperEntry)
     val cardBackground = rememberModuleCardBackground(module, wallpaperEntry, wallpaperLoadState)
+    val compact = LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
     TonalCard(
         modifier = Modifier.fillMaxWidth(),
         backgroundContent = {
@@ -721,6 +725,8 @@ private fun ModuleItem(
         val indication = LocalIndication.current
         var expanded by rememberSaveable(module.id) { mutableStateOf(false) }
         var isOverflowing by remember { mutableStateOf(false) }
+        val moduleVersion = stringResource(id = R.string.module_version)
+        val moduleAuthor = stringResource(id = R.string.module_author)
 
         Column(
             modifier = Modifier
@@ -738,15 +744,15 @@ private fun ModuleItem(
                         this
                     }
                 }
-                .padding(16.dp, 14.dp, 16.dp, 10.dp)
+                .padding(
+                    horizontal = if (compact) 12.dp else 16.dp,
+                    vertical = if (compact) 10.dp else 14.dp,
+                )
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val moduleVersion = stringResource(id = R.string.module_version)
-                val moduleAuthor = stringResource(id = R.string.module_author)
-
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
@@ -755,21 +761,25 @@ private fun ModuleItem(
                         fontWeight = FontWeight.SemiBold,
                         style = MaterialTheme.typography.titleMedium,
                         textDecoration = textDecoration,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = if (compact) 2 else Int.MAX_VALUE,
                     )
 
-                    Text(
-                        text = "$moduleVersion: ${module.version}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                        textDecoration = textDecoration
-                    )
+                    if (!compact) {
+                        Text(
+                            text = "$moduleVersion: ${module.version}",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                            textDecoration = textDecoration
+                        )
 
-                    Text(
-                        text = "$moduleAuthor: ${module.author}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                        textDecoration = textDecoration
-                    )
+                        Text(
+                            text = "$moduleAuthor: ${module.author}",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                            textDecoration = textDecoration
+                        )
+                    }
                 }
 
                 Row(
@@ -788,12 +798,33 @@ private fun ModuleItem(
                             haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
                             onCheckChanged(it)
                         },
-                        interactionSource = if (!module.hasWebUi) interactionSource else remember { MutableInteractionSource() }
+                        interactionSource = if (!module.hasWebUi) interactionSource else remember { MutableInteractionSource() },
+                        showThumbIcon = !compact,
+                        compact = compact,
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            if (compact) {
+                Text(
+                    text = "$moduleVersion: ${module.version}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    textDecoration = textDecoration,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "$moduleAuthor: ${module.author}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    textDecoration = textDecoration,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(if (compact) 6.dp else 8.dp))
 
             Text(
                 modifier = Modifier
@@ -817,19 +848,19 @@ private fun ModuleItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
                 overflow = if (expanded) TextOverflow.Clip else TextOverflow.Ellipsis,
-                maxLines = if (expanded) Int.MAX_VALUE else 4,
+                maxLines = if (expanded) Int.MAX_VALUE else if (compact) 2 else 4,
                 textDecoration = textDecoration,
                 onTextLayout = { textLayoutResult ->
                     isOverflowing = if (expanded) {
-                        textLayoutResult.lineCount > 4
+                        textLayoutResult.lineCount > (if (compact) 2 else 4)
                     } else {
                         textLayoutResult.hasVisualOverflow
                     }
                 }
             )
 
-            Row(modifier = Modifier.padding(vertical = 4.dp)) {
-                if (module.metamodule) {
+            if (module.metamodule) {
+                Row(modifier = Modifier.padding(vertical = 4.dp)) {
                     StatusTag(
                         "META",
                         modifier = Modifier.padding(bottom = 4.dp),
@@ -855,7 +886,7 @@ private fun ModuleItem(
                     enter = fadeIn(),
                     exit = fadeOut(),
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 12.dp)) {
                         if (module.hasActionScript) {
                             CombinedClickableButton(
                                 onClick = {
@@ -874,9 +905,9 @@ private fun ModuleItem(
                                 Icon(
                                     modifier = Modifier.size(20.dp),
                                     imageVector = Icons.Outlined.PlayArrow,
-                                    contentDescription = null,
+                                    contentDescription = if (compact) stringResource(R.string.action) else null,
                                 )
-                                if (!module.hasWebUi && !hasUpdate) {
+                                if (!compact && !module.hasWebUi && !hasUpdate) {
                                     Text(
                                         modifier = Modifier.padding(start = 7.dp),
                                         text = stringResource(R.string.action),
@@ -904,9 +935,9 @@ private fun ModuleItem(
                                 Icon(
                                     modifier = Modifier.size(20.dp),
                                     imageVector = Icons.Outlined.Code,
-                                    contentDescription = null,
+                                    contentDescription = if (compact) stringResource(R.string.open) else null,
                                 )
-                                if (!module.hasActionScript && !hasUpdate) {
+                                if (!compact && !module.hasActionScript && !hasUpdate) {
                                     Text(
                                         modifier = Modifier.padding(start = 7.dp),
                                         text = stringResource(R.string.open),
@@ -935,9 +966,9 @@ private fun ModuleItem(
                             Icon(
                                 modifier = Modifier.size(20.dp),
                                 imageVector = Icons.Outlined.Download,
-                                contentDescription = null,
+                                contentDescription = if (compact) stringResource(R.string.module_update) else null,
                             )
-                            if (!module.hasActionScript || !module.hasWebUi) {
+                            if (!compact && (!module.hasActionScript || !module.hasWebUi)) {
                                 Text(
                                     modifier = Modifier.padding(start = 7.dp),
                                     text = stringResource(R.string.module_update),
@@ -946,7 +977,7 @@ private fun ModuleItem(
                                 )
                             }
                         }
-                        Spacer(Modifier.width(12.dp))
+                        if (!compact) Spacer(Modifier.width(12.dp))
                     }
                 }
                 FilledTonalButton(
@@ -957,9 +988,9 @@ private fun ModuleItem(
                     Icon(
                         modifier = Modifier.size(20.dp).then(if (module.remove) Modifier.rotate(180f) else Modifier),
                         imageVector = if (module.remove) Icons.Outlined.Refresh else Icons.Outlined.Delete,
-                        contentDescription = null,
+                        contentDescription = if (compact) stringResource(if (module.remove) R.string.undo else R.string.uninstall) else null,
                     )
-                    if ((!module.hasActionScript && !module.hasWebUi) || !hasUpdate) {
+                    if (!compact && ((!module.hasActionScript && !module.hasWebUi) || !hasUpdate)) {
                         Text(
                             modifier = Modifier.padding(start = 7.dp),
                             text = stringResource(if (module.remove) R.string.undo else R.string.uninstall),
