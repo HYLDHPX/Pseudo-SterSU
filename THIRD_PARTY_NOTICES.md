@@ -282,8 +282,11 @@ logic/hook points and supporting hook/symbol code, respectively.
 The LKM port and its kernel sources declare GPL-2.0. The full license text is
 in `kernel/LICENSE`; original source-file SPDX and copyright notices are kept.
 The `KernelSU-Next` root GPL-3.0 license does not change those kernel-file
-terms. Repository attributes normalize the line endings of `sus_path.c` to LF;
-the imported kernel code otherwise matches the pinned source. SterSU adds separate ksud loading,
+terms. Repository attributes normalize the line endings of `sus_path.c` to LF.
+The `susfs_open_redirect.c` copy also includes compatible fixes from
+KernelSU-Next commits `b7c197621` and `bbe5db8f4`. Other LKM files may have
+SterSU-specific integration changes and are not a full copy of current dev.
+SterSU adds separate ksud loading,
 policy persistence, Manager status UI and KMI build wiring; those parts follow
 their own file-level licenses and do not replace the GKI SUSFS implementation.
 See `kernel/susfs/README.stersu.md` for the build and runtime boundaries.

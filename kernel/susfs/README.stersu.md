@@ -13,9 +13,11 @@ for supporting hook/symbol code. Thanks to all upstream authors and contributors
 The upstream LKM project and these kernel files are GPL-2.0; the full license
 text is at [`kernel/LICENSE`](../LICENSE). KernelSU-Next's repository-level
 GPL-3.0 license does not replace these kernel-file notices. The source files
-retain their upstream SPDX headers. The imported kernel code matches the pinned
-KernelSU-Next snapshot; repository attributes normalize `sus_path.c` line
-endings to LF. SterSU adds separate Manager/ksud build and policy wiring.
+retain their upstream SPDX headers. The base import is the pinned
+KernelSU-Next snapshot; `susfs_open_redirect.c` includes compatible fixes from
+commits `b7c197621` and `bbe5db8f4`. This directory is not a complete copy
+of current dev. Repository attributes normalize `sus_path.c` line endings to
+LF. SterSU adds separate Manager/ksud build and policy wiring.
 Preserve upstream notices
 and review source and license changes before updating this copy. Neither
 upstream project endorses SterSU.

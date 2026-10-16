@@ -167,6 +167,6 @@ private fun RowAboutIdentity(state: AboutUiState) {
 }
 
 private const val QQ_GROUP_URL = "https://qm.qq.com/q/Q8PmBoq9iK"
-private const val OFFICIAL_TELEGRAM_URL = "https://t.me/ApkeSu"
+private const val OFFICIAL_TELEGRAM_URL = "https://t.me/muyan762"
 private const val OFFICIAL_UPSTREAM_URL = "https://github.com/tiann/KernelSU"
 private const val ASTER_PROJECT_URL = "https://github.com/LyraVoid/Aster"
