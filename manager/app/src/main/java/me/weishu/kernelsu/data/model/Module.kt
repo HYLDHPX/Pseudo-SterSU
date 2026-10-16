@@ -20,4 +20,6 @@ data class Module(
     val actionIconPath: String?,
     val webUiIconPath: String?,
     val banner: String = "",
+    // preinit state for the next boot: "", "ok", "no_space", "error" or "bootloop"
+    val preinit: String = "",
 )

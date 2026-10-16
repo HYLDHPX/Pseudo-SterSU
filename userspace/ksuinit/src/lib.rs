@@ -312,25 +312,15 @@ fn replace_module_vermagic(buffer: &mut Vec<u8>, required_vermagic: &str) -> Res
     Ok(())
 }
 
-/// Relocate undefined symbols in an ELF kernel module buffer using /proc/kallsyms,
-/// then load it via init_module syscall.
-pub fn load_module(data: &[u8], params: &CStr) -> Result<()> {
-    load_module_inner(data, params, false)
-}
+type UndefinedSymbols = HashMap<String, (Sym, usize)>;
 
-/// Load a module only when every undefined ELF symbol was resolved from kallsyms.
-/// This is required for modules whose unresolved data imports could fault during
-/// the kernel's module-init cleanup path.
-pub fn load_module_strict(data: &[u8], params: &CStr) -> Result<()> {
-    load_module_inner(data, params, true)
-}
-
-fn load_module_inner(data: &[u8], params: &CStr, strict: bool) -> Result<()> {
-    let mut buffer = data.to_vec();
-    let elf = Elf::parse(&buffer)?;
+/// Collect the undefined symbols of an ELF kernel module, keyed by name, with
+/// the file offset of each symbol table entry.
+fn undefined_symbols(buffer: &[u8]) -> Result<(UndefinedSymbols, goblin::container::Ctx)> {
+    let elf = Elf::parse(buffer)?;
     let ctx = *elf.syms.ctx();
 
-    let mut unresolved_symbols: HashMap<String, (Sym, usize)> = HashMap::new();
+    let mut unresolved_symbols = HashMap::new();
     for (index, sym) in elf.syms.iter().enumerate() {
         if index == 0 {
             continue;
@@ -351,6 +341,95 @@ fn load_module_inner(data: &[u8], params: &CStr, strict: bool) -> Result<()> {
         unresolved_symbols.insert(name.to_owned(), (sym, offset));
     }
 
+    Ok((unresolved_symbols, ctx))
+}
+
+fn bind_symbol(
+    buffer: &mut [u8],
+    (mut sym, offset): (Sym, usize),
+    addr: u64,
+    ctx: goblin::container::Ctx,
+) -> Result<()> {
+    sym.st_shndx = section_header::SHN_ABS as usize;
+    sym.st_value = addr;
+    buffer.pwrite_with(sym, offset, ctx)?;
+    Ok(())
+}
+
+/// Resolve `names` against /proc/kallsyms, one address per name. The first
+/// match in kallsyms order wins.
+pub fn resolve_kallsyms(names: &[&str]) -> Result<Vec<Option<u64>>> {
+    let mut addrs = vec![None; names.len()];
+    let mut pending: HashMap<&str, usize> = names
+        .iter()
+        .enumerate()
+        .map(|(i, name)| (*name, i))
+        .collect();
+
+    if !pending.is_empty() {
+        for_each_kernel_symbols(|(symbol, addr)| {
+            if let Some(i) = pending.remove(symbol.as_str()) {
+                addrs[i] = Some(*addr);
+            }
+
+            Ok(!pending.is_empty())
+        })
+        .context("Cannot parse kallsyms")?;
+    }
+
+    Ok(addrs)
+}
+
+/// Relocate undefined symbols in an ELF kernel module buffer using /proc/kallsyms,
+/// then load it via init_module syscall.
+pub fn load_module(data: &[u8], params: &CStr) -> Result<()> {
+    load_module_with_resolver(data, params, resolve_kallsyms)
+}
+
+/// Relocate undefined symbols in an ELF kernel module buffer with `resolve`,
+/// then load it via init_module syscall. `resolve` gets all undefined symbol
+/// names at once and returns one address per name; symbols it does not know
+/// are left undefined for the kernel to bind against its exports.
+pub fn load_module_with_resolver<F>(data: &[u8], params: &CStr, resolve: F) -> Result<()>
+where
+    F: FnOnce(&[&str]) -> Result<Vec<Option<u64>>>,
+{
+    let mut buffer = data.to_vec();
+    let (unresolved_symbols, ctx) = undefined_symbols(&buffer)?;
+
+    if !unresolved_symbols.is_empty() {
+        let names: Vec<&str> = unresolved_symbols.keys().map(String::as_str).collect();
+        let addrs = resolve(&names).context("Cannot resolve symbols")?;
+        if addrs.len() != names.len() {
+            bail!(
+                "Resolver returned {} addresses for {} symbols",
+                addrs.len(),
+                names.len()
+            );
+        }
+
+        for (name, addr) in names.iter().zip(addrs) {
+            match addr {
+                Some(addr) => bind_symbol(&mut buffer, unresolved_symbols[*name], addr, ctx)?,
+                None => log::warn!("Cannot find symbol: {}", name),
+            }
+        }
+    }
+
+    init_module_buffer(buffer, params)
+}
+
+/// Load a module only when every undefined ELF symbol was resolved from kallsyms.
+/// This is required for modules whose unresolved data imports could fault during
+/// the kernel's module-init cleanup path.
+pub fn load_module_strict(data: &[u8], params: &CStr) -> Result<()> {
+    load_module_inner(data, params, true)
+}
+
+fn load_module_inner(data: &[u8], params: &CStr, strict: bool) -> Result<()> {
+    let mut buffer = data.to_vec();
+    let (mut unresolved_symbols, ctx) = undefined_symbols(&buffer)?;
+
     if !unresolved_symbols.is_empty() {
         for_each_kernel_symbols(|(symbol, addr)| {
             if strict && *addr == 0 {
@@ -370,13 +449,26 @@ fn load_module_inner(data: &[u8], params: &CStr, strict: bool) -> Result<()> {
     if strict && !unresolved_symbols.is_empty() {
         let mut names: Vec<_> = unresolved_symbols.keys().collect();
         names.sort_unstable();
-        bail!("Cannot load module: unresolved kernel symbols: {}", names.into_iter().map(String::as_str).collect::<Vec<_>>().join(", "));
+        bail!(
+            "Cannot load module: unresolved kernel symbols: {}",
+            names
+                .into_iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
     }
 
     for name in unresolved_symbols.keys() {
         log::warn!("Cannot find symbol: {}", name);
     }
 
+    init_module_buffer(buffer, params)
+}
+
+/// Load a symbol-bound module image, retrying once with the kernel's vermagic
+/// when the first attempt is rejected over a vermagic mismatch.
+fn init_module_buffer(mut buffer: Vec<u8>, params: &CStr) -> Result<()> {
     let mut kmsg = match open_kmsg_at_end() {
         Ok(file) => Some(file),
         Err(error) => {

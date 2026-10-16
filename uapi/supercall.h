@@ -10,7 +10,8 @@
 // 4: add KSU_GET_INFO_FLAG_BUNDLED
 // Native-GKI KPM uses optional extension ioctls and does not change the base ABI.
 // 5: add EVENT_SERVICES with a start/skip result
-static const __u32 KERNEL_SU_UAPI_VERSION = 5;
+// 6: add KSU_IOCTL_LOOKUP_SYMBOLS and KSU_GET_INFO_FLAG_PREINIT; modules.rc and preinit may live under /metadata/vold/ksu
+static const __u32 KERNEL_SU_UAPI_VERSION = 6;
 
 /* Magic numbers for reboot hook to install fd */
 static const __u32 KSU_INSTALL_MAGIC1 = 0xDEADBEEF;
@@ -32,6 +33,8 @@ static const __u32 KSU_GET_INFO_FLAG_PR_BUILD = (1U << 3);
 static const __u32 KSU_GET_INFO_FLAG_BUNDLED = (1U << 4);
 /* The built-in SukiSU-compatible KPM ABI is compiled into a GKI kernel. */
 static const __u32 KSU_GET_INFO_FLAG_NATIVE_KPM = (1U << 5);
+/* The preinit runner will run module preinit actions on boot */
+static const __u32 KSU_GET_INFO_FLAG_PREINIT = (1U << 6);
 
 struct ksu_get_info_cmd {
     __u32 version; /* Output: KERNEL_SU_VERSION */
@@ -234,6 +237,21 @@ struct ksu_kpm_cmd {
     __aligned_u64 arg2; /* Input: operation-specific pointer/length */
     __aligned_u64 result_code; /* Output: pointer to signed result */
 };
+/*
+ * Batch kernel image symbol lookup. Returns the number of symbols found; the
+ * address of a symbol that does not exist in the running kernel is set to 0.
+ * Matches like ksuinit's /proc/kallsyms walk: a kernel symbol name is cut at
+ * its first '$', else at ".llvm.", and the first match in kallsyms order wins.
+ * Module symbols are never returned.
+ */
+struct ksu_lookup_symbols_cmd {
+    __aligned_u64 names; /* Input: user pointer to `count` user pointers to null-terminated names */
+    __aligned_u64 addrs; /* Output: user pointer to `count` __u64 symbol addresses */
+    __u32 count; /* Input: number of symbols, at most KSU_LOOKUP_SYMBOLS_MAX */
+    __u32 flags; /* Input: reserved for future use, must be 0 */
+};
+
+static const __u32 KSU_LOOKUP_SYMBOLS_MAX = 1024;
 
 static const __u8 KSU_UMOUNT_WIPE = 0; /* ignore everything and wipe list */
 static const __u8 KSU_UMOUNT_ADD = 1; /* add entry (path + flags) */
@@ -276,4 +294,5 @@ static const __u32 KSU_IOCTL_DYNAMIC_MANAGER = _IOC(_IOC_READ | _IOC_WRITE, 'K',
 static const __u32 KSU_IOCTL_GET_MANAGERS = _IOC(_IOC_READ | _IOC_WRITE, 'K', 105, 0);
 static const __u32 KSU_IOCTL_GET_KPM_CAPS = _IOC(_IOC_READ | _IOC_WRITE, 'K', 106, 0);
 static const __u32 KSU_IOCTL_KPM = _IOC(_IOC_READ | _IOC_WRITE, 'K', 200, 0);
+static const __u32 KSU_IOCTL_LOOKUP_SYMBOLS = _IOW('K', 22, struct ksu_lookup_symbols_cmd);
 #endif
