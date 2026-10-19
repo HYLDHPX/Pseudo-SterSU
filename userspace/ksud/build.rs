@@ -256,6 +256,11 @@ fn assert_release_assets() {
 }
 
 fn main() {
+    // RustEmbed expands the selected asset directory into the daemon. Watch
+    // replacements as well as additions so an incremental build cannot retain
+    // an older bundled kernel module after the LKM matrix is rebuilt.
+    println!("cargo:rerun-if-changed=bin/aarch64");
+    println!("cargo:rerun-if-changed=bin/x86_64");
     assemble_bootstrap();
     let (code, name) = match get_fallback_version() {
         Some((code, name)) => (code, name),

@@ -1,3 +1,5 @@
 **/*.ko
+!aarch64/*_kernelsu.ko
+!aarch64/*_susfs_guard_lkm.ko
 !**/*_pathmask.ko
 **/ksuinit

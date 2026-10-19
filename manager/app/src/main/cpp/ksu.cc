@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #include <climits>
 #include <fcntl.h>
@@ -24,6 +25,21 @@
 
 static int fd = -1;
 static std::mutex fd_mutex;
+
+// Android's app seccomp policy can trap SYS_reboot before the KernelSU hook is
+// reached.  The probe runs in a short-lived child, so turn that trap into a
+// normal child failure instead of surfacing a native crash for the Manager.
+static void driver_probe_sigsys_handler(int, siginfo_t *, void *) {
+    _exit(127);
+}
+
+static inline void install_driver_probe_sigsys_guard() {
+    struct sigaction action = {};
+    action.sa_sigaction = driver_probe_sigsys_handler;
+    action.sa_flags = SA_SIGINFO;
+    sigemptyset(&action.sa_mask);
+    sigaction(SIGSYS, &action, nullptr);
+}
 
 static inline void set_fd_recv_timeout(int socket_fd) {
     struct timeval timeout = {};
@@ -156,6 +172,7 @@ static inline int install_driver_fd() {
 
     if (pid == 0) {
         close(sockets[0]);
+        install_driver_probe_sigsys_guard();
         int child_fd = -1;
         syscall(SYS_reboot, KSU_INSTALL_MAGIC1, KSU_INSTALL_MAGIC2, 0, &child_fd);
         bool sent = child_fd >= 0 && send_driver_fd(sockets[1], child_fd);

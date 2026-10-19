@@ -86,12 +86,6 @@ static write_op_fn orig_context_write, orig_access_write;
 #define ksu_security_bounded_transition_compat(...) security_bounded_transition(&selinux_state, __VA_ARGS__)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 19, 0)
-#define ksu_task_security_struct task_security_struct
-#else
-#define ksu_task_security_struct cred_security_struct
-#endif
-
 static ssize_t my_write_context(struct file *file, char *buf, size_t size)
 {
     // apply to all app uids
@@ -195,7 +189,7 @@ struct ksu_lsm_hook selinux_setprocattr_hook = KSU_LSM_HOOK_INIT(setprocattr, "s
  */
 static inline u32 cred_sid(const struct cred *cred)
 {
-    const struct ksu_task_security_struct *tsec;
+    const typeof(*selinux_cred(cred)) *tsec;
 
     tsec = selinux_cred(cred);
     return tsec->sid;
@@ -239,8 +233,8 @@ static int __nocfi my_setprocattr(const char *name, void *value, size_t size)
         goto call_orig;
     }
 
-    struct ksu_task_security_struct *tsec;
     struct cred *new;
+    typeof(selinux_cred(new)) tsec;
     u32 mysid = current_sid(), sid = 0, tmp_sid, ptsid;
     int error, error2;
     char *str = value;

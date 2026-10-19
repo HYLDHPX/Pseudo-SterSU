@@ -92,8 +92,14 @@ def main() -> int:
     require("abk_try_register_manager" in tracker and
             "5 * HZ" in tracker and "track_throne" in tracker,
             "ABK manager registration throttling is missing")
-    require("if (is_manager())" in tracker and
-            "ksu_has_manager()" not in tracker,
+    # The scan cache may query ksu_has_manager(); only an early return inside
+    # ABK registration would prevent discovery of an additional manager.
+    registration = re.search(
+        r"void abk_try_register_manager\(void\)\s*\{(.*?)\n\}", tracker, re.S
+    )
+    require(registration is not None and
+            "if (is_manager())" in registration.group(1) and
+            "ksu_has_manager()" not in registration.group(1),
             "ABK registration must not stop when another manager is present")
     require("abk_last_registration_attempt &&" in tracker,
             "ABK first registration attempt is incorrectly rate-limited")

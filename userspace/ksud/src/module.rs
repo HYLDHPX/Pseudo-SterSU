@@ -979,6 +979,7 @@ fn install_module_to_system(zip: &str) -> Result<String> {
     let zip_path = zip_path.canonicalize()?;
     zip_extract_file_to_memory(&zip_path, &entry_path, &mut buffer)?;
 
+    let module_prop_bytes = buffer.clone();
     let mut module_prop = HashMap::new();
     PropertiesIter::new_with_encoding(Cursor::new(buffer), encoding_rs::UTF_8).read_into(
         |k, v| {
@@ -1098,6 +1099,34 @@ fn install_module_to_system(zip: &str) -> Result<String> {
     let module_dir = Path::new(MODULE_DIR).join(module_id);
     // A metamodule doing its own hot install may have moved the marker into the live dir
     std::fs::remove_file(module_dir.join(defs::HOT_INSTALL_MARKER)).ok();
+
+    // Some older SUSFS and Magisk-compatible installers move the staged module into the
+    // live directory, then remove module.prop while cleaning their temporary files. The
+    // installer script itself may still exit successfully, so recover the canonical manifest
+    // from the ZIP before completing the normal pending-update path.
+    let staged_manifest = updated_dir.join("module.prop");
+    if !is_metamodule && !staged_manifest.is_file() && module_dir.join("module.prop").is_file() {
+        // A few installers deliberately promote the staged directory themselves (for
+        // example, to expose a WebUI without a reboot) and then clean up modules_update.
+        // Keep that successful promotion live instead of recreating a one-file update
+        // directory which would replace the complete module on the next boot.
+        println!("- Module installer promoted the module; keeping the live installation");
+        info!("Module {module_id} was promoted by its installer");
+        return Ok(module_id.to_owned());
+    }
+    if !staged_manifest.is_file() {
+        warn!(
+            "module installer removed {}; restoring it from the source ZIP",
+            staged_manifest.display()
+        );
+        ensure_dir_exists(&updated_dir)?;
+        let mut manifest = File::create(&staged_manifest)
+            .with_context(|| format!("Failed to restore {}", staged_manifest.display()))?;
+        manifest.write_all(&module_prop_bytes)?;
+        manifest.sync_all()?;
+        set_permissions(&staged_manifest, Permissions::from_mode(0o644))?;
+        restore_syscon(&staged_manifest)?;
+    }
     ensure_dir_exists(&module_dir)?;
     copy(
         updated_dir.join("module.prop"),

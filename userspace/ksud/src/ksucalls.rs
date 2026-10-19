@@ -374,7 +374,8 @@ pub fn is_lkm_mode() -> bool {
 
 /// Whether the kernel runs module preinit actions on boot.
 pub fn is_preinit_supported() -> bool {
-    get_info().flags & ksu_uapi::KSU_GET_INFO_FLAG_PREINIT != 0
+    let info = get_info();
+    info.uapi_version >= 6 && info.flags & ksu_uapi::KSU_GET_INFO_FLAG_PREINIT != 0
 }
 
 pub const fn uapi_version() -> u32 {

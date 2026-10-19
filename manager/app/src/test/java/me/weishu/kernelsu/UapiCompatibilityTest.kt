@@ -12,10 +12,18 @@ class UapiCompatibilityTest {
     }
 
     @Test
+    fun acceptsTheOptionalPreinitAndSymbolLookupUpgrade() {
+        assertTrue(isCompatibleUapiVersion(5, 6))
+        assertTrue(isCompatibleUapiVersion(6, 6))
+    }
+
+    @Test
     fun rejectsOtherVersionMismatches() {
         assertFalse(isCompatibleUapiVersion(3, 5))
         assertFalse(isCompatibleUapiVersion(6, 5))
         assertFalse(isCompatibleUapiVersion(5, 4))
         assertFalse(isCompatibleUapiVersion(4, 6))
+        assertFalse(isCompatibleUapiVersion(0, 6))
+        assertFalse(isCompatibleUapiVersion(6, 7))
     }
 }

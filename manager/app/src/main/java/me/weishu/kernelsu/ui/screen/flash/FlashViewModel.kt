@@ -38,6 +38,7 @@ class FlashViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val visibleLog = StringBuilder(_state.value.text)
             val fullLog = StringBuilder(_state.value.log)
+            val stderrLog = StringBuilder()
             val outputLock = Any()
             val result = runCatching {
                 flashIt(
@@ -56,6 +57,7 @@ class FlashViewModel : ViewModel() {
                     },
                     onStderr = { line ->
                         synchronized(outputLock) {
+                            stderrLog.append(line).append('\n')
                             fullLog.append(line).append('\n')
                             _state.update { it.copy(log = fullLog.toString()) }
                         }
@@ -68,6 +70,9 @@ class FlashViewModel : ViewModel() {
             }
 
             if (result.code != 0) {
+                if (stderrLog.isNotBlank()) {
+                    visibleLog.append(stderrLog)
+                }
                 val failure = "$flashErrorCode: ${result.code}.\n ${result.err} $flashCheckLog\n"
                 visibleLog.append(failure)
                 fullLog.append(failure)

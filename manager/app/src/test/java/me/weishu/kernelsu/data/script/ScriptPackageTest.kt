@@ -12,6 +12,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.io.FileInputStream
+import java.nio.file.Files
 
 class ScriptPackageTest {
 
@@ -127,8 +128,11 @@ class ScriptPackageTest {
         ScriptPackage.extract(z, dest)
         assertEquals("echo hi\n", File(dest, "action.sh").readText())
         assertEquals("payload", File(dest, "data/nested/file.txt").readText())
-        assertTrue(File(dest, "bin/helper").canExecute())
-        assertFalse(File(dest, "data/nested/file.txt").canExecute())
+        // Windows reports ordinary files as executable, without POSIX execute bits.
+        if (Files.getFileStore(dest.toPath()).supportsFileAttributeView("posix")) {
+            assertTrue(File(dest, "bin/helper").canExecute())
+            assertFalse(File(dest, "data/nested/file.txt").canExecute())
+        }
         // No temporary directory is left next to the extraction.
         assertEquals(listOf("abc"), dest.parentFile!!.list()!!.toList())
 
