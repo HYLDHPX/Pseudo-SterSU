@@ -86,6 +86,7 @@ import me.weishu.kernelsu.ui.component.rain.RainStyle
 import me.weishu.kernelsu.ui.theme.ColorMode
 import me.weishu.kernelsu.ui.theme.CustomThemePreset
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.theme.isInterfaceForcedDark
 import me.weishu.kernelsu.ui.theme.keyColorOptions
 import me.weishu.kernelsu.ui.theme.ThemePreset
@@ -124,7 +125,9 @@ fun ColorPaletteScreenMiuix(
     val enableBlurState = LocalEnableBlur.current
     val backdrop = rememberBlurBackdrop(enableBlurState)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = immersiveTopBarColor(
+        if (blurActive) Color.Transparent else colorScheme.surface,
+    )
     val topBarColors = skrootproTopBarColors(barColor, colorScheme.onSurface)
     val uiState = state.uiState
     val isLiquidGlassInterface = uiState.uiMode == InterfaceStyle.LiquidGlass.value

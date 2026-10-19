@@ -55,6 +55,7 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.liquid.globalLiquidGlassSurface
 import me.weishu.kernelsu.ui.component.liquid.isLiquidGlassTheme
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.util.BlurredBar
 import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
 import top.yukonga.miuix.kmp.basic.Card
@@ -98,11 +99,9 @@ fun AboutScreenMiuix(
     val enableBlur = LocalEnableBlur.current
     val barBlurBackdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = barBlurBackdrop != null && scrollProgress == 1f
-    val barColor = if (blurActive) {
-        Color.Transparent
-    } else {
-        if (scrollProgress == 1f) colorScheme.surface else Color.Transparent
-    }
+    val barColor = immersiveTopBarColor(
+        if (blurActive || scrollProgress < 1f) Color.Transparent else colorScheme.surface,
+    )
 
     Scaffold(
         containerColor = Color.Transparent,

@@ -124,6 +124,7 @@ import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.util.BlurredBar
 import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
 import me.weishu.kernelsu.ui.theme.immersiveSurfaceColor
+import me.weishu.kernelsu.ui.theme.immersivePageColor
 import me.weishu.kernelsu.ui.util.KpmCaps
 import me.weishu.kernelsu.ui.util.KpmCommandResult
 import me.weishu.kernelsu.ui.util.KpmEntry
@@ -428,7 +429,13 @@ private fun KpmStyledScreen(
         ) { padding -> content(padding) }
 
         InterfaceStyle.Material.value, InterfaceStyle.SidebarWidget.value -> Scaffold(
-            containerColor = if (style == InterfaceStyle.SidebarWidget.value) MaterialTheme.colorScheme.surface else Color.Transparent,
+            containerColor = immersivePageColor(
+                if (style == InterfaceStyle.SidebarWidget.value) {
+                    MaterialTheme.colorScheme.surface
+                } else {
+                    Color.Transparent
+                },
+            ),
             contentWindowInsets = WindowInsets.safeDrawing.only(
                 WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
             ),

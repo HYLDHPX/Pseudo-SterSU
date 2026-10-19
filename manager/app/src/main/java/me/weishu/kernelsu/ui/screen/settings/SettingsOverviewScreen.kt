@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.InterfaceStyle
+import me.weishu.kernelsu.ui.theme.immersivePageColor
 import me.weishu.kernelsu.ui.theme.immersiveScrolledTopBarColor
 
 internal val overviewPrimaryCategories = listOf(
@@ -81,7 +82,9 @@ fun SettingsOverviewScreen(
     }
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = if (sidebar) MaterialTheme.colorScheme.surface else Color.Transparent,
+        containerColor = immersivePageColor(
+            if (sidebar) MaterialTheme.colorScheme.surface else Color.Transparent,
+        ),
         contentWindowInsets = WindowInsets.systemBars
             .add(WindowInsets.displayCutout)
             .only(WindowInsetsSides.Top),

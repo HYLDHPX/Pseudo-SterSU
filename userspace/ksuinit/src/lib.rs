@@ -316,7 +316,10 @@ type UndefinedSymbols = HashMap<String, (Sym, usize)>;
 
 /// Collect the undefined symbols of an ELF kernel module, keyed by name, with
 /// the file offset of each symbol table entry.
-fn undefined_symbols(buffer: &[u8]) -> Result<(UndefinedSymbols, goblin::container::Ctx)> {
+fn undefined_symbols(
+    buffer: &[u8],
+    strict: bool,
+) -> Result<(UndefinedSymbols, goblin::container::Ctx)> {
     let elf = Elf::parse(buffer)?;
     let ctx = *elf.syms.ctx();
 
@@ -330,7 +333,11 @@ fn undefined_symbols(buffer: &[u8]) -> Result<(UndefinedSymbols, goblin::contain
             continue;
         }
 
-        let Some(name) = elf.strtab.get_at(sym.st_name).filter(|name| !name.is_empty()) else {
+        let Some(name) = elf
+            .strtab
+            .get_at(sym.st_name)
+            .filter(|name| !name.is_empty())
+        else {
             if strict {
                 bail!("Cannot load module: undefined ELF symbol {index} has no name");
             }
@@ -395,7 +402,7 @@ where
     F: FnOnce(&[&str]) -> Result<Vec<Option<u64>>>,
 {
     let mut buffer = data.to_vec();
-    let (unresolved_symbols, ctx) = undefined_symbols(&buffer)?;
+    let (unresolved_symbols, ctx) = undefined_symbols(&buffer, false)?;
 
     if !unresolved_symbols.is_empty() {
         let names: Vec<&str> = unresolved_symbols.keys().map(String::as_str).collect();
@@ -428,7 +435,7 @@ pub fn load_module_strict(data: &[u8], params: &CStr) -> Result<()> {
 
 fn load_module_inner(data: &[u8], params: &CStr, strict: bool) -> Result<()> {
     let mut buffer = data.to_vec();
-    let (mut unresolved_symbols, ctx) = undefined_symbols(&buffer)?;
+    let (mut unresolved_symbols, ctx) = undefined_symbols(&buffer, strict)?;
 
     if !unresolved_symbols.is_empty() {
         for_each_kernel_symbols(|(symbol, addr)| {

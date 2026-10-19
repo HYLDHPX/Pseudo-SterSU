@@ -71,6 +71,7 @@ import me.weishu.kernelsu.ui.component.miuix.SearchBar
 import me.weishu.kernelsu.ui.component.pixel.pixelAwareMiuixCardCornerRadius
 import me.weishu.kernelsu.ui.component.pixel.pixelAwareMiuixCardShape
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.theme.skrootproTopBarColors
 import me.weishu.kernelsu.ui.util.BlurredBar
@@ -130,7 +131,9 @@ fun SuperUserPagerMiuix(
 
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = immersiveTopBarColor(
+        if (blurActive) Color.Transparent else colorScheme.surface,
+    )
     val topBarColors = skrootproTopBarColors(barColor, colorScheme.onSurface)
 
     Scaffold(

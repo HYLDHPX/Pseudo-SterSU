@@ -1,6 +1,5 @@
 package me.weishu.kernelsu.ui.component
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -103,16 +102,15 @@ fun StyledSwitch(
     val knobProgress by animateFloatAsState(
         targetValue = progressTarget,
         animationSpec = tween(
-            durationMillis = activeCustomStyle?.transitionDurationMillis ?: 220,
+            durationMillis = activeCustomStyle?.transitionDurationMillis ?: 360,
             easing = activeCustomStyle?.transitionEasing?.composeEasing() ?: FastOutSlowInEasing,
         ),
         label = "sunMoonSwitchKnob",
     )
-    val trackColor by animateColorAsState(
-        targetValue = switchTrackColor(resolvedStyle, checked),
-        animationSpec = tween(durationMillis = 220),
-        label = "sunMoonSwitchTrack",
-    )
+    // Keep the track and the sun/moon knob on one progress value. A separate
+    // color animation made the background change before the icon reached its
+    // destination, which made the day/night transition feel discontinuous.
+    val trackColor = switchTrackColor(resolvedStyle, knobProgress)
     val ambientMotion = if (
         resolvedStyle == SwitchStyle.CloudStar ||
         resolvedStyle == SwitchStyle.Bb8 ||
@@ -237,13 +235,14 @@ fun StyledSwitch(
     }
 }
 
-private fun switchTrackColor(style: SwitchStyle, checked: Boolean): Color {
+private fun switchTrackColor(style: SwitchStyle, progress: Float): Color {
+    val transition = progress.coerceIn(0f, 1f)
     return when (style) {
         SwitchStyle.Custom -> Color.Transparent
-        SwitchStyle.Capsule -> if (checked) Color(0xFF34C77B) else Color(0xFFD8DEE8)
-        SwitchStyle.CloudStar -> if (checked) Color(0xFF090B12) else Color(0xFF2196F3)
-        SwitchStyle.Bb8 -> if (checked) Color(0xFF111A39) else Color(0xFF7FA9C0)
-        SwitchStyle.Sparkle -> if (checked) Color(0xFF172A3D) else Color(0xFF121212)
+        SwitchStyle.Capsule -> lerp(Color(0xFFD8DEE8), Color(0xFF34C77B), transition)
+        SwitchStyle.CloudStar -> lerp(Color(0xFF2196F3), Color(0xFF090B12), transition)
+        SwitchStyle.Bb8 -> lerp(Color(0xFF7FA9C0), Color(0xFF111A39), transition)
+        SwitchStyle.Sparkle -> lerp(Color(0xFF121212), Color(0xFF172A3D), transition)
         SwitchStyle.Original -> Color.Transparent
     }
 }

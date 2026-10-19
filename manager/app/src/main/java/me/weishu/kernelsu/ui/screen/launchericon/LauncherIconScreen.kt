@@ -68,6 +68,8 @@ import me.weishu.kernelsu.ui.component.skrootpro.skrootproSp
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.screen.settings.ManagerNameDialog
 import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
+import me.weishu.kernelsu.ui.theme.immersivePageColor
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.util.CustomWallpaperCrop
 import me.weishu.kernelsu.ui.util.LauncherIconOption
 import me.weishu.kernelsu.ui.util.loadCustomImageBitmap
@@ -173,13 +175,13 @@ private fun LauncherIconScreenMiuix(
     onPickCustomIcon: () -> Unit,
 ) {
     Scaffold(
-        containerColor = LauncherIdentityColors.Page,
+        containerColor = immersivePageColor(LauncherIdentityColors.Page),
         popupHost = { },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal),
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.settings_manager_identity),
-                color = LauncherIdentityColors.Page,
+                color = immersiveTopBarColor(LauncherIdentityColors.Page),
                 titleColor = LauncherIdentityColors.Ink,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -218,7 +220,7 @@ private fun LauncherIconPickerContent(
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
-        modifier = modifier.fillMaxSize().background(LauncherIdentityColors.Page),
+        modifier = modifier.fillMaxSize().background(immersivePageColor(LauncherIdentityColors.Page)),
         contentAlignment = Alignment.TopCenter,
     ) {
         LazyVerticalGrid(

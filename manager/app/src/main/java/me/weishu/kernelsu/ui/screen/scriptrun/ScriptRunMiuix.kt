@@ -47,6 +47,7 @@ import me.weishu.kernelsu.data.script.PreparedScript
 import me.weishu.kernelsu.data.script.ScriptParam
 import me.weishu.kernelsu.ui.component.miuix.EditText
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.util.BlurredBar
 import me.weishu.kernelsu.ui.util.ShellHighlightColors
 import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
@@ -84,7 +85,9 @@ internal fun ScriptRunScreenMiuix(
     val enableBlur = LocalEnableBlur.current
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop(enableBlur)
-    val barColor = if (backdrop != null) Color.Transparent else colorScheme.surface
+    val barColor = immersiveTopBarColor(
+        if (backdrop != null) Color.Transparent else colorScheme.surface,
+    )
 
     Scaffold(
         topBar = {

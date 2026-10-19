@@ -92,6 +92,7 @@ import me.weishu.kernelsu.ui.screen.module.ExpandableDescriptionText
 import me.weishu.kernelsu.ui.screen.scriptrun.lastRunText
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
 import me.weishu.kernelsu.ui.theme.LocalModuleDescriptionMaxLines
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.util.BlurredBar
 import me.weishu.kernelsu.ui.util.isDownloadAvailable
@@ -157,7 +158,9 @@ fun ModuleRepoScreenMiuix(
     val enableBlur = LocalEnableBlur.current
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = immersiveTopBarColor(
+        if (blurActive) Color.Transparent else colorScheme.surface,
+    )
 
     Scaffold(
         topBar = {
@@ -1325,7 +1328,9 @@ fun ModuleRepoDetailScreenMiuix(
 
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val detailBarColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val detailBarColor = immersiveTopBarColor(
+        if (blurActive) Color.Transparent else colorScheme.surface,
+    )
 
     val tabs = listOf(
         stringResource(R.string.tab_readme), stringResource(R.string.tab_releases), stringResource(R.string.tab_info)
@@ -1384,7 +1389,7 @@ fun ModuleRepoDetailScreenMiuix(
                                     }
                                 },
                                 colors = TabRowDefaults.tabRowColors(
-                                    backgroundColor = if (blurActive) Color.Transparent else colorScheme.surface
+                                    backgroundColor = detailBarColor
                                 ),
                                 height = tabRowHeight,
                             )

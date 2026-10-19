@@ -208,6 +208,14 @@
     <string name="reboot_bootloader">Reboot to Bootloader</string>
     <string name="reboot_download">Reboot to Download</string>
     <string name="reboot_edl">Reboot to EDL</string>
+    <string name="sidebar_reboot_title">Reboot options</string>
+    <string name="sidebar_reboot_system">Restart system</string>
+    <string name="sidebar_reboot_soft">Soft reboot</string>
+    <string name="sidebar_reboot_userspace">Userspace reboot</string>
+    <string name="sidebar_reboot_recovery">Recovery mode</string>
+    <string name="sidebar_reboot_bootloader">Bootloader mode</string>
+    <string name="sidebar_reboot_download">Download mode</string>
+    <string name="sidebar_reboot_edl">EDL mode</string>
     <string name="about">About</string>
     <string name="module_uninstall_confirm">Are you sure you want to uninstall module %s?</string>
     <string name="metamodule_uninstall_confirm">Are you sure you want to uninstall module %s? This action will affect all modules, and certain features provided by the metamodule (such as mounting) will no longer work.</string>

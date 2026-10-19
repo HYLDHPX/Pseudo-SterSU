@@ -228,7 +228,7 @@ private fun StatusCard(
             uriString = wallpaperState.uriString,
             crop = wallpaperState.crop,
         )
-        val hasWallpaper = wallpaperBitmap != null || !wallpaperState.videoUriString.isNullOrBlank()
+        val hasWallpaper = wallpaperState.hasSelectedAnyWallpaper
 
         val containerColor = if (ksuActive) {
             MaterialTheme.colorScheme.secondaryContainer
@@ -635,7 +635,7 @@ private fun WallpaperTonalCard(
         uriString = wallpaperState.uriString,
         crop = wallpaperState.crop,
     )
-    val hasWallpaper = wallpaperBitmap != null || !wallpaperState.videoUriString.isNullOrBlank()
+    val hasWallpaper = wallpaperState.hasSelectedAnyWallpaper
     if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) {
         val id = when (target) {
             HomeMetricCardWallpaperTarget.Superuser -> SidebarHomeCardId.Superuser

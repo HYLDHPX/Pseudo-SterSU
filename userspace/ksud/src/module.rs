@@ -588,9 +588,7 @@ pub fn exec_script_with<T: AsRef<Path>>(
         let child = command
             .spawn()
             .with_context(|| format!("Failed to exec {}", path.display()))?;
-        if deadline > Instant::now()
-            && !sigchld.wait_until(child.id() as libc::pid_t, deadline)?
-        {
+        if deadline > Instant::now() && !sigchld.wait_until(child.id() as libc::pid_t, deadline)? {
             warn!("Timed out waiting for script: {}", path.display());
         }
         return Ok(());
@@ -830,6 +828,10 @@ fn next_boot_modules() -> BTreeMap<String, PathBuf> {
                 continue;
             };
             let id = id.to_string();
+            if id == crate::kpatch_next::KPATCH_NEXT_MODULE_ID && should_skip_kpatch_next() {
+                modules.insert(id, None);
+                continue;
+            }
             if module_path.join(defs::DISABLE_FILE_NAME).exists()
                 || module_path.join(defs::REMOVE_FILE_NAME).exists()
             {
@@ -868,33 +870,6 @@ fn regenerate_preinit_rc(
 
         // collect common initrc first
         collect_rc_files(Path::new(defs::ADB_DIR).join("initrc.d"), None, &mut tmp)?;
-        // modules_update/ first so freshly-installed modules win on id collision.
-        for src_dir in [defs::MODULE_UPDATE_DIR, defs::MODULE_DIR] {
-            let Ok(entries) = std::fs::read_dir(src_dir) else {
-                continue;
-            };
-            for entry in entries.flatten() {
-                let module_path = entry.path();
-                if !module_path.is_dir() {
-                    continue;
-                }
-                let Some(id) = module_path.file_name().and_then(|s| s.to_str()) else {
-                    continue;
-                };
-                let id = id.to_string();
-                if id == crate::kpatch_next::KPATCH_NEXT_MODULE_ID && should_skip_kpatch_next() {
-                    modules.insert(id, None);
-                    continue;
-                }
-                if module_path.join(defs::DISABLE_FILE_NAME).exists()
-                    || module_path.join(defs::REMOVE_FILE_NAME).exists()
-                {
-                    modules.insert(id, None);
-                    continue;
-                }
-                modules.entry(id).or_insert(Some(module_path));
-            }
-        }
         for (id, path) in modules {
             collect_rc_files(path.join(defs::MODULE_INIT_RC_DIR), Some(id), &mut tmp)?;
         }
@@ -1150,12 +1125,11 @@ pub fn install_module(zip: &str) -> Result<()> {
     } else if let Err(e) = regenerate_preinit() {
         warn!("regenerate preinit failed: {e:#}");
     }
-    if let Ok(module_id) = &result {
-        if let Some((state, message)) = crate::preinit::status_of(module_id)
-            && state != "ok"
-        {
-            println!("! preinit will not take effect: {state} {message}");
-        }
+    if let Ok(module_id) = &result
+        && let Some((state, message)) = crate::preinit::status_of(module_id)
+        && state != "ok"
+    {
+        println!("! preinit will not take effect: {state} {message}");
     }
     result.map(|_| ())
 }

@@ -122,6 +122,7 @@ import me.weishu.kernelsu.ui.component.rebootlistpopup.RebootListPopupMiuix
 import me.weishu.kernelsu.ui.component.statustag.StatusTagMiuix
 import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.theme.skrootproTopBarColors
 import me.weishu.kernelsu.ui.util.BlurredBar
@@ -182,7 +183,9 @@ fun HomePagerMiuix(
     val homeTitle = state.customHomeTitle.ifBlank { stringResource(R.string.app_name) }
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = immersiveTopBarColor(
+        if (blurActive) Color.Transparent else colorScheme.surface,
+    )
     val topBarColors = skrootproTopBarColors(barColor, colorScheme.onSurface)
     Scaffold(
         containerColor = Color.Transparent,
@@ -619,7 +622,7 @@ private fun ActivatedLkmCard(
         val displaySubtitle = customSubtitle.ifBlank {
             stringResource(R.string.home_working_version, state.ksuVersionLabel)
         }
-        val hasLkmWallpaper = wallpaperBitmap != null || !lkmVideoUriString.isNullOrBlank()
+        val hasLkmWallpaper = wallpaperState.hasSelectedAnyWallpaper
         val primaryContentColor = if (hasLkmWallpaper) Color.White else colorScheme.onSurface
         val secondaryContentColor = if (hasLkmWallpaper) {
             Color.White.copy(alpha = 0.82f)
@@ -1509,7 +1512,7 @@ private fun MetricCard(
         crop = wallpaperState.crop,
     )
     val videoUriString = wallpaperState.videoUriString
-    val hasWallpaper = wallpaperBitmap != null || !videoUriString.isNullOrBlank()
+    val hasWallpaper = wallpaperState.hasSelectedAnyWallpaper
     val contentColor = if (hasWallpaper) Color.White else colorScheme.onSurface
     val summaryColor = if (hasWallpaper) {
         Color.White.copy(alpha = 0.82f)
@@ -2090,7 +2093,7 @@ private fun StatusMonitorPanelMiuix(
     wallpaperFit: HomeLayoutWallpaperFit = HomeLayoutWallpaperFit.Crop,
 ) {
     val videoUriString = wallpaperState.videoUriString
-    val hasWallpaper = wallpaperBitmap != null || !videoUriString.isNullOrBlank()
+    val hasWallpaper = wallpaperState.hasSelectedAnyWallpaper
     val seasonalStyle = isSnowInterfaceStyle()
     Box(
         modifier = Modifier
@@ -2159,7 +2162,7 @@ private fun SystemInfoPanelMiuix(
     onCopyValue: (String, String) -> Unit,
 ) {
     val videoUriString = wallpaperState.videoUriString
-    val hasWallpaper = wallpaperBitmap != null || !videoUriString.isNullOrBlank()
+    val hasWallpaper = wallpaperState.hasSelectedAnyWallpaper
     val seasonalStyle = isSnowInterfaceStyle()
     val hookTypeDisplay = kernelHookTypeLabel(hookTypes)
     val rowColor = if (hasWallpaper) Color.White else colorScheme.onSurface

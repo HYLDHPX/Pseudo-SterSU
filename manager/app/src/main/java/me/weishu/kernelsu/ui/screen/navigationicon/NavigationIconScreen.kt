@@ -71,6 +71,8 @@ import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.screen.settings.SettingsNavigationIconPreviewDialog
 import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
+import me.weishu.kernelsu.ui.theme.immersivePageColor
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.theme.skrootproTopBarColors
 import me.weishu.kernelsu.ui.util.BlurredBar
@@ -282,15 +284,19 @@ private fun NavigationIconScreenMiuix(
     val enableBlur = LocalEnableBlur.current
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = immersiveTopBarColor(
+        if (blurActive) Color.Transparent else colorScheme.surface,
+    )
     val topBarColors = skrootproTopBarColors(barColor, colorScheme.onSurface)
 
     MiuixScaffold(
-        containerColor = if (LocalUiMode.current == UiMode.Material && isInDarkTheme()) {
-            colorScheme.surface
-        } else {
-            Color.Transparent
-        },
+        containerColor = immersivePageColor(
+            if (LocalUiMode.current == UiMode.Material && isInDarkTheme()) {
+                colorScheme.surface
+            } else {
+                Color.Transparent
+            },
+        ),
         topBar = {
             BlurredBar(backdrop) {
                 MiuixTopAppBar(

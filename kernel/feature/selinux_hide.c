@@ -86,7 +86,7 @@ static write_op_fn orig_context_write, orig_access_write;
 #define ksu_security_bounded_transition_compat(...) security_bounded_transition(&selinux_state, __VA_ARGS__)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 18, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 19, 0)
 #define ksu_task_security_struct task_security_struct
 #else
 #define ksu_task_security_struct cred_security_struct

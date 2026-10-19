@@ -708,7 +708,7 @@ pub fn is_uapi_version_mismatch() -> bool {
 
 pub fn ensure_uapi_version_matched() -> Result<()> {
     let kernel_uapi = get_info().uapi_version;
-    let userspace_uapi = ksu_uapi::KERNEL_SU_UAPI_VERSION;
+    let userspace_uapi = uapi_version();
     if !crate::uapi_compat::is_compatible(kernel_uapi, userspace_uapi) {
         bail!(
             "UAPI version mismatch: kernel={kernel_uapi}, ksud={userspace_uapi}. Please update KernelSU!"

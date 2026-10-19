@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -47,6 +48,7 @@ import me.weishu.kernelsu.ui.util.inspectMediaFile
 import me.weishu.kernelsu.ui.util.persistCustomImageReference
 import me.weishu.kernelsu.ui.component.preloadCustomImageBitmap
 import me.weishu.kernelsu.ui.component.rememberCustomImageAndroidBitmap
+import me.weishu.kernelsu.ui.component.rememberCustomVideoFrameBitmap
 import me.weishu.kernelsu.ui.util.readThemeStoreImageState
 import me.weishu.kernelsu.ui.util.releasePersistableVideoBackgroundReadPermission
 import me.weishu.kernelsu.ui.util.releaseCustomImageReference
@@ -393,11 +395,26 @@ internal fun rememberHomeMetricCardWallpaperBitmap(
     uriString: String?,
     crop: CustomWallpaperCrop,
 ): Bitmap? {
-    return rememberCustomImageAndroidBitmap(
+    val decodedBitmap = rememberCustomImageAndroidBitmap(
         uriString = uriString,
         maxSide = HOME_METRIC_CARD_WALLPAPER_MAX_SIDE,
         crop = crop,
     )
+    // Keep the last complete frame while a newly selected URI/crop is decoded.
+    // Clearing the media is the only case where the previous frame must disappear
+    // immediately; otherwise the card briefly falls back to its solid surface.
+    var lastBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(uriString) {
+        if (uriString.isNullOrBlank()) {
+            lastBitmap = null
+        }
+    }
+    LaunchedEffect(decodedBitmap) {
+        if (decodedBitmap != null) {
+            lastBitmap = decodedBitmap
+        }
+    }
+    return if (uriString.isNullOrBlank()) null else decodedBitmap ?: lastBitmap
 }
 
 @Composable
@@ -413,8 +430,27 @@ internal fun BoxScope.HomeMetricCardWallpaperBackground(
     val adjusted = visualSettings.copy(
         overlayAlpha = (visualSettings.overlayAlpha + if (isInDarkTheme()) 0.08f else 0f).coerceAtMost(0.82f)
     )
+    val videoPreview = if (!videoUriString.isNullOrBlank()) {
+        rememberCustomVideoFrameBitmap(
+            uriString = videoUriString,
+            maxSide = HOME_METRIC_CARD_WALLPAPER_MAX_SIDE,
+        )
+    } else {
+        null
+    }
     MediaVisualLayer(settings = adjusted, modifier = Modifier.matchParentSize()) { colorFilter ->
         if (!videoUriString.isNullOrBlank()) {
+            // Keep the first decoded frame behind the external video surface so
+            // surface creation cannot flash the card's solid background.
+            if (videoPreview != null) {
+                Image(
+                    modifier = Modifier.matchParentSize(),
+                    bitmap = videoPreview,
+                    contentDescription = null,
+                    contentScale = wallpaperFit.toContentScale(),
+                    colorFilter = colorFilter,
+                )
+            }
             CustomVideoBackground(
                 uriString = videoUriString,
                 drawOverlay = false,

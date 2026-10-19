@@ -105,6 +105,8 @@ import me.weishu.kernelsu.ui.navigation3.Navigator
 import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.theme.ColorMode
 import me.weishu.kernelsu.ui.theme.SidebarUiTokens
+import me.weishu.kernelsu.ui.theme.immersivePageColor
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.util.FULL_CUSTOM_WALLPAPER_CROP
 
 /** Compact, device-oriented settings for the sidebar style; other styles keep their layouts. */
@@ -156,7 +158,9 @@ internal fun SettingsSidebarScreen(
     val layoutDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
     AnimatedContent(
         targetState = showAllSettings,
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).clipToBounds(),
+        modifier = Modifier.fillMaxSize().background(
+            immersivePageColor(MaterialTheme.colorScheme.surface),
+        ).clipToBounds(),
         transitionSpec = {
             if (!animationsEnabled) {
                 ContentTransform(EnterTransition.None, ExitTransition.None, sizeTransform = null)
@@ -191,7 +195,7 @@ internal fun SettingsSidebarScreen(
             ExpressiveScaffold(
                 modifier = Modifier.fillMaxSize(),
                 contentMaxWidth = SidebarUiTokens.DetailMaxWidth,
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = immersivePageColor(MaterialTheme.colorScheme.surface),
                 contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout)
                     .only(WindowInsetsSides.Top),
                 topBar = {
@@ -200,7 +204,9 @@ internal fun SettingsSidebarScreen(
                         actions = {
                             SettingsPageModeButton(SettingsPageMode.Categories, onPageModeChange)
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = immersiveTopBarColor(MaterialTheme.colorScheme.surface),
+                        ),
                     )
                 },
             ) { padding ->

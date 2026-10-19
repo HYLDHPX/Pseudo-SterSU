@@ -34,6 +34,14 @@
     <string name="reboot_bootloader">重新啟動至 Bootloader</string>
     <string name="reboot_download">重新啟動至 Download</string>
     <string name="reboot_edl">重新啟動至 EDL</string>
+    <string name="sidebar_reboot_title">重新啟動選項</string>
+    <string name="sidebar_reboot_system">重新啟動系統</string>
+    <string name="sidebar_reboot_soft">軟重啟</string>
+    <string name="sidebar_reboot_userspace">使用者空間</string>
+    <string name="sidebar_reboot_recovery">復原模式</string>
+    <string name="sidebar_reboot_bootloader">引導模式</string>
+    <string name="sidebar_reboot_download">下載模式</string>
+    <string name="sidebar_reboot_edl">緊急下載（EDL）</string>
     <string name="about">關於</string>
     <string name="module_uninstall_confirm">你是否要解除安裝「%s」模組？</string>
     <string name="module_uninstall_success">「%s」已解除安裝</string>

@@ -121,6 +121,7 @@ import me.weishu.kernelsu.ui.component.rebootlistpopup.RebootListPopupMiuix
 import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
 import me.weishu.kernelsu.ui.theme.LocalModuleTopBarAutoHide
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.theme.skrootproTopBarColors
 import me.weishu.kernelsu.ui.util.BlurredBar
@@ -301,7 +302,9 @@ fun ModulePagerMiuix(
 
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = immersiveTopBarColor(
+        if (blurActive) Color.Transparent else colorScheme.surface,
+    )
     val topBarColors = skrootproTopBarColors(barColor, colorScheme.onSurface)
     val topBarVisible = rememberModuleTopBarVisible(
         enabled = LocalModuleTopBarAutoHide.current,
@@ -636,7 +639,7 @@ private fun ModuleShortcutDialog(
                         Box(
                             modifier = Modifier
                                 .size(100.dp)
-                                .background(Color.White)
+                                .background(colorScheme.surfaceContainerHigh)
                         )
                         Image(
                             painter = painterResource(id = R.mipmap.ic_launcher_foreground),

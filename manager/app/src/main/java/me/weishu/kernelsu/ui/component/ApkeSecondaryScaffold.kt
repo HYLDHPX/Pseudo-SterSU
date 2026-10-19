@@ -64,6 +64,7 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
 import me.weishu.kernelsu.ui.theme.SidebarUiTokens
+import me.weishu.kernelsu.ui.theme.immersivePageColor
 import me.weishu.kernelsu.ui.theme.immersiveScrolledTopBarColor
 
 object ApkeUiTokens {
@@ -140,7 +141,13 @@ fun ApkeSecondaryScaffold(
     val sidebar = LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
     val scrollBehavior = if (sidebar) TopAppBarDefaults.pinnedScrollBehavior()
         else TopAppBarDefaults.enterAlwaysScrollBehavior()
-    val pageColor = if (sidebar && containerColor == Color.Transparent) MaterialTheme.colorScheme.surface else containerColor
+    val pageColor = immersivePageColor(
+        if (sidebar && containerColor == Color.Transparent) {
+            MaterialTheme.colorScheme.surface
+        } else {
+            containerColor
+        },
+    )
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val windowSizeClass = apkeWindowSizeClass(maxWidth)
         androidx.compose.runtime.CompositionLocalProvider(

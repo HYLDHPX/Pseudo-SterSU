@@ -35,6 +35,7 @@ data class MainActivityUiState(
     val enableBlur: Boolean,
     val enableFloatingBottomBar: Boolean,
     val enableFloatingBottomBarBlur: Boolean,
+    val enableSwipeDismiss: Boolean,
     val autoHideNavigationBar: Boolean,
     val scrollHideNavigationBar: Boolean,
     val moduleTopBarAutoHideEnabled: Boolean,

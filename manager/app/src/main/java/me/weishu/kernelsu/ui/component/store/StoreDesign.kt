@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
+import me.weishu.kernelsu.ui.theme.LocalImmersiveBackgroundActive
 
 /** Shared store chrome: app typography and accent, readable neutral surfaces in every UI mode. */
 @Composable
@@ -131,9 +132,14 @@ fun StoreScaffold(
     content: @Composable (PaddingValues) -> Unit,
 ) {
     StoreTheme {
+        val immersiveBackgroundActive = LocalImmersiveBackgroundActive.current
         Scaffold(
             modifier = modifier.fillMaxSize(),
-            containerColor = MaterialTheme.colorScheme.background,
+            containerColor = if (immersiveBackgroundActive) {
+                Color.Transparent
+            } else {
+                MaterialTheme.colorScheme.background
+            },
             contentWindowInsets = WindowInsets.safeDrawing,
             topBar = {
                 TopAppBar(
@@ -147,7 +153,13 @@ fun StoreScaffold(
                         }
                     },
                     actions = actions,
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = if (immersiveBackgroundActive) {
+                            Color.Transparent
+                        } else {
+                            MaterialTheme.colorScheme.background
+                        },
+                    ),
                 )
             },
             bottomBar = bottomBar,

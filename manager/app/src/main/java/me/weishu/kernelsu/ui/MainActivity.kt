@@ -96,6 +96,7 @@ import androidx.navigation3.ui.NavDisplayTransitionEffects
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import top.yukonga.miuix.kmp.nav.transition.NavSwipeDirection
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -514,6 +515,15 @@ class MainActivity : ComponentActivity() {
 
             val navigator = rememberNavigator(Route.Main)
             val stealthNavigator = remember { Navigator(Route.Main) }
+            val swipeDismiss = if (uiState.enableSwipeDismiss) {
+                if (LocalLayoutDirection.current == LayoutDirection.Rtl) {
+                    NavSwipeDirection.RightToLeft
+                } else {
+                    NavSwipeDirection.LeftToRight
+                }
+            } else {
+                NavSwipeDirection.None
+            }
             val currentRoute = if (uiState.stealthModeEnabled) {
                 Route.Main
             } else {

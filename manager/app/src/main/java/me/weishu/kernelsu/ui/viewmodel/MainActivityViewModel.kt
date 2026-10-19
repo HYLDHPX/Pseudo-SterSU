@@ -145,6 +145,7 @@ class MainActivityViewModel(
                 interfaceStyle,
                 settingRepo.enableFloatingBottomBarBlur,
             ),
+            enableSwipeDismiss = settingRepo.enableSwipeDismiss,
             autoHideNavigationBar = settingRepo.autoHideNavigationBar,
             scrollHideNavigationBar = settingRepo.scrollHideNavigationBar,
             moduleTopBarAutoHideEnabled = settingRepo.moduleTopBarAutoHideEnabled,
@@ -242,6 +243,7 @@ class MainActivityViewModel(
             enableBlur = false,
             enableFloatingBottomBar = false,
             enableFloatingBottomBarBlur = false,
+            enableSwipeDismiss = true,
             autoHideNavigationBar = false,
             scrollHideNavigationBar = false,
             moduleTopBarAutoHideEnabled = false,
@@ -339,6 +341,7 @@ class MainActivityViewModel(
             addAll(
                 listOf(
             "ui_mode",
+            "enable_swipe_dismiss",
             ACTIVE_INTERFACE_STYLE_ID_KEY,
             SWITCH_STYLE_KEY,
             CUSTOM_SWITCH_STYLE_LIBRARY_KEY,

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -46,6 +47,16 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.KsuIsValid
 import me.weishu.kernelsu.ui.component.bottombar.SidebarPaneShape
 
+private fun RebootListOption.sidebarLabelRes(): Int = when (reason) {
+    "soft_reboot" -> R.string.sidebar_reboot_soft
+    "userspace" -> R.string.sidebar_reboot_userspace
+    "recovery" -> R.string.sidebar_reboot_recovery
+    "bootloader" -> R.string.sidebar_reboot_bootloader
+    "download" -> R.string.sidebar_reboot_download
+    "edl" -> R.string.sidebar_reboot_edl
+    else -> R.string.sidebar_reboot_system
+}
+
 @Composable
 internal fun SidebarRebootPopup() {
     KsuIsValid {
@@ -76,7 +87,7 @@ internal fun SidebarRebootPopup() {
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(
-                            stringResource(R.string.reboot),
+                            stringResource(R.string.sidebar_reboot_title),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
@@ -84,9 +95,10 @@ internal fun SidebarRebootPopup() {
                         options.chunked(columns).forEach { row ->
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 row.forEach { option ->
-                                    val label = stringResource(option.labelRes)
+                                    val label = stringResource(option.sidebarLabelRes())
                                     Column(
                                         modifier = Modifier.weight(1f)
+                                            .aspectRatio(1f)
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                             .clickable(role = Role.Button) {
@@ -94,12 +106,12 @@ internal fun SidebarRebootPopup() {
                                                 onReboot(option.reason)
                                             }
                                             .semantics(mergeDescendants = true) { contentDescription = label }
-                                            .heightIn(min = 80.dp).padding(horizontal = 2.dp, vertical = 10.dp),
+                                            .padding(horizontal = 2.dp, vertical = 4.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp),
                                     ) {
-                                        Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-                                            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(36.dp))
+                                        Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+                                            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(30.dp))
                                             Text(
                                                 when (option.reason) {
                                                     "soft_reboot" -> "S"
@@ -114,7 +126,14 @@ internal fun SidebarRebootPopup() {
                                                 fontWeight = FontWeight.Black,
                                             )
                                         }
-                                        Text(label, fontSize = 11.sp, lineHeight = 14.sp, textAlign = TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                        Text(
+                                            label,
+                                            fontSize = 11.sp,
+                                            lineHeight = 14.sp,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
                                     }
                                 }
                                 repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
