@@ -1,4 +1,5 @@
 CFLAGS = -std=c11 -Wall -Wextra -Wno-unused -Wno-unused-parameter
+
 CFLAGS += -I. -I./lib -DBZ_NO_STDIO -DXZ_DEC_ANY_CHECK
 LDFLAGS = -static -lz
 
@@ -6,7 +7,7 @@ ifdef DEBUG
     CFLAGS += -DDEBUG -g
 endif
 
-OBJS := image.o kallsym.o kptools.o order.o insn.o patch.o symbol.o kpm.o common.o bootimg.o
+OBJS := image.o kallsym.o kptools.o order.o insn.o patch.o symbol.o kpm.o common.o bootimg.o x86_64.o
 
 LIB_SRCS := $(wildcard lib/*.c) $(wildcard lib/*/*.c)
 LIB_OBJS := $(LIB_SRCS:.c=.o)
@@ -21,6 +22,8 @@ kptools: $(ALL_OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 
+kptools.o: ../version
+
 %.o : %.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
 
@@ -28,7 +31,6 @@ kptools: $(ALL_OBJS)
 clean:
 	rm -rf kptools
 	rm *.o
-	
 	rm lib/bz2/*.o
 	rm lib/lz4/*.o
 	rm lib/sha/*.o

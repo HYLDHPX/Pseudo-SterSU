@@ -52,8 +52,8 @@ import me.weishu.kernelsu.ui.LocalInterfaceStyle
 import me.weishu.kernelsu.ui.component.dialog.LoadingDialogHandle
 import me.weishu.kernelsu.ui.util.getBugreportFile
 import me.weishu.kernelsu.ui.util.rememberSidebarWidgetConfig
-import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
-import top.yukonga.miuix.kmp.basic.Text as MiuixText
+import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as MiuixIcon
+import me.weishu.kernelsu.ui.component.passthrough.MiuixText as MiuixText
 import top.yukonga.miuix.kmp.basic.TextButton as MiuixTextButton
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.preference.ArrowPreference

@@ -56,6 +56,7 @@ import me.weishu.kernelsu.ui.component.snow.seasonNavigationContainerColor
 import me.weishu.kernelsu.ui.component.snow.seasonNavigationIndicator
 import me.weishu.kernelsu.ui.component.snow.seasonNavigationSurface
 import me.weishu.kernelsu.ui.theme.LocalEnableFloatingBottomBar
+import me.weishu.kernelsu.ui.theme.uiPassthroughNavigationColor
 import me.weishu.kernelsu.ui.theme.LocalEnableFloatingBottomBarBlur
 import me.weishu.kernelsu.ui.util.BlurredBar
 import me.weishu.kernelsu.ui.util.CustomNavigationIconState
@@ -64,11 +65,11 @@ import me.weishu.kernelsu.ui.util.CustomNavigationIconSlot
 import me.weishu.kernelsu.ui.util.LocalCustomNavigationIcons
 import top.yukonga.miuix.kmp.basic.Badge
 import top.yukonga.miuix.kmp.basic.BadgedBox
-import top.yukonga.miuix.kmp.basic.Icon
+import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as Icon
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationItem
-import top.yukonga.miuix.kmp.basic.Text
+import me.weishu.kernelsu.ui.component.passthrough.MiuixText as Text
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -90,7 +91,7 @@ fun BottomBarMiuix(
     val isPixelStyle = isPixelInterfaceStyle()
 
     val customIcons = LocalCustomNavigationIcons.current
-    val barColor = if (isPixelStyle) {
+    val barColor = uiPassthroughNavigationColor(if (isPixelStyle) {
         pixelNavigationContainerColor()
     } else if (isRainStyle) {
         rainNavigationContainerColor()
@@ -102,7 +103,7 @@ fun BottomBarMiuix(
         seasonNavigationContainerColor()
     } else {
         MiuixTheme.colorScheme.surface
-    }
+    })
     if (!enableFloatingBottomBar) {
         val navigationShape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
         val navigationModifier = modifier.then(

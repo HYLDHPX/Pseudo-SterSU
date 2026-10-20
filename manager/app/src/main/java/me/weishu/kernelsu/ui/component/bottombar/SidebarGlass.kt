@@ -74,23 +74,26 @@ internal fun Modifier.sidebarMaterialSurface(
     mode: SidebarGlassMode,
     backdrop: Backdrop?,
     edgeOnRight: Boolean,
+    opacity: Float = 1f,
+    showDividers: Boolean = true,
 ): Modifier {
+    val backgroundOpacity = if (opacity.isFinite()) opacity.coerceIn(0f, 1f) else 1f
     val gradient = Brush.verticalGradient(listOf(colors.background, colors.backgroundEnd))
-    val base = if (material != SidebarMaterial.Flat && backdrop != null && mode != SidebarGlassMode.Fallback) {
+    val base = if (backgroundOpacity > 0f && material != SidebarMaterial.Flat && backdrop != null && mode != SidebarGlassMode.Fallback) {
         Modifier.drawBackdrop(
             backdrop = backdrop,
             shape = { SidebarGlassLensShape },
             effects = {
-                val radius = (if (material == SidebarMaterial.NeumorphicGlass) 18.dp else 12.dp).toPx()
+                val radius = (if (material == SidebarMaterial.NeumorphicGlass) 18.dp else 12.dp).toPx() * backgroundOpacity
                 blur(radius, radius)
                 if (mode == SidebarGlassMode.Refractive) {
-                    lens(14.dp.toPx(), 4.dp.toPx(), depthEffect = true, chromaticAberration = 0f)
+                    lens(14.dp.toPx() * backgroundOpacity, 4.dp.toPx() * backgroundOpacity, depthEffect = true, chromaticAberration = 0f)
                 }
             },
             highlight = {
                 Highlight(
                     width = 0.8.dp,
-                    alpha = (0.5f * colors.highlightStrength).coerceIn(0f, 1f),
+                    alpha = if (showDividers) (0.5f * colors.highlightStrength * backgroundOpacity).coerceIn(0f, 1f) else 0f,
                     style = BloomStroke(
                         color = colors.highlight.copy(alpha = (0.24f * colors.highlightStrength).coerceIn(0f, 1f)),
                         innerBlurRadius = 1.dp,
@@ -106,20 +109,20 @@ internal fun Modifier.sidebarMaterialSurface(
                     ),
                 )
             },
-            onDrawSurface = { drawRect(gradient, alpha = colors.tintAlpha) },
+            onDrawSurface = { drawRect(gradient, alpha = colors.tintAlpha * backgroundOpacity) },
         )
     } else {
-        Modifier.drawWithCache { onDrawBehind { drawRect(gradient) } }
+        Modifier.drawWithCache { onDrawBehind { drawRect(gradient, alpha = backgroundOpacity) } }
     }
     return then(base).drawWithCache {
         val edgeWidth = 1.dp.toPx().coerceAtMost(size.width)
         onDrawWithContent {
-            if (material == SidebarMaterial.NeumorphicGlass) drawSidebarRelief(colors, 1f, inset = false)
-            if (material == SidebarMaterial.LiquidGlass && mode == SidebarGlassMode.Fallback) {
-                drawRect(colors.highlight.copy(alpha = (0.35f * colors.highlightStrength).coerceIn(0f, 1f)), size = Size(size.width, edgeWidth))
+            if (material == SidebarMaterial.NeumorphicGlass) drawSidebarRelief(colors, backgroundOpacity, inset = false)
+            if (showDividers && material == SidebarMaterial.LiquidGlass && mode == SidebarGlassMode.Fallback) {
+                drawRect(colors.highlight.copy(alpha = (0.35f * colors.highlightStrength * backgroundOpacity).coerceIn(0f, 1f)), size = Size(size.width, edgeWidth))
             }
             drawContent()
-            drawRect(
+            if (showDividers) drawRect(
                 colors.divider,
                 Offset(if (edgeOnRight) size.width - edgeWidth else 0f, 0f),
                 Size(edgeWidth, size.height),

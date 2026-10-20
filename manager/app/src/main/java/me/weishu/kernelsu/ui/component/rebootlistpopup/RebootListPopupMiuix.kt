@@ -20,7 +20,7 @@ import me.weishu.kernelsu.ui.screen.home.rememberHomeMetricCardWallpaperBitmap
 import me.weishu.kernelsu.ui.screen.home.rememberHomeMetricCardWallpaperState
 import top.yukonga.miuix.kmp.basic.DropdownColors
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
-import top.yukonga.miuix.kmp.basic.Icon
+import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider

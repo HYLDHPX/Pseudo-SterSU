@@ -48,12 +48,12 @@ import me.weishu.kernelsu.ui.component.store.StoreAlertDialog as AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
+import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.setValue
@@ -112,7 +112,7 @@ import me.weishu.kernelsu.ui.util.isValidCloudThemeGithubLogin
 import me.weishu.kernelsu.ui.util.readLinkedGitHubProfile
 import me.weishu.kernelsu.ui.util.readThemeAuthorProfile
 import me.weishu.kernelsu.ui.util.safeCloudThemeMessage
-import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
+import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 
 private enum class CreatorCenterPage(@StringRes val titleRes: Int, val icon: ImageVector) {

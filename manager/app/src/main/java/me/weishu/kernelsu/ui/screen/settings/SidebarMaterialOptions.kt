@@ -23,7 +23,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderState
-import androidx.compose.material3.Text
+import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -133,6 +133,17 @@ internal fun SidebarMaterialOptions(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall,
         )
+        HorizontalDivider()
+        UiPassthroughSwitch(
+            title = stringResource(R.string.sidebar_show_dividers),
+            checked = config.showDividers,
+            onCheckedChange = { onUpdate(config.copy(showDividers = it)) },
+        )
+        UiOpacitySlider(R.string.sidebar_background_opacity, config.backgroundOpacity) {
+            onUpdate(config.copy(backgroundOpacity = it))
+        }
+        Text(stringResource(R.string.sidebar_background_opacity_help),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         HorizontalDivider()
         Text(stringResource(R.string.sidebar_palette_mode), style = MaterialTheme.typography.titleSmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

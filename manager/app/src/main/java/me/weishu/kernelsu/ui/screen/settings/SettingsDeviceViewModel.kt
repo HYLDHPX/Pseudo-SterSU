@@ -31,6 +31,7 @@ private const val PENDING_PHOTO_KEY = "settings_device_photo_pending"
 private const val PICKER_RESULT_KEY = "settings_device_picker_result"
 private const val MODEL_TEXT_KEY = "settings_device_model_text"
 private const val PROCESSOR_TEXT_KEY = "settings_device_processor_text"
+private const val SYSTEM_TEXT_KEY = "settings_device_system_text"
 private const val MAX_PHOTO_BYTES = 20L * 1024 * 1024
 internal const val MAX_DEVICE_TEXT_LENGTH = 80
 
@@ -73,6 +74,7 @@ internal data class SettingsDeviceState(
     val busy: Boolean = false,
     val customModel: String? = null,
     val customProcessor: String? = null,
+    val customSystem: String? = null,
     val photo: SettingsDevicePhoto? = null,
     val bitmap: Bitmap? = null,
     val editing: SettingsDevicePhoto? = null,
@@ -103,6 +105,7 @@ internal class SettingsDeviceViewModel(
                     info = readSettingsDeviceInfo(context), loading = false,
                     customModel = preferences.getString(MODEL_TEXT_KEY, null),
                     customProcessor = preferences.getString(PROCESSOR_TEXT_KEY, null),
+                    customSystem = preferences.getString(SYSTEM_TEXT_KEY, null),
                     photo = photo, bitmap = photo?.let(::decodePhoto), editing = editing,
                 )
             }
@@ -111,15 +114,17 @@ internal class SettingsDeviceViewModel(
         }
     }
 
-    fun saveCustomText(model: String, processor: String) {
+    fun saveCustomText(model: String, processor: String, system: String) {
         if (_state.value.loading) return
         val customModel = normalizeDeviceCardText(model)
         val customProcessor = normalizeDeviceCardText(processor)
+        val customSystem = normalizeDeviceCardText(system)
         preferences.edit().apply {
             if (customModel == null) remove(MODEL_TEXT_KEY) else putString(MODEL_TEXT_KEY, customModel)
             if (customProcessor == null) remove(PROCESSOR_TEXT_KEY) else putString(PROCESSOR_TEXT_KEY, customProcessor)
+            if (customSystem == null) remove(SYSTEM_TEXT_KEY) else putString(SYSTEM_TEXT_KEY, customSystem)
         }.apply()
-        _state.update { it.copy(customModel = customModel, customProcessor = customProcessor) }
+        _state.update { it.copy(customModel = customModel, customProcessor = customProcessor, customSystem = customSystem) }
     }
 
     fun pickPhoto(uri: Uri) {

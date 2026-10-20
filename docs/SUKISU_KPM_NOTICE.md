@@ -14,9 +14,9 @@ ApkeSU 的 Native GKI KPM 接口是参考
 本项目审计时使用的 SukiSU-Ultra 接口参考提交为
 [`9fbe8fe8ca90c62c259c5894bf96d02ac31209b9`](https://github.com/SukiSU-Ultra/SukiSU-Ultra/commit/9fbe8fe8ca90c62c259c5894bf96d02ac31209b9)。
 早期启动运行时和镜像注入工具使用固定的
-[SukiSU_KernelPatch_patch](https://github.com/ShirkNeko/SukiSU_KernelPatch_patch)
+[SukiSU_KernelPatch_patch](https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch)
 源码快照，提交为
-[`c5f0785dc7fac22a846eecc6392f34198d8e18b5`](https://github.com/ShirkNeko/SukiSU_KernelPatch_patch/commit/c5f0785dc7fac22a846eecc6392f34198d8e18b5)。
+[`72bf62025e9c72e07b64c77db0801891f1088429`](https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/commit/72bf62025e9c72e07b64c77db0801891f1088429)（0.13.9）。
 来源、许可证和本地修改记录见
 [`third_party/kernelpatch/SOURCE.json`](../third_party/kernelpatch/SOURCE.json)。
 
@@ -60,9 +60,9 @@ the SukiSU-Ultra authors.
 The audited SukiSU-Ultra interface reference is commit
 [`9fbe8fe8ca90c62c259c5894bf96d02ac31209b9`](https://github.com/SukiSU-Ultra/SukiSU-Ultra/commit/9fbe8fe8ca90c62c259c5894bf96d02ac31209b9).
 The early-boot runtime and image tools use the pinned
-[SukiSU_KernelPatch_patch](https://github.com/ShirkNeko/SukiSU_KernelPatch_patch)
+[SukiSU_KernelPatch_patch](https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch)
 snapshot at commit
-[`c5f0785dc7fac22a846eecc6392f34198d8e18b5`](https://github.com/ShirkNeko/SukiSU_KernelPatch_patch/commit/c5f0785dc7fac22a846eecc6392f34198d8e18b5).
+[`72bf62025e9c72e07b64c77db0801891f1088429`](https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/commit/72bf62025e9c72e07b64c77db0801891f1088429) (0.13.9).
 See [`third_party/kernelpatch/SOURCE.json`](../third_party/kernelpatch/SOURCE.json)
 for provenance, license data, excluded artifacts, and local hardening.
 

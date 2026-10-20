@@ -16,7 +16,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.Image
+import me.weishu.kernelsu.ui.component.passthrough.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,8 +39,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ViewSidebar
@@ -57,13 +59,12 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -127,6 +128,7 @@ internal fun SettingsSidebarScreen(
     var showDeviceTextEditor by rememberSaveable { mutableStateOf(false) }
     var modelDraft by rememberSaveable { mutableStateOf("") }
     var processorDraft by rememberSaveable { mutableStateOf("") }
+    var systemDraft by rememberSaveable { mutableStateOf("") }
     var showColorMode by rememberSaveable { mutableStateOf(false) }
     var showLogs by rememberSaveable { mutableStateOf(false) }
     var showUninstall by rememberSaveable { mutableStateOf(false) }
@@ -245,11 +247,6 @@ internal fun SettingsSidebarScreen(
                             onEditPhoto = {
                                 if (device.photo == null) choosePhoto() else showPhotoActions = true
                             },
-                            onEditText = {
-                                modelDraft = device.customModel.orEmpty()
-                                processorDraft = device.customProcessor.orEmpty()
-                                showDeviceTextEditor = true
-                            },
                         )
                     }
                     item(key = "sidebar_settings_navigation") {
@@ -270,6 +267,18 @@ internal fun SettingsSidebarScreen(
                     item(key = "sidebar_settings_shortcuts") {
                         val repository = stringResource(R.string.home_learn_kernelsu_url).trimEnd('/')
                         SidebarSettingsCard {
+                            SidebarSettingsEntry(
+                                stringResource(R.string.settings_device_text_edit),
+                                stringResource(R.string.settings_device_text_summary),
+                                Icons.Rounded.Edit,
+                                enabled = !device.loading,
+                            ) {
+                                modelDraft = device.customModel.orEmpty()
+                                processorDraft = device.customProcessor.orEmpty()
+                                systemDraft = device.customSystem.orEmpty()
+                                showDeviceTextEditor = true
+                            }
+                            HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant)
                             BoxWithConstraints(Modifier.fillMaxWidth().padding(8.dp)) {
                                 val columns = settingsShortcutColumns(maxWidth.value, LocalDensity.current.fontScale)
                                 val shortcuts = listOf(
@@ -346,12 +355,26 @@ internal fun SettingsSidebarScreen(
             onDismissRequest = { showDeviceTextEditor = false },
             title = { Text(stringResource(R.string.settings_device_text_edit)) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     OutlinedTextField(
                         value = modelDraft,
                         onValueChange = { modelDraft = it.take(MAX_DEVICE_TEXT_LENGTH) },
                         label = { Text(stringResource(R.string.settings_device_model)) },
                         placeholder = { Text(device.info.model ?: stringResource(R.string.settings_device_unknown)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = systemDraft,
+                        onValueChange = { systemDraft = it.take(MAX_DEVICE_TEXT_LENGTH) },
+                        label = { Text(stringResource(R.string.settings_device_system)) },
+                        placeholder = {
+                            Text(stringResource(R.string.settings_device_android,
+                                device.info.androidVersion ?: stringResource(R.string.settings_device_unknown)))
+                        },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -368,11 +391,18 @@ internal fun SettingsSidebarScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    TextButton(onClick = {
+                        modelDraft = ""
+                        processorDraft = ""
+                        systemDraft = ""
+                    }) {
+                        Text(stringResource(R.string.settings_device_text_reset))
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    deviceViewModel.saveCustomText(modelDraft, processorDraft)
+                    deviceViewModel.saveCustomText(model = modelDraft, processor = processorDraft, system = systemDraft)
                     showDeviceTextEditor = false
                 }, enabled = !device.loading) { Text(stringResource(R.string.settings_device_text_save)) }
             },
@@ -443,9 +473,15 @@ private fun SidebarSettingsCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun SidebarSettingsEntry(title: String, summary: String, icon: ImageVector, onClick: () -> Unit) {
+private fun SidebarSettingsEntry(
+    title: String,
+    summary: String,
+    icon: ImageVector,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
     Row(
-        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick)
+        Modifier.fillMaxWidth().clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .heightIn(min = 80.dp).padding(SidebarUiTokens.PagePadding),
         horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -459,26 +495,22 @@ private fun SidebarSettingsEntry(title: String, summary: String, icon: ImageVect
 }
 
 @Composable
-private fun SettingsDeviceCard(state: SettingsDeviceState, onEditPhoto: () -> Unit, onEditText: () -> Unit) {
+private fun SettingsDeviceCard(state: SettingsDeviceState, onEditPhoto: () -> Unit) {
     val context = LocalContext.current
     val unknown = stringResource(if (state.loading) R.string.loading else R.string.settings_device_unknown)
     SidebarSettingsCard {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    state.customModel ?: state.info.model ?: unknown,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                IconButton(onClick = onEditText, enabled = !state.loading) {
-                    Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.settings_device_text_edit))
-                }
-            }
-            Text(stringResource(R.string.settings_device_android, state.info.androidVersion ?: unknown),
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                state.customModel ?: state.info.model ?: unknown,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(state.customSystem ?: stringResource(R.string.settings_device_android, state.info.androidVersion ?: unknown),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val stack = maxWidth < 220.dp || LocalDensity.current.fontScale > 1.4f
                 val photo: @Composable (Modifier) -> Unit = { modifier ->

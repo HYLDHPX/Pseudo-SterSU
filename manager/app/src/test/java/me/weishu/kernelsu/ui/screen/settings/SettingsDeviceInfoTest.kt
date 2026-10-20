@@ -30,6 +30,12 @@ class SettingsDeviceInfoTest {
         assertEquals(80, normalizeDeviceCardText("A".repeat(100))?.length)
     }
 
+    @Test fun customSystemNameKeepsItsOwnBrandAndVersion() {
+        assertEquals("Flyme AIOS 2", normalizeDeviceCardText("  Flyme AIOS 2  "))
+        assertEquals("HyperOS 3 / Android 16", normalizeDeviceCardText("HyperOS 3 / Android 16"))
+        assertEquals("\u6211\u7684\u7cfb\u7edf 1.0", normalizeDeviceCardText("\u6211\u7684\u7cfb\u7edf\n1.0"))
+    }
+
     @Test fun shortcutGridAccountsForNarrowPanesAndLargeFonts() {
         assertEquals(4, settingsShortcutColumns(344f, 1f))
         assertEquals(4, settingsShortcutColumns(270f, 1f))

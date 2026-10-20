@@ -2,7 +2,7 @@ package me.weishu.kernelsu.ui.component
 
 import android.graphics.Bitmap
 import android.util.LruCache
-import androidx.compose.foundation.Image
+import me.weishu.kernelsu.ui.component.passthrough.Image
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.height

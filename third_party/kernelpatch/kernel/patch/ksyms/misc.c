@@ -467,8 +467,8 @@ static void _linux_fs_sym_match(const char *name, unsigned long addr)
     // kfunc_match(dentry_open, name, addr);
     kfunc_match(filp_close, name, addr);
     // kfunc_match(getname, name, addr);
-    // kfunc_match(getname_kernel, name, addr);
-    // kfunc_match(putname, name, addr);
+    kfunc_match(getname_kernel, name, addr);
+    kfunc_match(putname, name, addr);
     // kfunc_match(final_putname, name, addr);
     kfunc_match(vfs_llseek, name, addr);
     kfunc_match(iterate_dir, name, addr);
@@ -550,6 +550,7 @@ int kfunc_def(security_sid_to_context)(u32 sid, char **scontext, u32 *scontext_l
 int kfunc_def(security_sid_to_context_force)(u32 sid, char **scontext, u32 *scontext_len) = 0;
 int kfunc_def(security_sid_to_context_inval)(u32 sid, char **scontext, u32 *scontext_len) = 0;
 int kfunc_def(security_context_to_sid)(const char *scontext, u32 scontext_len, u32 *out_sid, gfp_t gfp) = 0;
+int kfunc_def(security_context_to_sid_compat)(struct selinux_state *state, const char *scontext, u32 scontext_len, u32 *out_sid, gfp_t gfp) = 0;
 int kfunc_def(security_context_str_to_sid)(const char *scontext, u32 *out_sid, gfp_t gfp) = 0;
 int kfunc_def(security_context_to_sid_default)(const char *scontext, u32 scontext_len, u32 *out_sid, u32 def_sid,
                                                gfp_t gfp_flags) = 0;
@@ -595,7 +596,7 @@ static void _linux_security_selinux_sym_match(const char *name, unsigned long ad
 {
     // kvar_match(selinux_enabled_boot, name, addr);
     // kvar_match(selinux_enabled, name, addr);
-    // kvar_match(selinux_state, name, addr);
+    kvar_match(selinux_state, name, addr);
     // kvar_match(secclass_map, name, addr);
     // kfunc_match(security_mls_enabled, name, addr);
     // kfunc_match(security_load_policy, name, addr);

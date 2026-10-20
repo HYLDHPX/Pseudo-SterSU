@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(kptools)
+project (kptools)
 
 file(GLOB_RECURSE LIB_SOURCES "lib/*.c")
 
@@ -17,6 +17,7 @@ set(SOURCES
     kpm.c
     common.c
     bootimg.c
+    x86_64.c
 )
 
 add_executable(

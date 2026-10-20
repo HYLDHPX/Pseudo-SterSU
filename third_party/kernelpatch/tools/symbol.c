@@ -167,14 +167,25 @@ void select_map_area(kallsym_t *kallsym, char *image_buf, int imglen, int32_t *m
     }
     tools_logi("select map anchor: %s, offset: 0x%08x\n", selected, addr);
 
+    // The hole must hold the whole map section (map_data + map code,
+    // currently ~0xf10 with the scratch machinery) so the map_prepare copy
+    // never spills over the NOP-synced area into untouched kernel code.
+    // start_prepare backs up and restore_map restores exactly map_max_size
+    // bytes, so every NOPed byte comes back.  MAP_HOLE_OVERRIDE exists to
+    // build a bisect variant with the legacy 0x800 hole.
+#ifdef MAP_HOLE_OVERRIDE
+    int32_t hole_size = MAP_HOLE_OVERRIDE;
+#else
+    int32_t hole_size = MAP_MAX_SIZE;
+#endif
     if (!is_gki){
         // For non-GKI kernels, we can directly use the area starting from a cold text symbol for mapping.
         *map_start = align_ceil(addr, 16);
-        *max_size = 0x800;
+        *max_size = hole_size;
         return;
     }
     *map_start = align_floor(addr, 16);
-    *max_size = 0x800;
+    *max_size = hole_size;
 
 #define NOP 0xD503201F
 #define PAC 0xd503233f
@@ -227,8 +238,11 @@ void select_map_area(kallsym_t *kallsym, char *image_buf, int imglen, int32_t *m
 int fillin_map_symbol(kallsym_t *kallsym, char *img_buf, map_symbol_t *symbol, int32_t target_is_be)
 {
     memset(symbol, 0, sizeof(*symbol));
-
-    symbol->memblock_reserve_relo = get_symbol_offset_exit(kallsym, img_buf, "memblock_reserve");
+    symbol->memblock_reserve_relo = try_get_symbol_offset_zero(kallsym, img_buf, "memblock_reserve");
+    if (!symbol->memblock_reserve_relo) {
+        symbol->memblock_reserve_relo = get_symbol_offset_exit(kallsym, img_buf, "__memblock_reserve");
+    }
+    
     symbol->memblock_free_relo = get_symbol_offset_exit(kallsym, img_buf, "memblock_free");
 
     symbol->memblock_mark_nomap_relo = get_symbol_offset_zero(kallsym, img_buf, "memblock_mark_nomap");
@@ -291,16 +305,24 @@ int fillin_patch_config(kallsym_t *kallsym, char *img_buf, int imglen, patch_con
     if (!symbol->printk) tools_loge_exit("no symbol printk");
 
     symbol->panic = get_symbol_offset_zero(kallsym, img_buf, "panic");
+    // panic exists on every kernel; without it the KP core cannot attach its
+    // bootlog dump and a patched image that misses it is almost always broken
+    if (!symbol->panic) tools_loge_exit("no symbol panic (KP core cannot hook panic, patch aborted)");
 
     symbol->rest_init = try_get_symbol_offset_zero(kallsym, img_buf, "rest_init");
     if (!symbol->rest_init) symbol->cgroup_init = try_get_symbol_offset_zero(kallsym, img_buf, "cgroup_init");
     if (!symbol->rest_init && !symbol->cgroup_init) tools_loge_exit("no symbol rest_init");
 
     symbol->kernel_init = try_get_symbol_offset_zero(kallsym, img_buf, "kernel_init");
+    if (!symbol->kernel_init) tools_logw("no symbol kernel_init (KPM event timing degraded)\n");
 
     symbol->report_cfi_failure = get_symbol_offset_zero(kallsym, img_buf, "report_cfi_failure");
     symbol->__cfi_slowpath_diag = get_symbol_offset_zero(kallsym, img_buf, "__cfi_slowpath_diag");
     symbol->__cfi_slowpath = get_symbol_offset_zero(kallsym, img_buf, "__cfi_slowpath");
+    if (!symbol->report_cfi_failure && !symbol->__cfi_slowpath_diag && !symbol->__cfi_slowpath) {
+        tools_logw("no CFI failure handler symbol (report_cfi_failure / __cfi_slowpath_diag / __cfi_slowpath)\n");
+        tools_logw("if the kernel has CONFIG_CFI_CLANG (Android 13+ GKI common), every kCFI mismatch on KP memory will panic -> random reboots; the KP core will retry resolution via kallsyms at boot\n");
+    }
 
     symbol->copy_process = try_get_symbol_offset_zero(kallsym, img_buf, "copy_process");
     if (!symbol->copy_process) symbol->cgroup_post_fork = get_symbol_offset_zero(kallsym, img_buf, "cgroup_post_fork");
@@ -312,7 +334,7 @@ int fillin_patch_config(kallsym_t *kallsym, char *img_buf, int imglen, patch_con
 
     symbol->slow_avc_audit = try_get_symbol_offset_zero(kallsym, img_buf, "slow_avc_audit");
 
-    symbol->input_handle_event = get_symbol_offset_zero(kallsym, img_buf, "input_handle_event");
+    symbol->input_handle_event = try_get_symbol_offset_zero(kallsym, img_buf, "input_handle_event");
 
     if ((is_be() ^ target_is_be)) {
         for (int64_t *pos = (int64_t *)symbol; pos <= (int64_t *)symbol; pos++) {

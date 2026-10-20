@@ -8,7 +8,7 @@ import android.text.format.DateFormat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.foundation.Image
+import me.weishu.kernelsu.ui.component.passthrough.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -50,11 +50,11 @@ import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.Text
+import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -238,7 +238,12 @@ internal fun SidebarRailLayout(
         Column(
             modifier = modifier
                 .clip(SidebarPaneShape)
-                .sidebarMaterialSurface(colors, config.material, mode, backdrop, edgeOnRight = config.side == SidebarSide.Left)
+                .sidebarMaterialSurface(
+                    colors, config.material, mode, backdrop,
+                    edgeOnRight = config.side == SidebarSide.Left,
+                    opacity = config.backgroundOpacity,
+                    showDividers = config.showDividers,
+                )
                 .windowInsetsPadding(windowInsets)
                 .padding(vertical = 12.dp)
                 .width(railWidth)
@@ -278,7 +283,7 @@ internal fun SidebarRailLayout(
                                 Spacer(Modifier.height(12.dp))
                                 SidebarHeaderWidget(config, modifier = Modifier.weight(1f).padding(horizontal = 6.dp), compact = !tablet)
                             }
-                            HorizontalDivider(thickness = 0.5.dp, color = contentColor.copy(alpha = 0.22f))
+                            if (config.showDividers) HorizontalDivider(thickness = 0.5.dp, color = contentColor.copy(alpha = 0.22f))
                             Column(
                                 modifier = Modifier.weight(1f).fillMaxWidth().selectableGroup(),
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -294,7 +299,7 @@ internal fun SidebarRailLayout(
                 }
             }
             Spacer(Modifier.height(16.dp))
-            HorizontalDivider(thickness = 0.5.dp, color = contentColor.copy(alpha = 0.22f))
+            if (config.showDividers) HorizontalDivider(thickness = 0.5.dp, color = contentColor.copy(alpha = 0.22f))
             Box(
                 modifier = Modifier.fillMaxWidth().height(76.dp),
                 contentAlignment = Alignment.Center,

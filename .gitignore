@@ -13,3 +13,5 @@ __pycache__
 .codex-*
 /release-local/
 /userspace/ksud/.lkm_image_bootstrap.o
+/website/node_modules/
+/website/docs/.vitepress/dist/

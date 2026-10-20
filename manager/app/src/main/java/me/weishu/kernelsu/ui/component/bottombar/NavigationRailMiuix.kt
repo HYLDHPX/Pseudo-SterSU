@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.weishu.kernelsu.ui.LocalMainPagerState
+import me.weishu.kernelsu.ui.theme.uiPassthroughNavigationColor
 import me.weishu.kernelsu.ui.component.CustomNavigationIconImage
 import me.weishu.kernelsu.ui.component.snow.isSnowInterfaceStyle
 import me.weishu.kernelsu.ui.component.pixel.isPixelInterfaceStyle
@@ -36,10 +37,10 @@ import me.weishu.kernelsu.ui.util.BlurredBar
 import me.weishu.kernelsu.ui.util.CustomNavigationIconState
 import me.weishu.kernelsu.ui.util.LocalCustomNavigationIcons
 import top.yukonga.miuix.kmp.basic.BadgedBox
-import top.yukonga.miuix.kmp.basic.Icon
+import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as Icon
 import top.yukonga.miuix.kmp.basic.NavigationRail
 import top.yukonga.miuix.kmp.basic.NavigationRailItem
-import top.yukonga.miuix.kmp.basic.Text
+import me.weishu.kernelsu.ui.component.passthrough.MiuixText as Text
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -52,12 +53,12 @@ fun NavigationRailMiuix(
 ) {
     val mainState = LocalMainPagerState.current
     val customIcons = LocalCustomNavigationIcons.current
-    val railColor = when {
+    val railColor = uiPassthroughNavigationColor(when {
         isPixelInterfaceStyle() -> pixelNavigationContainerColor()
         blurBackdrop != null -> Color.Transparent
         isSnowInterfaceStyle() -> seasonNavigationContainerColor()
         else -> MiuixTheme.colorScheme.surface
-    }
+    })
 
     BlurredBar(blurBackdrop, blurActive = !isPixelInterfaceStyle()) {
         if (customIcons.hasCustomization) {
@@ -108,12 +109,12 @@ private fun MiuixCustomNavigationRail(
     onSelected: (Int) -> Unit,
 ) {
     val customIcons = LocalCustomNavigationIcons.current
-    val railColor = when {
+    val railColor = uiPassthroughNavigationColor(when {
         isPixelInterfaceStyle() -> pixelNavigationContainerColor()
         blurBackdrop != null -> Color.Transparent
         isSnowInterfaceStyle() -> seasonNavigationContainerColor()
         else -> MiuixTheme.colorScheme.surface
-    }
+    })
     Column(
         modifier = modifier
             .fillMaxHeight()

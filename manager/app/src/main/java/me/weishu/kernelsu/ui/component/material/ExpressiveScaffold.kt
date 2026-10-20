@@ -29,6 +29,9 @@ import androidx.compose.ui.unit.Dp
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
 import me.weishu.kernelsu.ui.theme.SidebarUiTokens
+import me.weishu.kernelsu.ui.theme.immersivePageColor
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
+import me.weishu.kernelsu.ui.theme.immersiveScrolledTopBarColor
 
 @Composable
 fun ExpressiveScaffold(
@@ -60,9 +63,9 @@ fun ExpressiveScaffold(
         snackbarHost = snackbarHost,
         floatingActionButton = floatingActionButton,
         floatingActionButtonPosition = floatingActionButtonPosition,
-        containerColor = if (sidebar) {
+        containerColor = immersivePageColor(if (sidebar) {
             MaterialTheme.colorScheme.surface
-        } else containerColor,
+        } else containerColor),
         contentColor = contentColor,
         contentWindowInsets = contentWindowInsets,
         content = { padding ->
@@ -82,8 +85,8 @@ fun expressiveTopAppBarColors(
 ): TopAppBarColors {
     val sidebar = LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
     return TopAppBarDefaults.topAppBarColors(
-        containerColor = if (sidebar) MaterialTheme.colorScheme.surface else containerColor,
-        scrolledContainerColor = if (sidebar) MaterialTheme.colorScheme.surface else scrolledContainerColor,
+        containerColor = immersiveTopBarColor(if (sidebar) MaterialTheme.colorScheme.surface else containerColor),
+        scrolledContainerColor = immersiveScrolledTopBarColor(if (sidebar) MaterialTheme.colorScheme.surface else scrolledContainerColor),
     )
 }
 

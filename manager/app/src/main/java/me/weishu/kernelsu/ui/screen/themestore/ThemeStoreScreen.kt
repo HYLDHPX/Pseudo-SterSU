@@ -60,7 +60,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -68,7 +68,7 @@ import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
+import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -1773,7 +1773,7 @@ private fun themeStorePalette(): ThemeStorePalette {
     val colors = MaterialTheme.colorScheme
     return ThemeStorePalette(
         surface = colors.surface,
-        navigationSurface = colors.background,
+        navigationSurface = me.weishu.kernelsu.ui.theme.uiPassthroughNavigationColor(colors.background),
         text = colors.onSurface,
         mutedText = colors.onSurfaceVariant,
         accent = colors.primary,

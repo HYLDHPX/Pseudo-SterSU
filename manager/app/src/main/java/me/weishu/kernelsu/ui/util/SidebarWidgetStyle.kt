@@ -112,6 +112,8 @@ data class SidebarWidgetConfig(
     val navigationPosition: SidebarNavigationPosition = SidebarNavigationPosition.Center,
     val navigationOrder: List<String> = SIDEBAR_NAVIGATION_IDS,
     val iconOnlyNavigation: Boolean = false,
+    val showDividers: Boolean = true,
+    val backgroundOpacity: Float = 1f,
     val side: SidebarSide = SidebarSide.Left,
     val weatherApi: SidebarWeatherConfig = SidebarWeatherConfig(),
     // Retain the old switch for older versions; the explicit material takes precedence.
@@ -122,6 +124,7 @@ data class SidebarWidgetConfig(
     val homeCards: SidebarHomeCards = SidebarHomeCards(),
 ) {
     fun normalized(): SidebarWidgetConfig = copy(
+        backgroundOpacity = if (backgroundOpacity.isFinite()) backgroundOpacity.coerceIn(0f, 1f) else 1f,
         weatherLabel = weatherLabel.trim().take(MAX_WEATHER_LABEL_LENGTH),
         weatherTemperature = weatherTemperature.trim().take(MAX_WEATHER_TEMPERATURE_LENGTH),
         imageUriString = imageUriString?.trim()?.takeIf(String::isNotEmpty),
@@ -162,6 +165,8 @@ fun readSidebarWidgetConfig(context: Context): SidebarWidgetConfig {
         ),
         navigationOrder = navigationOrder.ifEmpty { SIDEBAR_NAVIGATION_IDS },
         iconOnlyNavigation = prefs.getBoolean(SIDEBAR_ICON_ONLY_NAVIGATION_KEY, false),
+        showDividers = prefs.getBoolean(SIDEBAR_SHOW_DIVIDERS_KEY, true),
+        backgroundOpacity = prefs.getFloat(SIDEBAR_BACKGROUND_OPACITY_KEY, 1f),
         side = SidebarSide.fromValue(prefs.getString(SIDEBAR_SIDE_KEY, null)),
         weatherApi = readSidebarWeatherConfig(context),
         glassEnabled = prefs.getBoolean(SIDEBAR_GLASS_ENABLED_KEY, true),
@@ -193,6 +198,8 @@ fun writeSidebarWidgetConfig(context: Context, config: SidebarWidgetConfig) {
         putString(SIDEBAR_NAVIGATION_POSITION_KEY, value.navigationPosition.value)
         putString(SIDEBAR_NAVIGATION_ORDER_KEY, value.navigationOrder.joinToString(","))
         putBoolean(SIDEBAR_ICON_ONLY_NAVIGATION_KEY, value.iconOnlyNavigation)
+        putBoolean(SIDEBAR_SHOW_DIVIDERS_KEY, value.showDividers)
+        putFloat(SIDEBAR_BACKGROUND_OPACITY_KEY, value.backgroundOpacity)
         putString(SIDEBAR_SIDE_KEY, value.side.value)
         putBoolean(SIDEBAR_GLASS_ENABLED_KEY, value.material != SidebarMaterial.Flat)
         putString(SIDEBAR_MATERIAL_KEY, value.material.value)
@@ -241,6 +248,8 @@ private const val SIDEBAR_IMAGE_SHAPE_KEY = "sidebar_widget_image_shape"
 private const val SIDEBAR_NAVIGATION_POSITION_KEY = "sidebar_widget_navigation_position"
 private const val SIDEBAR_NAVIGATION_ORDER_KEY = "sidebar_widget_navigation_order"
 private const val SIDEBAR_ICON_ONLY_NAVIGATION_KEY = "sidebar_widget_icon_only_navigation"
+internal const val SIDEBAR_SHOW_DIVIDERS_KEY = "sidebar_widget_show_dividers"
+internal const val SIDEBAR_BACKGROUND_OPACITY_KEY = "sidebar_widget_background_opacity"
 private const val SIDEBAR_SIDE_KEY = "sidebar_widget_side"
 private const val SIDEBAR_GLASS_ENABLED_KEY = "sidebar_widget_glass_enabled"
 private const val SIDEBAR_HOME_LAYOUT_KEY = "sidebar_widget_home_layout"
@@ -257,6 +266,8 @@ private val SIDEBAR_WIDGET_KEYS = setOf(
     SIDEBAR_NAVIGATION_POSITION_KEY,
     SIDEBAR_NAVIGATION_ORDER_KEY,
     SIDEBAR_ICON_ONLY_NAVIGATION_KEY,
+    SIDEBAR_SHOW_DIVIDERS_KEY,
+    SIDEBAR_BACKGROUND_OPACITY_KEY,
     SIDEBAR_SIDE_KEY,
     SIDEBAR_GLASS_ENABLED_KEY,
     SIDEBAR_MATERIAL_KEY,

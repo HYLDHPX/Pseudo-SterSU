@@ -230,14 +230,16 @@ fun Modifier.globalLiquidGlassSurface(
 fun liquidGlassMiuixCardColors(
     color: Color = MiuixTheme.colorScheme.surfaceContainer,
 ) = MiuixCardDefaults.defaultColors(
-    color = if (isLiquidGlassTheme()) Color.Transparent else color
+    color = if (isLiquidGlassTheme()) Color.Transparent else
+        me.weishu.kernelsu.ui.theme.uiPassthroughSurfaceColor(color)
 )
 
 @Composable
 fun liquidGlassMaterialCardColors(
     containerColor: Color,
 ) = MaterialCardDefaults.cardColors(
-    containerColor = if (isLiquidGlassTheme()) Color.Transparent else containerColor
+    containerColor = if (isLiquidGlassTheme()) Color.Transparent else
+        me.weishu.kernelsu.ui.theme.uiPassthroughSurfaceColor(containerColor)
 )
 
 @Composable

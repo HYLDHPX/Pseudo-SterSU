@@ -41,12 +41,10 @@ import me.weishu.kernelsu.ui.util.detectBootImageKmi
 import me.weishu.kernelsu.ui.util.getAvailablePartitions
 import me.weishu.kernelsu.ui.util.getCurrentKmi
 import me.weishu.kernelsu.ui.util.getDefaultPartition
-import me.weishu.kernelsu.ui.util.getLoadedBlockableModules
 import me.weishu.kernelsu.ui.util.getFileName
 import me.weishu.kernelsu.ui.util.getSlotSuffix
 import me.weishu.kernelsu.ui.util.getSupportedKmis
 import me.weishu.kernelsu.ui.util.isAbDevice
-import me.weishu.kernelsu.ui.util.isBlockModulesValid
 import me.weishu.kernelsu.ui.util.probeRemoteBootPartitions
 import me.weishu.kernelsu.ui.util.rootAvailable
 import top.yukonga.miuix.kmp.basic.SnackbarHostState as MiuixSnackbarHostState
@@ -82,19 +80,8 @@ fun InstallScreen() {
     var allowShell by rememberSaveable { mutableStateOf(false) }
     var enableAdb by rememberSaveable { mutableStateOf(false) }
     var forceBackup by rememberSaveable { mutableStateOf(false) }
-    var blockModulesEnabled by rememberSaveable { mutableStateOf(false) }
-    var blockModules by rememberSaveable { mutableStateOf("") }
-    var blockModulesPrefilled by rememberSaveable { mutableStateOf(false) }
-    val effectiveBlockModules = if (blockModulesEnabled) blockModules else ""
     var navigationLocked by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        if (!blockModulesPrefilled) {
-            blockModulesPrefilled = true
-            val detected = loadInstallState(emptyList<String>()) { getLoadedBlockableModules() }
-            if (detected.isNotEmpty() && blockModules.isBlank()) blockModules = detected.joinToString(",")
-        }
-    }
 
     val isOta = installMethod is InstallMethod.DirectInstallToInactiveSlot
 
@@ -230,12 +217,7 @@ fun InstallScreen() {
         }
     }
 
-    val blockModulesInvalidMessage = stringResource(R.string.install_block_modules_invalid)
     val onInstall = onInstall@{ selectedLkm: LkmSelection ->
-        if (!isBlockModulesValid(effectiveBlockModules)) {
-            showMessage(blockModulesInvalidMessage)
-            return@onInstall
-        }
         installMethod?.let { method ->
             if (!patchMode.supportsInstallMethod(method)) {
                 showMessage(nativeKpmTip)
@@ -260,7 +242,6 @@ fun InstallScreen() {
                         allowShell = allowShell,
                         enableAdb = enableAdb,
                         backup = forceBackup,
-                        blockModules = effectiveBlockModules,
                     )
                 )
                 return@let
@@ -285,7 +266,6 @@ fun InstallScreen() {
                     allowShell = allowShell,
                     enableAdb = enableAdb,
                     backup = method is InstallMethod.SelectFile && forceBackup,
-                    blockModules = effectiveBlockModules,
                 )
             )
         }
@@ -450,7 +430,6 @@ fun InstallScreen() {
         canInstall = canInstall && patchReady && patchMode.supportsInstallMethod(installMethod) &&
                 (!usesBuiltInLkm || targetKmiSource != InstallKmiSource.Detecting) &&
                 !remoteProbeInProgress &&
-                isBlockModulesValid(effectiveBlockModules) &&
                 !navigationLocked,
         patchMode = patchMode,
         targetKmi = targetKmi,
@@ -460,9 +439,6 @@ fun InstallScreen() {
         enableAdb = enableAdb,
         forceBackup = forceBackup,
         canForceBackup = installMethod is InstallMethod.SelectFile || installMethod is InstallMethod.DownloadFile,
-        blockModulesEnabled = blockModulesEnabled,
-        blockModules = blockModules,
-        blockModulesValid = isBlockModulesValid(effectiveBlockModules),
     )
     val actions = InstallScreenActions(
         onBack = dropUnlessResumed { navigator.pop() },
@@ -584,12 +560,6 @@ fun InstallScreen() {
         },
         onSelectForceBackup = {
             forceBackup = it
-        },
-        onSelectBlockModules = {
-            blockModulesEnabled = it
-        },
-        onBlockModulesChange = {
-            blockModules = it
         },
     )
 

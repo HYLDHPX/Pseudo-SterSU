@@ -81,6 +81,8 @@ import me.weishu.kernelsu.ui.component.rain.rainNavigationContainerColor
 import me.weishu.kernelsu.ui.component.rain.rainNavigationIndicator
 import me.weishu.kernelsu.ui.component.rain.rainNavigationSurface
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
+import me.weishu.kernelsu.ui.theme.LocalUiPassthroughSettings
+import me.weishu.kernelsu.ui.theme.uiPassthroughNavigationColor
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
@@ -223,17 +225,18 @@ fun FloatingBottomBar(
     }
     val accentColor = MiuixTheme.colorScheme.primary
     val surfaceContainer = MiuixTheme.colorScheme.surfaceContainer
-    val containerColor = when {
+    val passthrough = LocalUiPassthroughSettings.current
+    val containerColor = uiPassthroughNavigationColor(when {
         isLiquidGlass -> liquidGlassSurfaceColor().copy(alpha = if (isBlurEnabled) 0.48f else 0.76f)
         isRainStyle -> rainNavigationContainerColor()
         isSnowStyle -> seasonNavigationContainerColor()
         isPixelStyle -> pixelNavigationContainerColor()
         isBlurEnabled -> surfaceContainer.copy(0.4f)
         else -> surfaceContainer
-    }
+    })
 
     val activeBackdrop = if (
-        isBlurEnabled && !isPixelStyle && !isRainStyle && !isLiquidGlass
+        isBlurEnabled && !passthrough.enabled && !isPixelStyle && !isRainStyle && !isLiquidGlass
     ) {
         backdrop
     } else {
@@ -399,7 +402,7 @@ fun FloatingBottomBar(
                             onDrawSurface = { drawRect(containerColor) },
                         )
                     } else {
-                        if (isLiquidGlass) {
+                        if (isLiquidGlass && !passthrough.enabled) {
                             Modifier.globalLiquidGlassSurface(
                                 shape = pillShape,
                                 surfaceColor = liquidGlassSurfaceColor(),

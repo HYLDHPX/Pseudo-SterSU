@@ -20,8 +20,26 @@
 *.kpm
 
 kpimg
+kpimg-x86
 
 *.img
 kernel
-kernel-b
+kernel-*
+bzImage.kernel
+bzImage-*
 *.bat
+
+# build/test artifacts: binaries, compressed blobs, logs
+bzImage
+kptools
+*.gz
+*.flat
+*.log
+*.err
+
+# ad-hoc qemu/gdb debug helpers
+gdb_*.cmd
+*.sh
+*.py
+__pycache__/
+*.cpio

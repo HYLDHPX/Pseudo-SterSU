@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,13 +19,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.CustomVideoBackground
-import me.weishu.kernelsu.ui.component.CustomVideoPassthroughBackground
 import me.weishu.kernelsu.ui.component.MediaVisualLayer
 import me.weishu.kernelsu.ui.util.CustomWallpaperCrop
 import me.weishu.kernelsu.ui.util.DEFAULT_CUSTOM_VIDEO_BACKGROUND_FRAME_RATE
 import me.weishu.kernelsu.ui.util.MediaVisualSettings
 import me.weishu.kernelsu.ui.util.sanitizeCustomWallpaperOpacity
-import me.weishu.kernelsu.ui.util.sanitizeCustomWallpaperPassthroughOpacity
+import me.weishu.kernelsu.ui.util.UiPassthroughSettings
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.basic.TextButton as MiuixTextButton
@@ -41,8 +38,7 @@ fun SettingsVideoBackgroundPreviewDialog(
     opacity: Float,
     crop: CustomWallpaperCrop = CustomWallpaperCrop(),
     visualSettings: MediaVisualSettings = MediaVisualSettings(),
-    passthroughEnabled: Boolean,
-    passthroughOpacity: Float,
+    passthroughSettings: UiPassthroughSettings,
     onDismissRequest: () -> Unit,
 ) {
     if (!show) return
@@ -54,8 +50,7 @@ fun SettingsVideoBackgroundPreviewDialog(
         opacity = opacity,
         crop = crop,
         visualSettings = visualSettings,
-        passthroughEnabled = passthroughEnabled,
-        passthroughOpacity = passthroughOpacity,
+        passthroughSettings = passthroughSettings,
         onDismissRequest = onDismissRequest,
     )
 }
@@ -68,8 +63,7 @@ private fun MiuixVideoBackgroundPreviewDialog(
     opacity: Float,
     crop: CustomWallpaperCrop,
     visualSettings: MediaVisualSettings,
-    passthroughEnabled: Boolean,
-    passthroughOpacity: Float,
+    passthroughSettings: UiPassthroughSettings,
     onDismissRequest: () -> Unit,
 ) {
     OverlayDialog(
@@ -85,8 +79,7 @@ private fun MiuixVideoBackgroundPreviewDialog(
                     opacity = opacity,
                     crop = crop,
                     visualSettings = visualSettings,
-                    passthroughEnabled = passthroughEnabled,
-                    passthroughOpacity = passthroughOpacity,
+                    passthroughSettings = passthroughSettings,
                 )
                 MiuixTextButton(
                     modifier = Modifier.fillMaxWidth(),
@@ -107,8 +100,7 @@ private fun VideoPreviewFrame(
     opacity: Float,
     crop: CustomWallpaperCrop,
     visualSettings: MediaVisualSettings,
-    passthroughEnabled: Boolean,
-    passthroughOpacity: Float,
+    passthroughSettings: UiPassthroughSettings,
 ) {
     val overlayAlpha = 1f - sanitizeCustomWallpaperOpacity(opacity)
     Box(
@@ -143,45 +135,6 @@ private fun VideoPreviewFrame(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface.copy(alpha = overlayAlpha))
         )
-        Column(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(24.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.78f))
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.settings_wallpaper_preview_hint),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.20f), RoundedCornerShape(12.dp))
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_wallpaper_preview_ui_sample),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
-        if (passthroughEnabled) {
-            val passthroughAlpha = sanitizeCustomWallpaperPassthroughOpacity(passthroughOpacity)
-            CustomVideoPassthroughBackground(
-                uriString = uriString,
-                durationSeconds = durationSeconds,
-                frameRate = frameRate,
-                crop = crop,
-                visualSettings = visualSettings,
-                imageAlpha = passthroughAlpha,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        BackgroundPreviewUi(passthroughSettings)
     }
 }

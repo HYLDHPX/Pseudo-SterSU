@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="kpm_running_runtime">Running KernelPatch: %1$s</string>
+    <string name="kpm_bundled_runtime">Bundled KernelPatch: %1$s. Installing this APK does not update the boot runtime; a matching KPM-enabled boot image is required.</string>
     <string name="app_name" translatable="false">SterSU</string>
     <string name="home_title" translatable="false">SterSU</string>
     <string name="module_shortcut_copy_scheme">Copy shortcut link</string>
@@ -1082,8 +1084,6 @@
     <string name="sidebar_home_layout_material">Material</string>
     <string name="sidebar_home_layout_cards">Status cards</string>
     <string name="sidebar_home_layout_summary">Switch only the miuix (Enhanced) home page. The existing Material layout remains the default.</string>
-    <string name="sidebar_design_preview_show">Show live preview</string>
-    <string name="sidebar_design_preview_hide">Hide preview</string>
     <string name="sidebar_design_saved_hint">Changes save automatically and affect only the miuix (Enhanced) style.</string>
     <string name="sidebar_design_icons">Customize navigation icons and labels</string>
     <string name="sidebar_widget_settings_summary">A monochrome sidebar with a custom avatar, clock or weather, navigation icons and a bottom power menu. Supports either side and light or dark mode.</string>
@@ -1215,10 +1215,6 @@
     <string name="sidebar_widget_move_up">Move up</string>
     <string name="sidebar_widget_move_down">Move down</string>
     <string name="sidebar_widget_configure">Configure sidebar</string>
-    <string name="sidebar_widget_preview_material_home">Material home</string>
-    <string name="sidebar_widget_preview_status">Working</string>
-    <string name="sidebar_widget_preview_status_summary">Material content with the custom sidebar</string>
-    <string name="sidebar_widget_preview_card">Home card %1$d</string>
     <string name="interface_style_store_title">Interface styles</string>
     <string name="interface_style_store_tab">Styles</string>
     <string name="interface_style_store_summary">Download optional Four seasons, Rain, Pixel, and Frosted glass variants.</string>
@@ -1780,11 +1776,6 @@
     <string name="allow_shell_summary">Always allow adb shell to call su. Do not enable this unless absolutely necessary.</string>
     <string name="enable_adb">Force enable adb on boot</string>
     <string name="enable_adb_summary">Force enable USB debugging and disable adb authentication. Do not enable this unless absolutely necessary.</string>
-    <string name="install_block_modules">Block kernel modules (risky)</string>
-    <string name="install_block_modules_warning">Stop the listed kernel modules from loading at boot. Blocking a module the system depends on can make the device hang on the boot logo or bootloop (e.g. MediaTek mkp on some devices). Only enable this if you know the modules are safe to block on your device. To recover, flash the stock boot / init_boot image with fastboot.</string>
-    <string name="install_block_modules_list">Modules to block</string>
-    <string name="install_block_modules_summary">Comma-separated module names to stop from loading at boot, e.g. oplus_secure_guard. Leave empty to block nothing.</string>
-    <string name="install_block_modules_invalid">Module names may contain only letters, digits and underscores, each at most 64 characters.</string>
     <string name="advanced_options">Advanced Options</string>
     <string name="expand">Expand</string>
     <string name="download_channel_name">Module Downloads</string>
@@ -3480,4 +3471,27 @@
     <string name="script_param_below_min">Must be at least %d</string>
     <string name="script_param_above_max">Must be at most %d</string>
     <string name="script_param_invalid">Invalid value</string>
+    <string name="settings_page_background_store">Store</string>
+    <string name="settings_page_background_templates">App profile templates</string>
+    <string name="ui_passthrough_title">UI transparency</string>
+    <string name="ui_passthrough_expand">Adjust</string>
+    <string name="ui_passthrough_collapse">Collapse</string>
+    <string name="ui_passthrough_help" formatted="false">Only surface backgrounds become transparent. Text, icons and images stay unchanged by default. 0% is transparent; 100% is opaque. Requires a global or page wallpaper; settings are saved automatically.</string>
+    <string name="ui_passthrough_inherit">Use global transparency settings</string>
+    <string name="ui_passthrough_enable">Enable UI transparency</string>
+    <string name="ui_passthrough_readable">Readable</string>
+    <string name="ui_passthrough_soft">Soft</string>
+    <string name="ui_passthrough_clear">Clear</string>
+    <string name="ui_passthrough_surfaces">Card and list background opacity</string>
+    <string name="ui_passthrough_top_bar">Top bar background opacity</string>
+    <string name="ui_passthrough_bottom_bar">Bottom navigation background opacity</string>
+    <string name="ui_passthrough_foreground">Adjust text, icons and images separately</string>
+    <string name="ui_passthrough_foreground_help" formatted="false">Defaults are 100%. These controls do not affect the wallpaper or this editor. Text and icons retain at least 20% opacity; original disabled states remain unchanged.</string>
+    <string name="ui_passthrough_text">Text opacity</string>
+    <string name="ui_passthrough_icons">Icon opacity</string>
+    <string name="ui_passthrough_images">Image opacity</string>
+    <string name="ui_passthrough_reset">Restore readable defaults</string>
+    <string name="sidebar_show_dividers">Show sidebar dividers</string>
+    <string name="sidebar_background_opacity">Sidebar background opacity</string>
+    <string name="sidebar_background_opacity_help">Independent of page transparency and glass tint. Does not fade the avatar, widgets, navigation icons or labels.</string>
 </resources>

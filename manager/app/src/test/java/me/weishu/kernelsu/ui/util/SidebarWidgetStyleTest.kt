@@ -7,6 +7,20 @@ import org.junit.Test
 
 class SidebarWidgetStyleTest {
     @Test
+    fun sidebarBackgroundAndDividersAreIndependentOfForegroundAndMaterial() {
+        val original = SidebarWidgetConfig()
+        assertEquals(1f, original.backgroundOpacity, 0f)
+        assertTrue(original.showDividers)
+        val clear = original.copy(backgroundOpacity = 0f, showDividers = false).normalized()
+        assertEquals(original, clear.copy(backgroundOpacity = 1f, showDividers = true))
+        assertTrue(isSidebarWidgetPreference(SIDEBAR_BACKGROUND_OPACITY_KEY))
+        assertTrue(isSidebarWidgetPreference(SIDEBAR_SHOW_DIVIDERS_KEY))
+        assertEquals(1f, original.copy(backgroundOpacity = Float.NaN).normalized().backgroundOpacity, 0f)
+        assertEquals(1f, original.copy(backgroundOpacity = 2f).normalized().backgroundOpacity, 0f)
+        assertEquals(0f, original.copy(backgroundOpacity = -1f).normalized().backgroundOpacity, 0f)
+    }
+
+    @Test
     fun legacyImageWidgetBecomesClockWhileItsArtworkRemainsAvailableAsAvatar() {
         val config = SidebarWidgetConfig(
             widgetType = SidebarWidgetType.fromValue("image"),

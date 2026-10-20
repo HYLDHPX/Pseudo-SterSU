@@ -18,12 +18,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
+import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
+import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,6 +47,7 @@ import me.weishu.kernelsu.ui.component.dialog.rememberLoadingDialog
 import me.weishu.kernelsu.ui.util.getBugreportFile
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import top.yukonga.miuix.kmp.nav.gesture.WindowNavigationEventBridge
 
 private tailrec fun Context.findComponentActivity(): ComponentActivity? {
     return when (this) {
@@ -104,6 +105,7 @@ fun SendLogBottomSheet(
         onDismissRequest = { dismiss() },
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         content = {
+            WindowNavigationEventBridge()
             Row(
                 modifier = Modifier
                     .padding(top = 16.dp, bottom = 32.dp)

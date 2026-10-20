@@ -36,7 +36,7 @@ import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -44,7 +44,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -65,6 +65,7 @@ import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
 import me.weishu.kernelsu.ui.theme.SidebarUiTokens
 import me.weishu.kernelsu.ui.theme.immersivePageColor
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.theme.immersiveScrolledTopBarColor
 
 object ApkeUiTokens {
@@ -185,8 +186,8 @@ fun ApkeSecondaryScaffold(
                             },
                             actions = actions,
                             colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = if (sidebar) pageColor else Color.Transparent,
-                                scrolledContainerColor = if (sidebar) pageColor else immersiveScrolledTopBarColor(
+                                containerColor = immersiveTopBarColor(if (sidebar) pageColor else Color.Transparent),
+                                scrolledContainerColor = immersiveScrolledTopBarColor(
                                     MaterialTheme.colorScheme.surface,
                                 ),
                             ),

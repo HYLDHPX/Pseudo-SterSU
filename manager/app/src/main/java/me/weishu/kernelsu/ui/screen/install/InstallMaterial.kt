@@ -20,12 +20,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
+import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
+import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
@@ -210,25 +209,6 @@ internal fun InstallScreenMaterial(
                             summary = stringResource(id = R.string.enable_adb_summary),
                             checked = uiState.enableAdb,
                             onCheckedChange = actions.onSelectEnableAdb,
-                        )
-                    }
-                    item(visible = uiState.advancedOptionsShown) {
-                        SegmentedCheckboxItem(
-                            title = stringResource(R.string.install_block_modules),
-                            summary = stringResource(R.string.install_block_modules_warning),
-                            checked = uiState.blockModulesEnabled,
-                            onCheckedChange = actions.onSelectBlockModules,
-                        )
-                    }
-                    item(visible = uiState.advancedOptionsShown && uiState.blockModulesEnabled) {
-                        OutlinedTextField(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                            value = uiState.blockModules,
-                            onValueChange = actions.onBlockModulesChange,
-                            label = { Text(stringResource(R.string.install_block_modules_list)) },
-                            supportingText = { Text(stringResource(if (uiState.blockModulesValid) R.string.install_block_modules_summary else R.string.install_block_modules_invalid)) },
-                            isError = !uiState.blockModulesValid,
-                            singleLine = true,
                         )
                     }
             }

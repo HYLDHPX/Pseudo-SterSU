@@ -1245,8 +1245,16 @@ fn load_manifest_now(
             let path = path
                 .to_str()
                 .context("Native KPM path is not valid UTF-8")?;
-            ksucalls::native_kpm_load(path, &manifest.args)
-                .with_context(|| format!("load Native GKI KPM '{id}'"))?;
+            ksucalls::native_kpm_load(path, &manifest.args).map_err(|error| {
+                let hint = crate::kpm_abi::native_load_failure_hint(
+                    error.raw_os_error(),
+                    Path::new(path).is_file(),
+                );
+                let runtime = ksucalls::native_kpm_probe().unwrap_or_else(|_| "unknown".into());
+                anyhow::Error::new(error).context(format!(
+                    "load Native GKI KPM '{id}' (running KernelPatch {runtime}): {hint}"
+                ))
+            })?;
             Ok(KpmRuntimeInfo {
                 name: manifest.metadata.name.clone(),
                 version: manifest.metadata.version.clone(),
@@ -1817,6 +1825,11 @@ pub fn print_caps() {
             } else {
                 ""
             };
+            let runtime_version = if loader_ready {
+                ksucalls::native_kpm_probe().ok()
+            } else {
+                None
+            };
             println!(
                 "{}",
                 json!({
@@ -1830,6 +1843,9 @@ pub fn print_caps() {
                     "kernelSupported": loader_ready,
                     "loaderReady": loader_ready,
                     "probeError": probe_error,
+                    "runtimeVersion": runtime_version,
+                    "bundledRuntimeVersion": crate::assets::get_asset_data("kpimg")
+                        .ok().and_then(|image| crate::kpm_abi::kpimg_version(&image)),
                     "policyEnabled": policy_enabled,
                     "lateLoad": late_load,
                     "supported": loader_ready && policy_enabled && !late_load,

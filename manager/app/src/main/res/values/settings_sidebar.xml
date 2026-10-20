@@ -12,7 +12,10 @@
     <string name="settings_device_processor">Processor</string>
     <string name="settings_device_memory">RAM</string>
     <string name="settings_device_manager">Manager version</string>
-    <string name="settings_device_text_edit">Edit device text</string>
+    <string name="settings_device_text_edit">Customize device info</string>
+    <string name="settings_device_text_summary">Device model, system and processor names</string>
+    <string name="settings_device_system">System name</string>
+    <string name="settings_device_text_reset">Use detected values</string>
     <string name="settings_device_text_hint">Leave a field empty to use the detected value. Changes affect this card only.</string>
     <string name="settings_device_text_save">Save</string>
     <string name="settings_device_photo">Device image</string>

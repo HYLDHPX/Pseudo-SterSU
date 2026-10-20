@@ -689,12 +689,7 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.LauncherIcon> { LauncherIconScreen() }
                                 entry<Route.NavigationIcons> { NavigationIconScreen() }
                                 entry<Route.SidebarWidgetSettings> {
-                                    SidebarWidgetSettingsScreen(
-                                        destinations = mainDestinations(
-                                            mainPagerState.kpmActive,
-                                            uiState.stealthModeEnabled,
-                                        ),
-                                    )
+                                    SidebarWidgetSettingsScreen()
                                 }
                                 entry<Route.Backgrounds> { BackgroundSettingsScreen() }
                                 entry<Route.SoundEffects> { SoundEffectsScreen() }
@@ -857,6 +852,16 @@ class MainActivity : ComponentActivity() {
                         if (uiState.stealthModeEnabled) MainDestination.Home else mainPagerState.destinationForPage(),
                         currentRoute,
                     )
+                    val passthroughTarget = customPageBackgroundTarget(currentRoute) ?: when (
+                        if (uiState.stealthModeEnabled) MainDestination.Home else mainPagerState.destinationForPage()
+                    ) {
+                        MainDestination.Home -> CustomPageBackgroundTarget.Home
+                        MainDestination.SuperUser -> CustomPageBackgroundTarget.Superuser
+                        MainDestination.Module -> CustomPageBackgroundTarget.Module
+                        MainDestination.Settings -> CustomPageBackgroundTarget.Settings
+                        MainDestination.Kpm -> CustomPageBackgroundTarget.Kpm
+                    }
+                    val uiPassthrough = me.weishu.kernelsu.ui.util.rememberUiPassthroughScope(passthroughTarget).settings
                     val pagerBackgrounds = if (
                         uiState.backgroundScrollFollowEnabled && currentRoute.hostsMainPager()
                     ) {
@@ -927,6 +932,7 @@ class MainActivity : ComponentActivity() {
                             visualSettings = effectiveBackground.visualSettings,
                             passthroughEnabled = uiState.customWallpaperPassthroughEnabled,
                             passthroughOpacity = uiState.customWallpaperPassthroughOpacity,
+                            uiPassthroughSettings = uiPassthrough,
                             backgroundScrollFollowState = backgroundScrollFollowState,
                             pagerBackgrounds = pagerBackgrounds,
                             horizontalPagerPosition = {
@@ -1154,7 +1160,9 @@ internal fun customPageBackgroundTarget(route: Route?): CustomPageBackgroundTarg
     return when (route) {
         Route.Install -> CustomPageBackgroundTarget.Install
         Route.Kpm -> CustomPageBackgroundTarget.Kpm
-        else -> null
+        Route.AppProfileTemplate, is Route.TemplateEditor -> CustomPageBackgroundTarget.Templates
+        Route.About -> CustomPageBackgroundTarget.About
+        else -> if (route.isStoreRoute()) CustomPageBackgroundTarget.Store else null
     }
 }
 

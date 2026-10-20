@@ -8,7 +8,7 @@ import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,7 +70,6 @@ sealed class FlashIt : Parcelable {
         val allowShell: Boolean = false,
         val enableAdb: Boolean = false,
         val backup: Boolean = false,
-        val blockModules: String = "",
     ) : FlashIt()
 
     @Parcelize
@@ -82,7 +81,6 @@ sealed class FlashIt : Parcelable {
         val allowShell: Boolean = false,
         val enableAdb: Boolean = false,
         val backup: Boolean = false,
-        val blockModules: String = "",
     ) : FlashIt()
 
     @Parcelize
@@ -142,7 +140,6 @@ suspend fun flashIt(
             flashIt.allowShell,
             flashIt.enableAdb,
             flashIt.backup,
-            flashIt.blockModules,
             onStdout,
             onStderr
         )
@@ -155,7 +152,6 @@ suspend fun flashIt(
             allowShell = flashIt.allowShell,
             enableAdb = flashIt.enableAdb,
             forceBackup = flashIt.backup,
-            blockModules = flashIt.blockModules,
             onStdout = onStdout,
             onStderr = onStderr,
         )

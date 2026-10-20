@@ -91,7 +91,7 @@ implementation, not as an official SukiSU-Ultra release. The interface
 reference is pinned to SukiSU-Ultra commit
 `9fbe8fe8ca90c62c259c5894bf96d02ac31209b9`; the early-boot KernelPatch/KPIMG
 source snapshot is pinned separately to
-`c5f0785dc7fac22a846eecc6392f34198d8e18b5`. The URLs, license data, and exact
+`72bf62025e9c72e07b64c77db0801891f1088429` (0.13.9). The URLs, license data, and exact
 scope are recorded in `docs/SUKISU_KPM_NOTICE.md` and
 `third_party/kernelpatch/SOURCE.json`.
 

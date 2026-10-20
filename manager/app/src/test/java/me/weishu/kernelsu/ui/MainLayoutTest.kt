@@ -386,4 +386,14 @@ class MainLayoutTest {
         assertEquals(CustomPageBackgroundTarget.Install, customPageBackgroundTarget(Route.Install))
         assertNull(customPageBackgroundTarget(Route.Settings))
     }
+
+    @Test
+    fun storeTemplatesAndAboutHaveIndependentBackgroundTargets() {
+        listOf(Route.ThemeStore, Route.ThemeStoreMy, Route.ThemeStoreCustomize,
+            Route.ThemeStoreLibrary).forEach { route ->
+            assertEquals(CustomPageBackgroundTarget.Store, customPageBackgroundTarget(route))
+        }
+        assertEquals(CustomPageBackgroundTarget.Templates, customPageBackgroundTarget(Route.AppProfileTemplate))
+        assertEquals(CustomPageBackgroundTarget.About, customPageBackgroundTarget(Route.About))
+    }
 }

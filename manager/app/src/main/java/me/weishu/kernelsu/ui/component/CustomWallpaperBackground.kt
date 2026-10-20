@@ -44,6 +44,8 @@ import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.ui.component.liquid.isLiquidGlassTheme
 import me.weishu.kernelsu.ui.component.liquid.liquidGlassBackdropColor
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
+import me.weishu.kernelsu.ui.theme.UiPassthroughTheme
+import me.weishu.kernelsu.ui.util.UiPassthroughSettings
 import me.weishu.kernelsu.ui.util.CustomBackgroundState
 import me.weishu.kernelsu.ui.util.CustomWallpaperCrop
 import me.weishu.kernelsu.ui.util.CustomPageBackgroundSet
@@ -207,6 +209,7 @@ fun CustomWallpaperRoot(
     visualSettings: MediaVisualSettings = MediaVisualSettings(),
     passthroughEnabled: Boolean = false,
     passthroughOpacity: Float = DEFAULT_CUSTOM_WALLPAPER_PASSTHROUGH_OPACITY,
+    uiPassthroughSettings: UiPassthroughSettings? = null,
     backgroundScrollFollowState: BackgroundScrollFollowState? = null,
     pagerBackgrounds: List<CustomBackgroundState> = emptyList(),
     horizontalPagerPosition: (() -> Float)? = null,
@@ -246,40 +249,14 @@ fun CustomWallpaperRoot(
                 )
             }
         }
-        content()
-        if (passthroughEnabled) {
-            val passthroughAlpha = sanitizeCustomWallpaperPassthroughOpacity(passthroughOpacity)
-            when {
-                usePagerBackgrounds -> PagerAnchoredBackgroundLayers(
-                    backgrounds = pagerBackgrounds,
-                    pagerPosition = horizontalPagerPosition,
-                    isLiquidGlass = isLiquidGlass,
-                    imageAlpha = passthroughAlpha,
-                    drawOverlay = false,
-                    modifier = backgroundMotionModifier,
-                )
-
-                !videoUriString.isNullOrBlank() -> CustomVideoPassthroughBackground(
-                    uriString = videoUriString,
-                    durationSeconds = videoDurationSeconds,
-                    frameRate = videoFrameRate,
-                    crop = crop,
-                    visualSettings = visualSettings,
-                    imageAlpha = passthroughAlpha,
-                    modifier = backgroundMotionModifier,
-                )
-
-                !uriString.isNullOrBlank() -> CustomBackgroundMedia(
-                    imageUriString = uriString,
-                    videoUriString = null,
-                    opacity = 1f,
-                    crop = crop,
-                    visualSettings = visualSettings,
-                    imageAlpha = passthroughAlpha,
-                    drawOverlay = false,
-                    modifier = backgroundMotionModifier,
-                )
-            }
+        val settings = uiPassthroughSettings ?: UiPassthroughSettings(
+            enabled = passthroughEnabled,
+            surfaceOpacity = 1f - sanitizeCustomWallpaperPassthroughOpacity(passthroughOpacity),
+        )
+        val hasMedia = !uriString.isNullOrBlank() || !videoUriString.isNullOrBlank() ||
+            pagerBackgrounds.any { it.hasMedia }
+        UiPassthroughTheme(settings.copy(enabled = settings.enabled && hasMedia)) {
+            content()
         }
     }
 }
@@ -573,34 +550,6 @@ fun rememberCustomImageBitmap(
     crop: CustomWallpaperCrop = CustomWallpaperCrop(),
 ) = rememberCustomImageAndroidBitmap(uriString, maxSide, crop).let { bitmap ->
     remember(bitmap) { bitmap?.asImageBitmap() }
-}
-
-@Composable
-fun CustomVideoPassthroughBackground(
-    uriString: String,
-    durationSeconds: Int = DEFAULT_CUSTOM_VIDEO_BACKGROUND_DURATION_SECONDS,
-    frameRate: Int = DEFAULT_CUSTOM_VIDEO_BACKGROUND_FRAME_RATE,
-    crop: CustomWallpaperCrop = FULL_CUSTOM_WALLPAPER_CROP,
-    visualSettings: MediaVisualSettings = MediaVisualSettings(),
-    imageAlpha: Float,
-    modifier: Modifier = Modifier,
-) {
-    if (uriString.isBlank() || imageAlpha <= 0f) return
-
-    MediaVisualLayer(
-        settings = visualSettings.copy(opacity = visualSettings.opacity * imageAlpha),
-        modifier = modifier.fillMaxSize(),
-    ) {
-        CustomVideoBackground(
-            uriString = uriString,
-            durationSeconds = durationSeconds,
-            frameRate = frameRate,
-            crop = crop,
-            imageAlpha = 1f,
-            drawOverlay = false,
-            modifier = Modifier.fillMaxSize(),
-        )
-    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

@@ -30,14 +30,14 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
+import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -64,12 +64,16 @@ import androidx.compose.ui.window.DialogProperties
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.theme.LocalImmersiveBackgroundActive
+import me.weishu.kernelsu.ui.theme.LocalUiPassthroughSettings
+import me.weishu.kernelsu.ui.theme.withUiPassthrough
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 
 /** Shared store chrome: app typography and accent, readable neutral surfaces in every UI mode. */
 @Composable
 fun StoreTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = storeColorScheme(isInDarkTheme(), MaterialTheme.colorScheme.primary),
+        colorScheme = storeColorScheme(isInDarkTheme(), MaterialTheme.colorScheme.primary)
+            .withUiPassthrough(LocalUiPassthroughSettings.current),
         shapes = Shapes(
             extraSmall = RoundedCornerShape(6.dp),
             small = RoundedCornerShape(8.dp),
@@ -154,11 +158,11 @@ fun StoreScaffold(
                     },
                     actions = actions,
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = if (immersiveBackgroundActive) {
+                        containerColor = immersiveTopBarColor(if (immersiveBackgroundActive) {
                             Color.Transparent
                         } else {
                             MaterialTheme.colorScheme.background
-                        },
+                        }),
                     ),
                 )
             },

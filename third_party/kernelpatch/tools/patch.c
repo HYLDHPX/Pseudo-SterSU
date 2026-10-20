@@ -13,7 +13,7 @@
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdint.h>
+#include <stddef.h>
 
 #include "kallsym.h"
 #include "bootimg.h"
@@ -25,6 +25,7 @@
 #include "preset.h"
 #include "symbol.h"
 #include "kpm.h"
+#include "x86_64.h"
 #include "lib/sha/sha256.h"
 
 void read_kernel_file(const char *path, kernel_file_t *kernel_file)
@@ -122,9 +123,114 @@ const char *extra_type_str(extra_item_type extra_type)
         return EXTRA_TYPE_RAW_STR;
     case EXTRA_TYPE_ANDROID_RC:
         return EXTRA_TYPE_ANDROID_RC_STR;
+    case EXTRA_TYPE_KCONFIG_LEGACY:
+        return EXTRA_TYPE_KCONFIG_LEGACY_STR;
     default:
         return EXTRA_TYPE_NONE_STR;
     }
+}
+
+static bool header_backup_has_valid_primary_entry(const uint8_t *header_backup)
+{
+    uint32_t primary_entry = u32le(*(const uint32_t *)header_backup);
+    if ((primary_entry & 0xFC000000) == 0x14000000) return true;
+
+    if (!memcmp(header_backup, "MZ", 2)) {
+        primary_entry = u32le(*(const uint32_t *)(header_backup + 4));
+        if ((primary_entry & 0xFC000000) == 0x14000000) return true;
+    }
+
+    return false;
+}
+
+static uint32_t preset_version_num(const preset_t *preset)
+{
+    version_t ver = preset->header.kp_version;
+    return (ver.major << 16) + (ver.minor << 8) + ver.patch;
+}
+
+static void push_header_backup_candidate(size_t *candidates, int *candidate_num, size_t candidate)
+{
+    for (int i = 0; i < *candidate_num; i++) {
+        if (candidates[i] == candidate) return;
+    }
+    candidates[(*candidate_num)++] = candidate;
+}
+
+static const uint8_t *preset_header_backup(const preset_t *preset)
+{
+    const uint8_t *setup = (const uint8_t *)&preset->setup;
+    size_t candidates[4];
+    int candidate_num = 0;
+    size_t current_header_backup_offset = offsetof(setup_preset_t, header_backup);
+
+    uint32_t ver_num = preset_version_num(preset);
+    if (ver_num <= VERSION(0, 13, 1)) {
+        push_header_backup_candidate(candidates, &candidate_num, current_header_backup_offset - 16);
+        push_header_backup_candidate(candidates, &candidate_num, current_header_backup_offset);
+    } else {
+        push_header_backup_candidate(candidates, &candidate_num, current_header_backup_offset);
+        push_header_backup_candidate(candidates, &candidate_num, current_header_backup_offset - 16);
+    }
+
+    push_header_backup_candidate(candidates, &candidate_num, current_header_backup_offset - 8);
+
+    for (int i = 0; i < candidate_num; i++) {
+        const uint8_t *header_backup = setup + candidates[i];
+        if (header_backup_has_valid_primary_entry(header_backup)) return header_backup;
+    }
+
+    return setup + candidates[0];
+}
+
+static preset_t *find_patched_preset(const char *kimg, int kimg_len, int32_t *saved_kimg_len, int *align_kimg_len)
+{
+    const char *search_ptr = kimg;
+    int search_len = kimg_len;
+
+    while (search_len > 0) {
+        preset_t *candidate = get_preset(search_ptr, search_len);
+        if (!candidate) break;
+
+        int32_t candidate_saved_kimg_len = (int32_t)u64le(candidate->setup.kimg_size);
+        int candidate_align_kimg_len = (int)((const char *)candidate - kimg);
+        const uint8_t *header_backup = preset_header_backup(candidate);
+
+        if (candidate_align_kimg_len == (int)align_ceil(candidate_saved_kimg_len, SZ_4K) &&
+            header_backup_has_valid_primary_entry(header_backup)) {
+            if (saved_kimg_len) *saved_kimg_len = candidate_saved_kimg_len;
+            if (align_kimg_len) *align_kimg_len = candidate_align_kimg_len;
+            return candidate;
+        }
+
+        tools_logw("found magic string at 0x%x but saved kernel image size/header backup mismatch, ignoring\n",
+                   candidate_align_kimg_len);
+
+        search_ptr = (const char *)candidate + 1;
+        search_len = kimg_len - (int)(search_ptr - kimg);
+    }
+
+    return NULL;
+}
+
+static uint32_t extra_item_header_version(const patch_extra_item_t *item)
+{
+    return PATCH_EXTRA_FLAGS_GET_HEADER_VERSION(item->flags);
+}
+
+static void sanitize_legacy_extra_item(patch_extra_item_t *item)
+{
+    if (extra_item_header_version(item) == PATCH_EXTRA_HEADER_VERSION_LEGACY && item->flags) {
+        tools_logw("legacy extra item %s has dirty flags 0x%x, clearing for compatibility\n", item->name,
+                   (uint32_t)item->flags);
+        item->flags = 0;
+    }
+}
+
+static bool is_legacy_kconfig_extra(const patch_extra_item_t *item)
+{
+    return extra_item_header_version(item) == PATCH_EXTRA_HEADER_VERSION_LEGACY &&
+           item->type == EXTRA_TYPE_KCONFIG_LEGACY && !strcmp(item->name, EXTRA_TYPE_KCONFIG_LEGACY_STR);
 }
 
 static char *bytes_to_hexstr(const unsigned char *data, int len)
@@ -139,6 +245,13 @@ static char *bytes_to_hexstr(const unsigned char *data, int len)
 
 #define MAX_COMPILE_TIME_LEN 24
 
+static bool show_secrets;
+
+void patch_set_show_secrets(bool enabled)
+{
+    show_secrets = enabled;
+}
+
 void print_preset_info(preset_t *preset)
 {
     setup_header_t *header = &preset->header;
@@ -147,6 +260,7 @@ void print_preset_info(preset_t *preset)
     uint32_t ver_num = (ver.major << 16) + (ver.minor << 8) + ver.patch;
     bool is_android = header->config_flags & CONFIG_ANDROID;
     bool is_debug = header->config_flags & CONFIG_DEBUG;
+    bool is_x86_64 = header->config_flags & CONFIG_FLAG_X86_64;
 
     char compile_time_str[MAX_COMPILE_TIME_LEN];
     snprintf(compile_time_str, sizeof(compile_time_str), "%s %s", __TIME__, __DATE__);
@@ -155,12 +269,14 @@ void print_preset_info(preset_t *preset)
     fprintf(stdout, "version=0x%x\n", ver_num);
     fprintf(stdout, "compile_time=%s\n", compile_time_str);
     fprintf(stdout, "config=%s,%s\n", is_android ? "android" : "linux", is_debug ? "debug" : "release");
-    fprintf(stdout, "superkey=%s\n", setup->superkey);
+    fprintf(stdout, "arch=%s\n", is_x86_64 ? "x86_64" : "arm64");
+    fprintf(stdout, "superkey=%.*s\n", SUPER_KEY_LEN,
+            show_secrets ? (const char *)setup->superkey : "<redacted>");
 
     // todo: remove compat version
     if (ver_num > 0xa04) {
         char *hexstr = bytes_to_hexstr(setup->root_superkey, ROOT_SUPER_KEY_HASH_LEN);
-        fprintf(stdout, "root_superkey=%s\n", hexstr);
+        fprintf(stdout, "root_superkey=%s\n", show_secrets ? hexstr : "<redacted>");
         free(hexstr);
     }
 
@@ -205,6 +321,16 @@ int parse_image_patch_info(const char *kimg, int kimg_len, patched_kimg_t *pimg)
     pimg->kimg = kimg;
     pimg->kimg_len = kimg_len;
 
+    preset_t *old_preset = NULL;
+    int32_t saved_kimg_len = 0;
+    int align_kimg_len = 0;
+
+    old_preset = find_patched_preset(kimg, kimg_len, &saved_kimg_len, &align_kimg_len);
+    if (old_preset) {
+        tools_logi("restore header backup before parsing patched kernel image\n");
+        memcpy((char *)kimg, preset_header_backup(old_preset), HDR_BACKUP_SIZE);
+    }
+
     // kernel image infomation
     kernel_info_t *kinfo = &pimg->kinfo;
     if (get_kernel_info(kinfo, kimg, kimg_len)) tools_loge_exit("get_kernel_info error\n");
@@ -222,32 +348,11 @@ int parse_image_patch_info(const char *kimg, int kimg_len, patched_kimg_t *pimg)
     }
     if (!pimg->banner) tools_loge_exit("can't find linux banner\n");
 
-    // patched or new
-    preset_t *old_preset = NULL;
-    const char *search_ptr = kimg;
-    int search_len = kimg_len;
-    int32_t saved_kimg_len = 0;
-    int align_kimg_len = 0;
-
-    while (search_len > 0) {
-        old_preset = get_preset(search_ptr, search_len);
-        if (!old_preset) break;
-
-        saved_kimg_len = old_preset->setup.kimg_size;
-        if (is_be() ^ kinfo->is_be) saved_kimg_len = i32swp(saved_kimg_len);
-
-        align_kimg_len = (char *)old_preset - kimg;
-        if (align_kimg_len == (int)align_ceil(saved_kimg_len, SZ_4K)) {
-            break;
+    if (!old_preset) {
+        old_preset = find_patched_preset(kimg, kimg_len, &saved_kimg_len, &align_kimg_len);
+        if (old_preset && (is_be() ^ kinfo->is_be)) {
+            saved_kimg_len = i32swp(saved_kimg_len);
         }
-
-        tools_logw("found magic string at 0x%x but saved kernel image size mismatch, ignoring (false positive?)\n",
-                   align_kimg_len);
-
-        // Search next
-        search_ptr = (char *)old_preset + 1;
-        search_len = kimg_len - (search_ptr - kimg);
-        old_preset = NULL;
     }
 
     pimg->preset = old_preset;
@@ -261,7 +366,7 @@ int parse_image_patch_info(const char *kimg, int kimg_len, patched_kimg_t *pimg)
     tools_logi("patched kernel image ...\n");
     pimg->ori_kimg_len = saved_kimg_len;
 
-    memcpy((char *)kimg, old_preset->setup.header_backup, sizeof(old_preset->setup.header_backup));
+    memcpy((char *)kimg, preset_header_backup(old_preset), HDR_BACKUP_SIZE);
 
     // extra
     int extra_offset = align_kimg_len + old_preset->setup.kpimg_size;
@@ -276,6 +381,15 @@ int parse_image_patch_info(const char *kimg, int kimg_len, patched_kimg_t *pimg)
         patch_extra_item_t *item = (patch_extra_item_t *)item_pos;
         if (strcmp(EXTRA_HDR_MAGIC, item->magic)) break;
         if (item->type == EXTRA_TYPE_NONE) break;
+        sanitize_legacy_extra_item(item);
+        if (is_legacy_kconfig_extra(item)) {
+            tools_logw("skip legacy embedded kconfig extra item during upgrade compatibility scan\n");
+            item_pos += sizeof(patch_extra_item_t);
+            item_pos += item->args_size;
+            item_pos += item->con_size;
+            continue;
+        }
+        if (pimg->embed_item_num >= EXTRA_ITEM_MAX_NUM) tools_loge_exit("too many embedded extra items\n");
         pimg->embed_item[pimg->embed_item_num++] = item;
         item_pos += sizeof(patch_extra_item_t);
         item_pos += item->args_size;
@@ -326,6 +440,7 @@ int print_image_patch_info(patched_kimg_t *pimg)
             fprintf(stdout, "args_size=0x%x\n", item->args_size);
             fprintf(stdout, "args=%s\n", item->args_size > 0 ? (char *)item + sizeof(*item) : "");
             fprintf(stdout, "con_size=0x%x\n", item->con_size);
+            fprintf(stdout, "flags=0x%x\n", item->flags);
 
             if (item->type == EXTRA_TYPE_KPM) {
                 kpm_info_t kpm_info = { 0 };
@@ -425,19 +540,91 @@ static void require_native_kpm_abi(kallsym_t *symbols, char *image, int image_si
     tools_logi("Native GKI KPM ABI verified\n");
 }
 
-int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *out_path, const char *superkey,
-                     bool root_key, const char **additional, extra_config_t *extra_configs, int extra_config_num)
+static int patch_update_x86(const char *kimg_path, const char *kpimg_path, const char *out_path,
+                            const char *superkey, bool root_key, const char **additional,
+                            int extra_config_num)
 {
-    set_log_enable(true);
+    if (extra_config_num) {
+        tools_loge("x86 kpimg extras are not supported yet\n");
+        return -1;
+    }
+    if (additional && additional[0]) {
+        tools_loge("x86 kpimg additional properties are not supported yet\n");
+        return -1;
+    }
 
+    x86_bzimage_t image;
+    if (load_x86_bzimage(kimg_path, &image)) {
+        tools_loge("load x86 bzImage failed\n");
+        return -1;
+    }
+
+    char *kpimg = NULL;
+    int kpimg_len = 0;
+    read_file(kpimg_path, &kpimg, &kpimg_len);
+    if (kpimg_len < (int)sizeof(preset_t)) {
+        tools_loge("x86 kpimg is too small\n");
+        free(kpimg);
+        free_x86_bzimage(&image);
+        return -1;
+    }
+
+    preset_t *preset = (preset_t *)kpimg;
+    char magic[MAGIC_LEN] = KP_MAGIC;
+    if (memcmp(preset->header.magic, magic, MAGIC_LEN) ||
+        !(preset->header.config_flags & CONFIG_FLAG_X86_64)) {
+        tools_loge("kpimg is not an x86_64 payload\n");
+        free(kpimg);
+        free_x86_bzimage(&image);
+        return -1;
+    }
+
+    setup_preset_t *setup = &preset->setup;
+    memset(setup, 0, sizeof(*setup));
+    kallsym_t kallsym = { 0 };
+    int kver = 0;
+    if (!find_linux_banner(&kallsym, image.flat, image.flat_size, &kver)) {
+        setup->kernel_version.major = kallsym.version.major;
+        setup->kernel_version.minor = kallsym.version.minor;
+        setup->kernel_version.patch = kallsym.version.patch;
+    }
+
+    if (!root_key) {
+        strncpy((char *)setup->superkey, superkey, SUPER_KEY_LEN - 1);
+    } else if (superkey && superkey[0]) {
+        BYTE digest[SHA256_BLOCK_SIZE];
+        SHA256_CTX ctx;
+        sha256_init(&ctx);
+        sha256_update(&ctx, (const BYTE *)superkey, strnlen(superkey, SUPER_KEY_LEN));
+        sha256_final(&ctx, digest);
+        memcpy(setup->root_superkey, digest, ROOT_SUPER_KEY_HASH_LEN);
+    }
+
+    int rc = inject_x86_kpimg(&image, kpimg, kpimg_len);
+    if (!rc) rc = write_x86_bzimage(&image, out_path);
+    if (!rc) tools_logi("x86 patch done: %s\n", out_path);
+
+    free(kpimg);
+    free_x86_bzimage(&image);
+    return rc;
+}
+
+int patch_update_img_buf(const char *kimg, int kimg_len, const char *kpimg_path, const char *superkey,
+                         bool root_key, const char **additional, extra_config_t *extra_configs,
+                         int extra_config_num, char **out_kimg, int *out_kimg_len)
+{
     if (!kpimg_path) tools_loge_exit("empty kpimg\n");
-    if (!out_path) tools_loge_exit("empty out image path\n");
     if (!superkey && !root_key) tools_loge_exit("empty superkey\n");
+    if (!out_kimg || !out_kimg_len) tools_loge_exit("empty out kernel buffer\n");
+    *out_kimg = NULL;
+    *out_kimg_len = 0;
 
     patched_kimg_t pimg = { 0 };
-    kernel_file_t kernel_file;
-    read_kernel_file(kimg_path, &kernel_file);
-    if (kernel_file.is_uncompressed_img) tools_logw("kernel image with UNCOMPRESSED_IMG header\n");
+    kernel_file_t kernel_file = { 0 };
+    kernel_file.kfile = (char *)kimg;
+    kernel_file.kimg = (char *)kimg;
+    kernel_file.kfile_len = kimg_len;
+    kernel_file.kimg_len = kimg_len;
 
     int rc = parse_image_patch_info(kernel_file.kimg, kernel_file.kimg_len, &pimg);
     if (rc) tools_loge_exit("parse kernel image error\n");
@@ -462,14 +649,32 @@ int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *
         }else{
             tools_logi("disabled PI_MAP for kernel version > 6.12.23\n");
         }
-        
-        
+
+
     }
-    
+
     if (analyze_kallsym_info(&kallsym, kallsym_kimg, pimg.ori_kimg_len, ARM64, 1)) {
         tools_loge_exit("analyze_kallsym_info error\n");
     }
     require_native_kpm_abi(&kallsym, kallsym_kimg, pimg.ori_kimg_len);
+
+    // locate the kernel's own IKCONFIG gzip blob; runtime puff-inflates it
+    size_t kcfg_start = 0, kcfg_bytes = 0;
+    int kcfg_rc = find_ikconfig_blob(kallsym_kimg, pimg.ori_kimg_len, &kcfg_start, &kcfg_bytes);
+    if (kcfg_rc) {
+        tools_logw("kernel IKCONFIG blob not found (rc=%d), kconfig unavailable at runtime\n", kcfg_rc);
+    } else {
+        tools_logi("ikconfig gzip blob at 0x%zx, size 0x%zx (runtime puff)\n", kcfg_start, kcfg_bytes);
+    }
+
+    // locate the kernel's embedded BTF blob (CONFIG_DEBUG_INFO_BTF)
+    size_t btf_start = 0, btf_bytes = 0;
+    int btf_rc = find_btf_blob(kallsym_kimg, pimg.ori_kimg_len, &btf_start, &btf_bytes);
+    if (btf_rc) {
+        tools_logw("kernel BTF blob not found (rc=%d), btf unavailable at runtime\n", btf_rc);
+    } else {
+        tools_logi("btf blob at 0x%zx, size 0x%zx\n", btf_start, btf_bytes);
+    }
 
     // kpimg
     char *kpimg = NULL;
@@ -496,7 +701,9 @@ int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *
         }
 
         patch_extra_item_t *item = NULL;
-        if (config->is_path) {
+        if (config->item && config->data) {
+            item = config->item;
+        } else if (config->is_path) {
             // todo: free
             item = (patch_extra_item_t *)malloc(sizeof(patch_extra_item_t));
             memset(item, 0, sizeof(patch_extra_item_t));
@@ -528,7 +735,9 @@ int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *
                     item->priority = i32swp(item->priority);
                     item->con_size = i32swp(item->con_size);
                     item->args_size = i32swp(item->args_size);
+                    item->flags = i32swp(item->flags);
                 }
+                sanitize_legacy_extra_item(item);
                 if (!config->set_args && item->args_size > 0) {
                     config->set_args = (char *)item + sizeof(*item);
                 }
@@ -587,11 +796,11 @@ int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *
     uint32_t ver_num = (ver.major << 16) + (ver.minor << 8) + ver.patch;
     bool is_android = header->config_flags & CONFIG_ANDROID;
     bool is_debug = header->config_flags & CONFIG_DEBUG;
-    char compile_time_str[MAX_COMPILE_TIME_LEN];
-    snprintf(compile_time_str, sizeof(compile_time_str), "%s %s", __TIME__, __DATE__);
+    bool is_x86_64 = header->config_flags & CONFIG_FLAG_X86_64;
     tools_logi("kpimg version: %x\n", ver_num);
-    tools_logi("kpimg compile time: %s\n", compile_time_str);
-    tools_logi("kpimg config: %s, %s\n", is_android ? "android" : "linux", is_debug ? "debug" : "release");
+    tools_logi("kpimg compile time: %s\n", header->compile_time);
+    tools_logi("kpimg config: %s, %s, %s\n", is_android ? "android" : "linux",
+               is_debug ? "debug" : "release", is_x86_64 ? "x86_64" : "arm64");
 
     setup_preset_t *setup = &preset->setup;
     memset(setup, 0, sizeof(preset->setup));
@@ -621,7 +830,7 @@ int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *
     }
     if (sync_size > 0) {
         memcpy(out_kernel_file.kimg + sync_start, kallsym_kimg + sync_start, sync_size);
-        tools_logi("Synced NOP modifications from kallsym_kimg to output file (offset: 0x%x, size: 0x%x)\n", 
+        tools_logi("Synced NOP modifications from kallsym_kimg to output file (offset: 0x%x, size: 0x%x)\n",
                    sync_start, sync_size);
     }
 
@@ -671,7 +880,7 @@ int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *
 
     // superkey
     if (!root_key) {
-        tools_logi("superkey: %s\n", superkey);
+        tools_logi("superkey configured (value omitted)\n");
         strncpy((char *)setup->superkey, superkey, SUPER_KEY_LEN - 1);
     } else if (superkey && superkey[0] != '\0') {
         int len = SHA256_BLOCK_SIZE > ROOT_SUPER_KEY_HASH_LEN ? ROOT_SUPER_KEY_HASH_LEN : SHA256_BLOCK_SIZE;
@@ -681,9 +890,7 @@ int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *
         sha256_update(&ctx, (const BYTE *)superkey, strnlen(superkey, SUPER_KEY_LEN));
         sha256_final(&ctx, buf);
         memcpy(setup->root_superkey, buf, len);
-        char *hexstr = bytes_to_hexstr(setup->root_superkey, len);
-        tools_logi("root superkey hash: %s\n", hexstr);
-        free(hexstr);
+        tools_logi("root superkey verifier configured (value omitted)\n");
     } else {
         memset(setup->root_superkey, 0, ROOT_SUPER_KEY_HASH_LEN);
         tools_logi("root_key mode with empty superkey: root_superkey zeroed\n");
@@ -717,7 +924,7 @@ int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *
         addition_pos += kvlen;
     }
 
-    // append extra
+// append extra
     int current_offset = out_img_len;
     for (int i = 0; i < extra_config_num; i++) {
         extra_config_t *config = extra_configs + i;
@@ -735,6 +942,7 @@ int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *
             item->priority = i32swp(item->priority);
             item->con_size = i32swp(item->con_size);
             item->args_size = i32swp(item->args_size);
+            item->flags = i32swp(item->flags);
         }
 
         extra_append(out_kernel_file.kimg, (void *)item, sizeof(*item), &current_offset);
@@ -742,28 +950,115 @@ int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *
         extra_append(out_kernel_file.kimg, (void *)config->data, con_len, &current_offset);
     }
 
+    // record IKCONFIG gzip blob location for runtime puff inflation
+    if (!kcfg_rc) {
+        setup->kconfig_offset = (int64_t)kcfg_start;
+        setup->kconfig_size = (int64_t)kcfg_bytes;
+    }
+
+    // record BTF blob location for runtime parsing
+    if (!btf_rc) {
+        setup->btf_offset = (int64_t)btf_start;
+        setup->btf_size = (int64_t)btf_bytes;
+    }
+
+    if ((is_be() ^ kinfo->is_be)) {
+        setup->kconfig_offset = i64swp(setup->kconfig_offset);
+        setup->kconfig_size = i64swp(setup->kconfig_size);
+        setup->btf_offset = i64swp(setup->btf_offset);
+        setup->btf_size = i64swp(setup->btf_size);
+    }
+
     // guard extra
     patch_extra_item_t empty_item = { 0 };
     extra_append(out_kernel_file.kimg, (void *)&empty_item, sizeof(empty_item), &current_offset);
 
-    write_kernel_file(&out_kernel_file, out_path);
+    // transfer ownership of the patched kernel buffer to the caller
+    *out_kimg = out_kernel_file.kfile;
+    *out_kimg_len = out_kernel_file.kfile_len;
+    out_kernel_file.kfile = NULL;
 
     // free
     free(kallsym_kimg);
     free(kpimg);
     free_kernel_file(&out_kernel_file);
+
+    return 0;
+}
+
+int patch_update_img(const char *kimg_path, const char *kpimg_path, const char *out_path, const char *superkey,
+                     bool root_key, const char **additional, extra_config_t *extra_configs, int extra_config_num)
+{
+    set_log_enable(true);
+
+    if (!kpimg_path) tools_loge_exit("empty kpimg\n");
+    if (!out_path) tools_loge_exit("empty out image path\n");
+    if (!superkey && !root_key) tools_loge_exit("empty superkey\n");
+
+    char *probe = NULL;
+    int probe_len = 0;
+    read_file(kimg_path, &probe, &probe_len);
+    bool x86_bzimage = is_x86_bzimage(probe, probe_len);
+    free(probe);
+    if (x86_bzimage) {
+        int rc = patch_update_x86(kimg_path, kpimg_path, out_path, superkey, root_key, additional,
+                                  extra_config_num);
+        set_log_enable(false);
+        return rc;
+    }
+
+    kernel_file_t kernel_file;
+    read_kernel_file(kimg_path, &kernel_file);
+    if (kernel_file.is_uncompressed_img) tools_logw("kernel image with UNCOMPRESSED_IMG header\n");
+
+    char *out_kimg = NULL;
+    int out_kimg_len = 0;
+    int rc = patch_update_img_buf(kernel_file.kimg, kernel_file.kimg_len, kpimg_path, superkey, root_key,
+                                  additional, extra_configs, extra_config_num, &out_kimg, &out_kimg_len);
+
+    if (!rc) {
+        if (kernel_file.is_uncompressed_img) {
+            kernel_file_t out_file = { 0 };
+            new_kernel_file(&out_file, &kernel_file, out_kimg_len, false);
+            memcpy(out_file.kimg, out_kimg, out_kimg_len);
+            write_kernel_file(&out_file, out_path);
+            free_kernel_file(&out_file);
+        } else {
+            write_file(out_path, out_kimg, out_kimg_len, false);
+        }
+        tools_logi("patch done: %s\n", out_path);
+    }
+
+    if (out_kimg) free(out_kimg);
     free_kernel_file(&kernel_file);
 
-    tools_logi("patch done: %s\n", out_path);
-
     set_log_enable(false);
-    return 0;
+    return rc;
 }
 
 int unpatch_img(const char *kimg_path, const char *out_path)
 {
     if (!kimg_path) tools_loge_exit("empty kernel image\n");
     if (!out_path) tools_loge_exit("empty out image path\n");
+
+    char *probe = NULL;
+    int probe_len = 0;
+    read_file(kimg_path, &probe, &probe_len);
+    bool x86_bzimage = is_x86_bzimage(probe, probe_len);
+    free(probe);
+    if (x86_bzimage) {
+        set_log_enable(true);
+        x86_bzimage_t image;
+        if (load_x86_bzimage(kimg_path, &image)) {
+            set_log_enable(false);
+            return -1;
+        }
+        int rc = remove_x86_kpimg(&image);
+        if (!rc) rc = write_x86_bzimage(&image, out_path);
+        free_x86_bzimage(&image);
+        set_log_enable(false);
+        return rc;
+    }
 
     kernel_file_t kernel_file;
     read_kernel_file(kimg_path, &kernel_file);
@@ -796,13 +1091,12 @@ int reset_key(const char *kimg_path, const char *out_path, const char *superkey)
     preset_t *preset = get_preset(kernel_file.kimg, kernel_file.kimg_len);
     if (!preset) tools_loge_exit("not patched kernel image\n");
 
-    char *origin_key = strdup((char *)preset->setup.superkey);
+    memset(preset->setup.superkey, 0, sizeof(preset->setup.superkey));
     strcpy((char *)preset->setup.superkey, superkey);
-    tools_logi("reset superkey: %s -> %s\n", origin_key, preset->setup.superkey);
+    tools_logi("superkey updated (values omitted)\n");
 
     write_kernel_file(&kernel_file, out_path);
 
-    free(origin_key);
     free_kernel_file(&kernel_file);
 
     return 0;
@@ -812,6 +1106,30 @@ int dump_kallsym(const char *kimg_path)
 {
     if (!kimg_path) tools_loge_exit("empty kernel image\n");
     set_log_enable(true);
+
+    char *probe = 0;
+    int probe_len = 0;
+    read_file(kimg_path, &probe, &probe_len);
+    bool bzimage = is_x86_bzimage(probe, probe_len);
+    free(probe);
+    if (bzimage) {
+        x86_bzimage_t image;
+        if (load_x86_bzimage(kimg_path, &image)) {
+            fprintf(stderr, "load x86 bzImage error\n");
+            return -1;
+        }
+        kallsym_t kallsym;
+        int rc = analyze_kallsym_info(&kallsym, image.flat, image.flat_size, X86_64, 1);
+        if (rc) {
+            fprintf(stderr, "analyze x86 kallsyms error\n");
+        } else {
+            dump_all_symbols(&kallsym, image.flat);
+        }
+        free_x86_bzimage(&image);
+        set_log_enable(false);
+        return rc;
+    }
+
     // read image files
     kernel_file_t kernel_file;
     read_kernel_file(kimg_path, &kernel_file);
@@ -830,6 +1148,21 @@ int dump_ikconfig(const char *kimg_path)
 {
     if (!kimg_path) tools_loge_exit("empty kernel image\n");
     set_log_enable(true);
+
+    char *probe = 0;
+    int probe_len = 0;
+    read_file(kimg_path, &probe, &probe_len);
+    bool bzimage = is_x86_bzimage(probe, probe_len);
+    free(probe);
+    if (bzimage) {
+        x86_bzimage_t image;
+        if (load_x86_bzimage(kimg_path, &image)) return -1;
+        int rc = dump_all_ikconfig(image.flat, image.flat_size);
+        free_x86_bzimage(&image);
+        set_log_enable(false);
+        return rc;
+    }
+
     // read image files
     kernel_file_t kernel_file;
     read_kernel_file(kimg_path, &kernel_file);

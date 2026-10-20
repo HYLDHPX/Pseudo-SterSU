@@ -24,6 +24,8 @@
 #include "patch.h"
 #include "common.h"
 #include "kpm.h"
+#include "x86_64.h"
+#include "secret_input.h"
 
 uint32_t version = 0;
 const char *program_name = NULL;
@@ -40,6 +42,8 @@ void print_usage(char **argv)
         "  -v, --version                    Print version number. Print kpimg version if -k specified.\n"
 
         "  -p, --patch                      Patch or Update patch of kernel image(-i) with specified kpimg(-k) and superkey(-s).\n"
+        "                                   If -i is an Android boot image (ANDROID! magic), the kernel is extracted,\n"
+        "                                   patched and the boot image is repacked automatically in one step.\n"
         "  -u, --unpatch                    Unpatch patched kernel image(-i).\n"
         "  -r, --reset-skey                 Reset superkey of patched image(-i).\n"
         "  -d, --dump                       Dump kallsyms infomations of kernel image(-i).\n"
@@ -48,11 +52,16 @@ void print_usage(char **argv)
         "                                   Print extra item informations if (-M) specified.\n"
         "                                   Print KernelPatch image informations if (-k) specified.\n"
         "Unpack kernel: unpack <boot.img>\n  Repack Kernel: repack <boot.img>\n"
+        "Unpack x86 bzImage: unpack-bzimage <bzImage> <kernel>\n"
+        "Repack x86 bzImage: repack-bzimage <bzImage> <output>\n"
         "Options:\n"
         "  -i, --image PATH                 Kernel image path.\n"
         "  -k, --kpimg PATH                 KernelPatch image path.\n"
         "  -s, --skey KEY                   Set the superkey and save it directly in the boot.img.\n"
         "  -S, --root-skey KEY              Set the root-superkey useing hash verification, and the superkey can be changed dynamically.\n"
+        "      --skey-fd FD                 Read a superkey from FD rather than argv.\n"
+        "      --root-skey-fd FD            Read a hash-verification root key from FD.\n"
+        "      --show-secrets               Explicitly disclose secrets for image inspection (-l) only.\n"
         "  -o, --out PATH                   Patched image path.\n"
         "  -a  --addition KEY=VALUE         Add additional information.\n"
 
@@ -65,8 +74,8 @@ void print_usage(char **argv)
         "  -N, --extra-name NAME            Set name of previous extra item.\n"
         "  -V, --extra-event EVENT          Set trigger event of previous extra item.\n"
         "  -A, --extra-args ARGS            Set arguments of previous extra item.\n"
-        "  -D, --extra-detach               Detach previous extra item from patches.\n"
-        "\n";
+"  -D, --extra-detach               Detach previous extra item from patches.\n"
+"\n";
     fprintf(stdout, c, version, program_name);
 }
 
@@ -74,6 +83,29 @@ int main(int argc, char *argv[])
 {
     version = (MAJOR << 16) + (MINOR << 8) + PATCH;
     program_name = argv[0];
+    if (argc > 3 && strcmp(argv[1], "unpack-bzimage") == 0) {
+        set_log_enable(true);
+        x86_bzimage_t image;
+        if (load_x86_bzimage(argv[2], &image)) {
+            tools_loge("load x86 bzImage failed: %s\n", argv[2]);
+            return 1;
+        }
+        write_file(argv[3], image.flat, image.flat_size, false);
+        tools_logi("x86 flat kernel written: %s, size: 0x%zx\n", argv[3], image.flat_size);
+        free_x86_bzimage(&image);
+        return 0;
+    }
+    if (argc > 3 && strcmp(argv[1], "repack-bzimage") == 0) {
+        set_log_enable(true);
+        x86_bzimage_t image;
+        if (load_x86_bzimage(argv[2], &image)) {
+            tools_loge("load x86 bzImage failed: %s\n", argv[2]);
+            return 1;
+        }
+        int rc = write_x86_bzimage(&image, argv[3]);
+        free_x86_bzimage(&image);
+        return rc ? 1 : 0;
+    }
     if (argc > 2){
         
         if (strcmp(argv[1], "unpack") == 0) {
@@ -105,6 +137,9 @@ int main(int argc, char *argv[])
                                  { "kpimg", required_argument, NULL, 'k' },
                                  { "skey", required_argument, NULL, 's' },
                                  { "root-skey", required_argument, NULL, 'S' },
+                                 { "show-secrets", no_argument, NULL, 0x100 },
+                                 { "skey-fd", required_argument, NULL, 0x101 },
+                                 { "root-skey-fd", required_argument, NULL, 0x102 },
                                  { "out", required_argument, NULL, 'o' },
                                  { "addition", required_argument, NULL, 'a' },
 
@@ -122,6 +157,9 @@ int main(int argc, char *argv[])
     char *out_path = NULL;
     char *superkey = NULL;
     bool root_skey = false;
+    bool disclose_secrets = false;
+    const char *key_fd_text = NULL;
+    char secret_buffer[SUPER_KEY_LEN] = { 0 };
 
     int additional_num = 0;
     const char *additional[16] = { 0 };
@@ -146,6 +184,20 @@ int main(int argc, char *argv[])
         case 'f':
         case 'l':
             cmd = opt;
+            break;
+        case 0x100:
+            disclose_secrets = true;
+            break;
+        case 0x102:
+            root_skey = true;
+            /* fall through */
+        case 0x101:
+            if (key_fd_text) {
+                fprintf(stderr, "only one key fd may be specified\n");
+                free(extra_configs);
+                return 2;
+            }
+            key_fd_text = optarg;
             break;
         case 'i':
             kimg_path = optarg;
@@ -193,6 +245,27 @@ int main(int argc, char *argv[])
             break;
         }
     }
+    if (key_fd_text) {
+        if (superkey || (cmd != 'p' && cmd != 'r')) {
+            fprintf(stderr, "key fd requires -p or -r and cannot be combined with an argv key\n");
+            free(extra_configs);
+            return 2;
+        }
+        int key_rc = kp_read_secret_fd(key_fd_text, secret_buffer, sizeof(secret_buffer));
+        if (key_rc) {
+            fprintf(stderr, "unable to read key from fd (error %d)\n", key_rc);
+            kp_secret_wipe(secret_buffer, sizeof(secret_buffer));
+            free(extra_configs);
+            return 2;
+        }
+        superkey = secret_buffer;
+    }
+    if (disclose_secrets && cmd != 'l') {
+        fprintf(stderr, "--show-secrets is valid only with -l\n");
+        free(extra_configs);
+        return 2;
+    }
+    patch_set_show_secrets(disclose_secrets);
     int ret = 0;
 
     if (cmd == 'h') {
@@ -204,8 +277,15 @@ int main(int argc, char *argv[])
             fprintf(stdout, "%x\n", version);
     } else if (cmd == 'p') {
         if (!superkey) root_skey = true;
-        ret = patch_update_img(kimg_path, kpimg_path, out_path, superkey, root_skey, additional, extra_configs,
-                               extra_config_num);
+        set_log_enable(true);
+        if (kimg_path && is_bootimg(kimg_path)) {
+            tools_logi("detected Android boot image, patching kernel in place\n");
+            ret = patch_bootimg(kimg_path, kpimg_path, out_path, superkey, root_skey, additional, extra_configs,
+                                extra_config_num);
+        } else {
+            ret = patch_update_img(kimg_path, kpimg_path, out_path, superkey, root_skey, additional, extra_configs,
+                                   extra_config_num);
+        }
     } else if (cmd == 'd') {
         ret = dump_kallsym(kimg_path);
     } else if (cmd == 'f') {
@@ -215,15 +295,16 @@ int main(int argc, char *argv[])
     } else if (cmd == 'r') {
         ret = reset_key(kimg_path, out_path, superkey);
     } else if (cmd == 'l') {
-        if (kimg_path) return print_image_patch_info_path(kimg_path);
-        if (config && config->path) return print_kpm_info_path(config->path);
-        if (kpimg_path) return print_kp_image_info_path(kpimg_path);
+        if (kimg_path) ret = print_image_patch_info_path(kimg_path);
+        else if (config && config->path) ret = print_kpm_info_path(config->path);
+        else if (kpimg_path) ret = print_kp_image_info_path(kpimg_path);
     }
 
     else {
         print_usage(argv);
     }
 
+    kp_secret_wipe(secret_buffer, sizeof(secret_buffer));
     free(extra_configs);
 
     return ret;

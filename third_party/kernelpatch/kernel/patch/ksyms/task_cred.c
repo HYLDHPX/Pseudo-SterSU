@@ -10,6 +10,7 @@
 #include <linux/sched/task.h>
 #include <linux/vmalloc.h>
 #include <baselib.h>
+#include <kbtf.h>
 #include <linux/pid.h>
 #include <asm/current.h>
 #include <linux/security.h>
@@ -203,7 +204,7 @@ int resolve_cred_offset()
     kernel_cap_t new_cap_e = { 0xff }, new_cap_i = { 0xf }, new_cap_p = { 0xfff };
     cap_capset(cred1, cred, &new_cap_e, &new_cap_i, &new_cap_p);
 
-    for (int i = 0; i < CRED_MAX_SIZE; i += sizeof(uint32_t)) {
+    for (int i = 0; i + (int)sizeof(kernel_cap_t) <= CRED_MAX_SIZE; i += sizeof(uint32_t)) {
         if (is_bl(i)) continue;
         kernel_cap_t cap = *(kernel_cap_t *)((uintptr_t)cred + i);
         kernel_cap_t cap1 = *(kernel_cap_t *)((uintptr_t)cred1 + i);
@@ -225,7 +226,7 @@ int resolve_cred_offset()
     }
 
     // cap_bset
-    for (int i = 0; i < CRED_MAX_SIZE; i += sizeof(uint32_t)) {
+    for (int i = 0; i + (int)sizeof(kernel_cap_t) <= CRED_MAX_SIZE; i += sizeof(uint32_t)) {
         if (is_bl(i)) continue;
         kernel_cap_t cap1 = *(kernel_cap_t *)((uintptr_t)cred1 + i);
         if (cap1.val == effective.val) {
@@ -353,7 +354,11 @@ int resolve_cred_offset()
     *(unsigned *)((uintptr_t)new_cred + cred_offset.securebits_offset) = 0;
     cap_task_prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_RAISE, 0xf, 0, 0);
     new_cred = *(struct cred **)((uintptr_t)task + task_struct_offset.cred_offset);
-    for (int i = 0; i < CRED_MAX_SIZE; i += sizeof(uint32_t)) {
+    /* prctl installed a slab cred, not one of our CRED_MAX_SIZE scratch buffers. */
+    unsigned long (*cred_size)(const void *) = (typeof(cred_size))kallsyms_lookup_name("ksize");
+    unsigned long ambient_scan_len = cred_size ? cred_size(new_cred) : CRED_MAX_SIZE;
+    for (int i = 0; i + (int)sizeof(kernel_cap_t) <= CRED_MAX_SIZE &&
+                    i + (int)sizeof(kernel_cap_t) <= ambient_scan_len; i += sizeof(uint32_t)) {
         if (is_bl(i)) continue;
         kernel_cap_t cap = *(kernel_cap_t *)((uintptr_t)cred + i);
         kernel_cap_t new_cap = *(kernel_cap_t *)((uintptr_t)new_cred + i);
@@ -401,7 +406,8 @@ int resolve_task_offset()
     int cred_offset_idx = 0;
     init_cred = get_task_cred(init_task); // todo: get_task_cred not export
     log_boot("    init_cred addr: %llx\n", init_cred);
-    for (uintptr_t i = (uintptr_t)init_task; i < (uintptr_t)init_task + TASK_STRUCT_MAX_SIZE; i += sizeof(uint32_t)) {
+    for (uintptr_t i = (uintptr_t)init_task; i + sizeof(uintptr_t) <= (uintptr_t)init_task + TASK_STRUCT_MAX_SIZE;
+         i += sizeof(uint32_t)) {
         uintptr_t val = *(uintptr_t *)i;
         if (val == (uintptr_t)init_cred) {
             cred_offset[cred_offset_idx++] = i - (uintptr_t)init_task;
@@ -443,7 +449,8 @@ int resolve_task_offset()
     // active_mm
     init_mm = (struct mm_struct *)kallsyms_lookup_name("init_mm");
     if (init_mm) {
-        for (uintptr_t i = (uintptr_t)task; i < (uintptr_t)task + TASK_STRUCT_MAX_SIZE; i += sizeof(uint32_t)) {
+        for (uintptr_t i = (uintptr_t)task; i + sizeof(uintptr_t) <= (uintptr_t)task + TASK_STRUCT_MAX_SIZE;
+             i += sizeof(uint32_t)) {
             uintptr_t active_mm = *(uintptr_t *)i;
             if (active_mm == (uintptr_t)init_mm) {
                 task_struct_offset.active_mm_offset = i - (uintptr_t)task;
@@ -536,6 +543,40 @@ int resolve_current()
         }
     }
 
+    /* Newer GKI kernels may compile set_task_stack_end_magic() to an empty
+     * function when the scheduler stack-end check is disabled.  In that case
+     * the init stack contains no STACK_END_MAGIC even though its layout is
+     * otherwise unchanged.  The init_thread_union symbol is the exact base of
+     * the boot task's stack, so use it to select the smallest candidate that
+     * contains the current SP.  For a downward-growing arm64 stack this is the
+     * real THREAD_SIZE: a smaller candidate aligns SP above the stack base.
+     *
+     * Only take this path when sp_el0 identified current as task_struct.  If
+     * sp_el0 is thread_info, an absent magic also means we cannot safely infer
+     * the end_of_stack offset used by old !THREAD_INFO_IN_TASK kernels. */
+    if (!thread_size && init_thread_union_addr && sp_el0_is_current) {
+        for (int i = 0; i < sizeof(thread_shift_cand) / sizeof(thread_shift_cand[0]); i++) {
+            int tsz = 1 << thread_shift_cand[i];
+            uint64_t sp_low = sp & ~(tsz - 1);
+            if (sp_low != init_thread_union_addr) continue;
+
+            thread_size = tsz;
+            stack_end_offset = 0;
+            thread_info_in_task = 1;
+            log_boot("    stack size inferred from init_thread_union: %x\n", thread_size);
+            break;
+        }
+    }
+
+    /* Keep the historical arm64 default as a last-resort compatibility path
+     * for kernels that hide init_thread_union from kallsyms. */
+    if (!thread_size) {
+        thread_size = 0x4000;
+        stack_end_offset = 0;
+        thread_info_in_task = 1;
+        log_boot("    stack size fallback to arm64 default: %x\n", thread_size);
+    }
+
     log_boot("    thread_size: %x\n", thread_size);
     log_boot("    stack_end_offset: %x\n", stack_end_offset);
     log_boot("    thread_info_in_task: %x\n", thread_info_in_task);
@@ -609,6 +650,42 @@ int resolve_mm_struct_offset()
     return 0;
 }
 
+static void btf_set(int16_t *dst, const char *s, const char *m)
+{
+    long o = kp_btf_member_offset(s, m);
+    if (o >= 0 && o <= 0x7fff) *dst = (int16_t)o;
+}
+
+// Override the offset tables with authoritative BTF values when the kernel
+// embeds BTF (GKI 5.10+). Runs after the heuristic resolvers, so it is a no-op
+// on kernels without BTF and never changes their behavior there.
+static void resolve_struct_btf(void)
+{
+    if (!kp_btf_available()) return;
+    log_boot("struct offsets: overriding with BTF\n");
+
+    btf_set(&task_struct_offset.pid_offset, "task_struct", "pid");
+    btf_set(&task_struct_offset.tgid_offset, "task_struct", "tgid");
+    btf_set(&task_struct_offset.real_cred_offset, "task_struct", "real_cred");
+    btf_set(&task_struct_offset.cred_offset, "task_struct", "cred");
+    btf_set(&task_struct_offset.comm_offset, "task_struct", "comm");
+    btf_set(&task_struct_offset.fs_offset, "task_struct", "fs");
+    btf_set(&task_struct_offset.files_offset, "task_struct", "files");
+    btf_set(&task_struct_offset.seccomp_offset, "task_struct", "seccomp");
+    btf_set(&task_struct_offset.security_offset, "task_struct", "security");
+    btf_set(&task_struct_offset.mm_offset, "task_struct", "mm");
+    btf_set(&task_struct_offset.active_mm_offset, "task_struct", "active_mm");
+
+    btf_set(&cred_offset.uid_offset, "cred", "uid");
+    btf_set(&cred_offset.gid_offset, "cred", "gid");
+    btf_set(&cred_offset.suid_offset, "cred", "suid");
+    btf_set(&cred_offset.sgid_offset, "cred", "sgid");
+    btf_set(&cred_offset.euid_offset, "cred", "euid");
+    btf_set(&cred_offset.egid_offset, "cred", "egid");
+
+    btf_set(&mm_struct_offset.pgd_offset, "mm_struct", "pgd");
+}
+
 int resolve_struct()
 {
     full_cap = CAP_FULL_SET;
@@ -622,6 +699,8 @@ int resolve_struct()
     if ((err = resolve_cred_offset())) goto out;
 
     resolve_mm_struct_offset();
+
+    resolve_struct_btf();
 
 out:
     return err;

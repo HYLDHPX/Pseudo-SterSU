@@ -43,7 +43,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -71,9 +70,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.weishu.kernelsu.R
-import me.weishu.kernelsu.ui.component.LocalSwitchStyle
-import me.weishu.kernelsu.ui.component.StyledSwitch
-import me.weishu.kernelsu.ui.component.SwitchStyle
 import me.weishu.kernelsu.ui.component.rememberCustomVideoFrameBitmap
 import me.weishu.kernelsu.ui.component.rememberCustomWallpaperPreviewBitmap
 import me.weishu.kernelsu.ui.component.MediaVisualLayer
@@ -84,10 +80,8 @@ import me.weishu.kernelsu.ui.util.CustomBackgroundState
 import me.weishu.kernelsu.ui.util.CustomPageBackgroundTarget
 import me.weishu.kernelsu.ui.util.MAX_CUSTOM_VIDEO_BACKGROUND_DURATION_SECONDS
 import me.weishu.kernelsu.ui.util.MAX_CUSTOM_WALLPAPER_OPACITY
-import me.weishu.kernelsu.ui.util.MAX_CUSTOM_WALLPAPER_PASSTHROUGH_OPACITY
 import me.weishu.kernelsu.ui.util.MIN_CUSTOM_VIDEO_BACKGROUND_DURATION_SECONDS
 import me.weishu.kernelsu.ui.util.MIN_CUSTOM_WALLPAPER_OPACITY
-import me.weishu.kernelsu.ui.util.MIN_CUSTOM_WALLPAPER_PASSTHROUGH_OPACITY
 import me.weishu.kernelsu.ui.util.persistCustomImageReference
 import me.weishu.kernelsu.ui.util.takePersistableImageReadPermission
 import me.weishu.kernelsu.ui.util.takePersistableVideoBackgroundReadPermission
@@ -210,8 +204,6 @@ fun BackgroundSettingsScreen() {
                 }
                 previewScopeKey = scopeKey
             },
-            onPassthroughEnabledChange = viewModel::setCustomWallpaperPassthroughEnabled,
-            onPassthroughOpacityChange = viewModel::setCustomWallpaperPassthroughOpacity,
             onScrollFollowEnabledChange = viewModel::setBackgroundScrollFollowEnabled,
         )
     }
@@ -243,14 +235,16 @@ fun BackgroundSettingsScreen() {
     )
 
     val previewState = previewScopeKey?.let(uiState::backgroundStateForScope)
+    val previewPassthrough = me.weishu.kernelsu.ui.util.rememberUiPassthroughScope(
+        previewScopeKey?.let(::pageTargetFromScopeKey),
+    ).settings
     SettingsWallpaperPreviewDialog(
         show = previewState?.hasWallpaper == true,
         uriString = previewState?.wallpaperUriString,
         opacity = previewState?.opacity ?: CustomBackgroundState().opacity,
         crop = previewState?.crop ?: CustomBackgroundState().crop,
         visualSettings = previewState?.visualSettings ?: me.weishu.kernelsu.ui.util.MediaVisualSettings(),
-        passthroughEnabled = uiState.customWallpaperPassthroughEnabled,
-        passthroughOpacity = uiState.customWallpaperPassthroughOpacity,
+        passthroughSettings = previewPassthrough,
         onDismissRequest = { previewScopeKey = null },
     )
     SettingsVideoBackgroundPreviewDialog(
@@ -261,8 +255,7 @@ fun BackgroundSettingsScreen() {
         opacity = previewState?.opacity ?: CustomBackgroundState().opacity,
         crop = previewState?.crop ?: CustomBackgroundState().crop,
         visualSettings = previewState?.visualSettings ?: me.weishu.kernelsu.ui.util.MediaVisualSettings(),
-        passthroughEnabled = uiState.customWallpaperPassthroughEnabled,
-        passthroughOpacity = uiState.customWallpaperPassthroughOpacity,
+        passthroughSettings = previewPassthrough,
         onDismissRequest = { previewScopeKey = null },
     )
 }
@@ -510,6 +503,7 @@ private fun BackgroundEditorCard(
                     )
                 }
             }
+            UiPassthroughOptions(target = pageTargetFromScopeKey(scopeKey))
         }
     }
 }
@@ -705,91 +699,19 @@ private fun SharedBackgroundOptions(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.78f),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            val switchStyle = LocalSwitchStyle.current
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Layers,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.settings_shared_background_options),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_wallpaper_passthrough_summary),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if (switchStyle == SwitchStyle.Original) {
-                    Switch(
-                        checked = uiState.customWallpaperPassthroughEnabled,
-                        onCheckedChange = actions.onPassthroughEnabledChange,
-                    )
-                } else {
-                    StyledSwitch(
-                        checked = uiState.customWallpaperPassthroughEnabled,
-                        onCheckedChange = actions.onPassthroughEnabledChange,
-                        style = switchStyle,
-                    )
-                }
-            }
-
-            if (uiState.customWallpaperPassthroughEnabled) {
-                BackgroundSlider(
-                    title = stringResource(R.string.settings_wallpaper_passthrough_opacity),
-                    value = uiState.customWallpaperPassthroughOpacity,
-                    valueRange = MIN_CUSTOM_WALLPAPER_PASSTHROUGH_OPACITY..MAX_CUSTOM_WALLPAPER_PASSTHROUGH_OPACITY,
-                    valueLabel = { "${(it * 100).roundToInt()}%" },
-                    onValueChange = actions.onPassthroughOpacityChange,
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.settings_background_scroll_follow),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_background_scroll_follow_summary),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if (switchStyle == SwitchStyle.Original) {
-                    Switch(
-                        checked = uiState.backgroundScrollFollowEnabled,
-                        onCheckedChange = actions.onScrollFollowEnabledChange,
-                    )
-                } else {
-                    StyledSwitch(
-                        checked = uiState.backgroundScrollFollowEnabled,
-                        onCheckedChange = actions.onScrollFollowEnabledChange,
-                        style = switchStyle,
-                    )
-                }
-            }
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            UiPassthroughSwitch(
+                title = stringResource(R.string.settings_background_scroll_follow),
+                checked = uiState.backgroundScrollFollowEnabled,
+                onCheckedChange = actions.onScrollFollowEnabledChange,
+            )
+            Text(
+                text = stringResource(R.string.settings_background_scroll_follow_summary),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
     }
 }
@@ -805,8 +727,6 @@ private data class BackgroundSettingsActions(
     val onFrameRateChange: (Int) -> Unit,
     val onVisualSettingsChange: (String, me.weishu.kernelsu.ui.util.MediaVisualSettings) -> Unit,
     val onCropChange: (String, me.weishu.kernelsu.ui.util.CustomWallpaperCrop) -> Unit,
-    val onPassthroughEnabledChange: (Boolean) -> Unit,
-    val onPassthroughOpacityChange: (Float) -> Unit,
     val onScrollFollowEnabledChange: (Boolean) -> Unit,
 )
 

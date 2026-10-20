@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="kpm_running_runtime">当前运行的 KernelPatch：%1$s</string>
+    <string name="kpm_bundled_runtime">APK 内置 KernelPatch：%1$s。安装 APK 不会更新启动运行时，需另行更新匹配的 KPM 启动镜像。</string>
     <string name="home_card_wallpapers">&#x4E3B;&#x9875;&#x5361;&#x7247;&#x58C1;&#x7EB8;</string>
     <string name="home_card_wallpapers_summary">&#x4E3A;&#x4E3B;&#x9875;&#x6240;&#x6709;&#x5361;&#x7247;&#x5206;&#x522B;&#x8BBE;&#x7F6E;&#x56FE;&#x7247;&#x6216;&#x89C6;&#x9891;&#x58C1;&#x7EB8;&#x3002;</string>
     <string name="home_card_wallpapers_main_section">&#x4E3B;&#x5361;&#x7247;</string>
@@ -977,8 +979,6 @@
     <string name="sidebar_home_layout_material">Material 原版</string>
     <string name="sidebar_home_layout_cards">状态卡片</string>
     <string name="sidebar_home_layout_summary">仅切换「miuix（美化版）」的主页，默认保留原有 Material 布局。</string>
-    <string name="sidebar_design_preview_show">展开实时预览</string>
-    <string name="sidebar_design_preview_hide">收起预览</string>
     <string name="sidebar_design_saved_hint">修改自动保存，仅影响「miuix（美化版）」风格。</string>
     <string name="sidebar_design_icons">自定义导航图标与名称</string>
     <string name="sidebar_widget_settings_summary">黑白侧栏包含顶部头像、时钟或天气、导航图标与底部电源菜单，支持左右切换及日间、夜间模式。</string>
@@ -1110,10 +1110,6 @@
     <string name="sidebar_widget_move_up">向上移动</string>
     <string name="sidebar_widget_move_down">向下移动</string>
     <string name="sidebar_widget_configure">配置侧栏</string>
-    <string name="sidebar_widget_preview_material_home">Material 主页</string>
-    <string name="sidebar_widget_preview_status">工作中</string>
-    <string name="sidebar_widget_preview_status_summary">Material 内容与自定义侧栏组合预览</string>
-    <string name="sidebar_widget_preview_card">主页卡片 %1$d</string>
     <string name="interface_style_store_title">界面风格商店</string>
     <string name="interface_style_store_tab">风格</string>
     <string name="interface_style_store_summary">下载可选的四季、雨境、像素风和毛玻璃风格。</string>
@@ -3428,4 +3424,27 @@
     <string name="script_param_below_min">不能小于 %d</string>
     <string name="script_param_above_max">不能大于 %d</string>
     <string name="script_param_invalid">无效的值</string>
+    <string name="settings_page_background_store">商店</string>
+    <string name="settings_page_background_templates">应用配置模板</string>
+    <string name="ui_passthrough_title">UI 穿透</string>
+    <string name="ui_passthrough_expand">调节</string>
+    <string name="ui_passthrough_collapse">收起</string>
+    <string name="ui_passthrough_help" formatted="false">只调节卡片与栏位的背景，默认不改变文字、图片和图标。0% 为全透明，100% 为不透明。设置自动保存，需配合全局或单页壁纸使用。</string>
+    <string name="ui_passthrough_inherit">跟随全局穿透设置</string>
+    <string name="ui_passthrough_enable">启用 UI 穿透</string>
+    <string name="ui_passthrough_readable">清晰卡片</string>
+    <string name="ui_passthrough_soft">轻透</string>
+    <string name="ui_passthrough_clear">全透</string>
+    <string name="ui_passthrough_surfaces">卡片与列表背景不透明度</string>
+    <string name="ui_passthrough_top_bar">顶部栏背景不透明度</string>
+    <string name="ui_passthrough_bottom_bar">底部导航背景不透明度</string>
+    <string name="ui_passthrough_foreground">单独调节文字、图标和图片</string>
+    <string name="ui_passthrough_foreground_help" formatted="false">默认均为 100%，不影响壁纸和本调节面板。为便于恢复，文字与图标最低保留 20%；控件原有的禁用状态保持不变。</string>
+    <string name="ui_passthrough_text">文字不透明度</string>
+    <string name="ui_passthrough_icons">图标不透明度</string>
+    <string name="ui_passthrough_images">图片不透明度</string>
+    <string name="ui_passthrough_reset" formatted="false">恢复默认（内容 100%）</string>
+    <string name="sidebar_show_dividers">显示侧栏分隔线</string>
+    <string name="sidebar_background_opacity">侧栏背景不透明度</string>
+    <string name="sidebar_background_opacity_help">独立于页面穿透和玻璃染色浓度，不改变头像、中部组件、导航图标与文字。</string>
 </resources>

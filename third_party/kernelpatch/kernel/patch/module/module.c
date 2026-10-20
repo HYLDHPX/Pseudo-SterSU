@@ -6,6 +6,7 @@
 #include <uapi/asm-generic/errno.h>
 #include <pgtable.h>
 #include <kpmalloc.h>
+#include <kputils.h>
 #include <linux/err.h>
 #include <linux/string.h>
 #include <symbol.h>
@@ -40,6 +41,43 @@
 #define elf_check_arch(x) ((x)->e_machine == EM_AARCH64)
 
 #define ARCH_SHF_SMALL 0
+
+static void set_load_error(struct load_info *info, const char *message)
+{
+    if (!info || !message) return;
+    snprintf(info->info.error_msg, sizeof(info->info.error_msg), "%s", message);
+}
+
+static const char *load_error(const struct load_info *info, const char *fallback)
+{
+    if (info && info->info.error_msg[0]) return info->info.error_msg;
+    return fallback;
+}
+
+static bool kpm_load_result_enabled(void __user *reserved)
+{
+    if (!reserved) return false;
+
+    struct kpm_load_result *result = memdup_user(reserved, sizeof(*result));
+    if (!result || IS_ERR(result)) return false;
+
+    bool enabled = result->magic == KPM_LOAD_RESULT_MAGIC && result->size >= sizeof(*result);
+    kvfree(result);
+    return enabled;
+}
+
+static void set_kpm_load_result(void __user *reserved, long code, const char *message)
+{
+    if (!kpm_load_result_enabled(reserved)) return;
+
+    struct kpm_load_result result;
+    memset(&result, 0, sizeof(result));
+    result.magic = KPM_LOAD_RESULT_MAGIC;
+    result.size = sizeof(result);
+    result.code = code;
+    if (message) snprintf(result.message, sizeof(result.message), "%s", message);
+    compat_copy_to_user(reserved, &result, sizeof(result));
+}
 
 static inline bool strstarts(const char *str, const char *prefix)
 {
@@ -166,7 +204,7 @@ static bool is_core_symbol(const Elf_Sym *src, const Elf_Shdr *sechdrs, unsigned
 }
 
 /* Change all symbols so that st_value encodes the pointer directly. */
-static int simplify_symbols(struct module *mod, const struct load_info *info)
+static int simplify_symbols(struct module *mod, struct load_info *info)
 {
     Elf_Shdr *symsec = &info->sechdrs[info->index.sym];
     Elf_Sym *sym = (void *)symsec->sh_addr;
@@ -192,7 +230,10 @@ static int simplify_symbols(struct module *mod, const struct load_info *info)
             // if (!addr) addr = kallsyms_lookup_name(name);
             if (!addr) {
                 logke("unknown symbol: %s\n", name);
-                ret = -ENOENT;
+                if (!info->info.error_msg[0])
+                    snprintf(info->info.error_msg, sizeof(info->info.error_msg), "unknown symbol: %s", name);
+                /* Distinguish an unresolved ELF symbol from filp_open ENOENT. */
+                ret = -ENOLINK;
                 break;
             }
             sym[i].st_value = addr;
@@ -306,6 +347,7 @@ static int move_module(struct module *mod, struct load_info *info)
         if (!strcmp(".kpm.ctl1", sname)) mod->ctl1 = (mod_ctl1call_t *)dest;
 
         if (!mod->exit && !strcmp(".kpm.exit", sname)) mod->exit = (mod_exitcall_t *)dest;
+        if (!mod->event && !strcmp(".kpm.event", sname)) mod->event = (mod_eventcall_t *)dest;
 
         if (!mod->info.base && !strcmp(".kpm.info", sname)) mod->info.base = (const char *)dest;
     }
@@ -327,17 +369,20 @@ static int setup_load_info(struct load_info *info)
 
     if ((rc = rewrite_section_headers(info))) {
         logke("rewrite section error\n");
+        set_load_error(info, "rewrite section headers failed");
         return rc;
     }
 
     if (!find_sec(info, ".kpm.init") || !find_sec(info, ".kpm.exit")) {
         logke("no .kpm.init or .kpm.exit section\n");
+        set_load_error(info, "no .kpm.init or .kpm.exit section");
         return -ENOEXEC;
     }
 
     info->index.info = find_sec(info, ".kpm.info");
     if (!info->index.info) {
         logke("no .kpm.info section\n");
+        set_load_error(info, "no .kpm.info section");
         return -ENOEXEC;
     }
     if (info->sechdrs[info->index.info].sh_type != SHT_PROGBITS ||
@@ -353,6 +398,7 @@ static int setup_load_info(struct load_info *info)
     const char *name = get_modinfo(info, "name");
     if (!name) {
         logke("module name not found\n");
+        set_load_error(info, "module name not found");
         return -ENOEXEC;
     }
     info->info.name = name;
@@ -362,6 +408,7 @@ static int setup_load_info(struct load_info *info)
     const char *version = get_modinfo(info, "version");
     if (!version) {
         logkd("module version not found\n");
+        set_load_error(info, "module version not found");
         return -ENOEXEC;
     }
     info->info.version = version;
@@ -409,6 +456,7 @@ static int setup_load_info(struct load_info *info)
 
     if (info->index.sym == 0) {
         logkd("module has no symbols (stripped?)\n");
+        set_load_error(info, "module has no symbols (stripped?)");
         return -ENOEXEC;
     }
     return 0;
@@ -477,7 +525,8 @@ static struct module *find_module_locked(const char *name)
     return 0;
 }
 
-long load_module(const void *data, int len, const char *args, const char *event, void *__user reserved)
+long load_module_ex(const void *data, int len, const char *args, const char *event, const char *source,
+                    void *__user reserved)
 {
     struct load_info load_info = { .len = len, .hdr = data };
     struct load_info *info = &load_info;
@@ -489,6 +538,7 @@ long load_module(const void *data, int len, const char *args, const char *event,
     spin_lock(&module_lock);
     if (find_module_locked(info->info.name)) {
         logkfd("%s exist\n", info->info.name);
+        set_load_error(info, "module already exists");
         rc = -EEXIST;
         spin_unlock(&module_lock);
         goto out;
@@ -497,14 +547,18 @@ long load_module(const void *data, int len, const char *args, const char *event,
 
     struct module *mod = (struct module *)vmalloc(sizeof(struct module));
     if (!mod) {
+        set_load_error(info, "allocate module state failed");
         rc = -ENOMEM;
         goto out;
     }
     memset(mod, 0, sizeof(struct module));
+    snprintf(mod->load_event, sizeof(mod->load_event), "%s", event ? event : "");
+    snprintf(mod->load_source, sizeof(mod->load_source), "%s", source ? source : "embedded");
 
     if (args) {
         mod->args = vmalloc(strlen(args) + 1);
         if (!mod->args) {
+            set_load_error(info, "allocate module args failed");
             rc = -ENOMEM;
             goto free1;
         }
@@ -514,13 +568,26 @@ long load_module(const void *data, int len, const char *args, const char *event,
     layout_sections(mod, info);
     layout_symtab(mod, info);
 
-    if ((rc = move_module(mod, info))) goto free;
-    if (!mod->init || !*mod->init || !mod->exit || !*mod->exit) {
+    if ((rc = move_module(mod, info))) {
+        set_load_error(info, "allocate executable module memory failed");
+        goto free;
+    }
+    if (!mod->init || !mod->exit) {
+        set_load_error(info, "module init or exit section is missing");
         rc = -ENOEXEC;
         goto free;
     }
     if ((rc = simplify_symbols(mod, info))) goto free;
-    if ((rc = apply_relocations(mod, info))) goto free;
+    if ((rc = apply_relocations(mod, info))) {
+        set_load_error(info, "apply relocations failed");
+        goto free;
+    }
+    /* Callback pointers in ET_REL are populated by relocations, not by memcpy. */
+    if (!*mod->init || !*mod->exit) {
+        set_load_error(info, "relocated module init or exit callback is null");
+        rc = -ENOEXEC;
+        goto free;
+    }
 
     flush_icache_all();
 
@@ -539,6 +606,7 @@ long load_module(const void *data, int len, const char *args, const char *event,
         spin_unlock(&module_lock);
         goto out;
     } else {
+        set_load_error(info, "module init failed");
         logkfi("[%s] failed with [%s] error: %d, try exit ...\n", mod->info.name, args, rc);
         (*mod->exit)(reserved);
     }
@@ -549,6 +617,7 @@ free:
 free1:
     kvfree(mod);
 out:
+    set_kpm_load_result(reserved, rc, rc ? load_error(info, "load module failed") : "module loaded");
     return rc;
 }
 
@@ -576,20 +645,30 @@ long unload_module(const char *name, void *__user reserved)
     kp_free_exec(mod->start);
     kvfree(mod);
 
-    logkfi("name: %s, rc: %d\n", name, rc);
+    logkfi("name: %s, rc: %ld\n", name, rc);
     return rc;
 }
 
-long load_module_path(const char *path, const char *args, void *__user reserved)
+long load_module(const void *data, int len, const char *args, const char *event, void *__user reserved)
+{
+    return load_module_ex(data, len, args, event, "embedded", reserved);
+}
+
+long load_module_path_event(const char *path, const char *args, const char *event, void *__user reserved)
 {
     long rc = 0;
     logkfd("%s\n", path);
-    if (!path) return -EINVAL;
+    if (!path) {
+        rc = -EINVAL;
+        set_kpm_load_result(reserved, rc, "module path is null");
+        return rc;
+    }
 
     struct file *filp = filp_open(path, O_RDONLY, 0);
     if (unlikely(!filp || IS_ERR(filp))) {
         logkfe("open module: %s error\n", path);
         rc = PTR_ERR(filp);
+        set_kpm_load_result(reserved, rc, "open module file failed");
         goto out;
     }
     loff_t len = vfs_llseek(filp, 0, SEEK_END);
@@ -608,26 +687,35 @@ long load_module_path(const char *path, const char *args, void *__user reserved)
     void *data = vmalloc(len);
     if (!data) {
         rc = -ENOMEM;
-        filp_close(filp, 0);
-        goto out;
+        set_kpm_load_result(reserved, rc, "allocate module file buffer failed");
+        goto close;
     }
     memset(data, 0, len);
 
     loff_t pos = 0;
     ssize_t read = kernel_read(filp, data, len, &pos);
     filp_close(filp, 0);
+    filp = 0;
 
     if (read != len || pos != len) {
         logkfe("read module: %s error\n", path);
         rc = -EIO;
+        set_kpm_load_result(reserved, rc, "read module file failed");
         goto free;
     }
 
-    rc = load_module(data, len, args, "load-file", reserved);
+    rc = load_module_ex(data, len, args, event ? event : "load-file", "file", reserved);
 free:
     kvfree(data);
+close:
+    if (filp) filp_close(filp, 0);
 out:
     return rc;
+}
+
+long load_module_path(const char *path, const char *args, void *__user reserved)
+{
+    return load_module_path_event(path, args, "load-file", reserved);
 }
 
 long module_control0(const char *name, const char *ctl_args, char *__user out_msg, int outlen)
@@ -697,6 +785,30 @@ out:
     return rc;
 }
 
+long notify_modules_event(const char *event, const char *args, void *__user reserved)
+{
+    if (!event) return -EINVAL;
+
+    long result = 0;
+    int count = 0;
+    rcu_read_lock();
+
+    struct module *pos;
+    list_for_each_entry(pos, &modules.list, list)
+    {
+        if (!pos->event || !*pos->event) continue;
+
+        long rc = (*pos->event)(event, args, reserved);
+        logkfi("event: %s, module: %s, rc: %ld\n", event, pos->info.name, rc);
+        if (rc < 0 && !result) result = rc;
+        count++;
+    }
+
+    rcu_read_unlock();
+    return result ?: count;
+}
+KP_EXPORT_SYMBOL(notify_modules_event);
+
 struct module *find_module(const char *name)
 {
     struct module *pos;
@@ -728,6 +840,7 @@ int get_module_nums()
 int list_modules(char *out_names, int size)
 {
     if (!out_names || size <= 0) return -EINVAL;
+    out_names[0] = '\0';
 
     rcu_read_lock();
 

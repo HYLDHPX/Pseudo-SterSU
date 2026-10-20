@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="kpm_running_runtime">目前執行的 KernelPatch：%1$s</string>
+    <string name="kpm_bundled_runtime">APK 內附 KernelPatch：%1$s。安裝 APK 不會更新啟動執行環境，需另外更新相符的 KPM 啟動映像。</string>
     <string name="home">首頁</string>
     <string name="home_not_installed">未安裝</string>
     <string name="home_click_to_install">點選開始安裝</string>

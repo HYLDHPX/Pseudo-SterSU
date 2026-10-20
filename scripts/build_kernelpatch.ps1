@@ -10,7 +10,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$defaultSourceDateEpoch = 1779534332
+$defaultSourceDateEpoch = 1792255305
 if ([string]::IsNullOrWhiteSpace($env:SOURCE_DATE_EPOCH)) {
     $env:SOURCE_DATE_EPOCH = $defaultSourceDateEpoch.ToString()
 }

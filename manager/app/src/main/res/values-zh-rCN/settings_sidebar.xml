@@ -12,7 +12,10 @@
     <string name="settings_device_processor">处理器</string>
     <string name="settings_device_memory">运存</string>
     <string name="settings_device_manager">管理器版本</string>
-    <string name="settings_device_text_edit">编辑设备文字</string>
+    <string name="settings_device_text_edit">自定义设备信息</string>
+    <string name="settings_device_text_summary">统一修改机型、系统和处理器显示名称</string>
+    <string name="settings_device_system">系统名称</string>
+    <string name="settings_device_text_reset">恢复自动识别</string>
     <string name="settings_device_text_hint">留空使用系统识别结果；修改仅影响这张卡片的显示。</string>
     <string name="settings_device_text_save">保存</string>
     <string name="settings_device_photo">设备图片</string>

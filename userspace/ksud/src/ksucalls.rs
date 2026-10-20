@@ -583,7 +583,7 @@ pub fn native_kpm_probe() -> io::Result<String> {
     if text.is_empty() {
         return Err(io::Error::from_raw_os_error(libc::EOPNOTSUPP));
     }
-    Ok(text)
+    Ok(crate::kpm_abi::format_runtime_version(&text))
 }
 
 pub fn native_kpm_load(path: &str, args: &str) -> io::Result<()> {

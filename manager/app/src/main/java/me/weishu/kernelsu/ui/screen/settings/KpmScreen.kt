@@ -57,14 +57,14 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.Icon
+import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -155,11 +155,11 @@ import me.weishu.kernelsu.ui.webui.WebUIState
 import me.weishu.kernelsu.ui.webui.prepareWebView
 import java.io.File
 import java.io.FileOutputStream
-import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
+import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar as MiuixSmallTopAppBar
-import top.yukonga.miuix.kmp.basic.Text as MiuixText
+import me.weishu.kernelsu.ui.component.passthrough.MiuixText as MiuixText
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import androidx.compose.foundation.layout.displayCutout
@@ -1223,6 +1223,22 @@ private fun KpmOverviewCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            if (currentCaps?.backend == "native-gki") {
+                if (currentCaps.runtimeVersion.isNotBlank()) {
+                    Text(
+                        text = stringResource(R.string.kpm_running_runtime, currentCaps.runtimeVersion),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (currentCaps.bundledRuntimeVersion.isNotBlank()) {
+                    Text(
+                        text = stringResource(R.string.kpm_bundled_runtime, currentCaps.bundledRuntimeVersion),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             if (caps?.managementAvailable == true && !caps.lateLoad) {
                 HorizontalDivider()

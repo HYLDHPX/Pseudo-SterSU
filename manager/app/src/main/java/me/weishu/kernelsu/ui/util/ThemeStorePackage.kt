@@ -946,6 +946,10 @@ fun exportThemeStorePackage(context: Context, destination: Uri): ThemeStorePacka
                     )
                 }
                 config.put("pageBackgrounds", pageBackgroundsJson)
+                config.put("uiPassthrough", prefs.exportUiPassthrough())
+                config.put("sidebarSurface", JSONObject()
+                    .put("showDividers", prefs.getBoolean(SIDEBAR_SHOW_DIVIDERS_KEY, true))
+                    .put("backgroundOpacity", sanitizeUiOpacity(prefs.getFloat(SIDEBAR_BACKGROUND_OPACITY_KEY, 1f), 1f)))
 
                 val wallpaperState = ThemeStoreWallpaperState(
                     uriString = prefs.getString(CUSTOM_WALLPAPER_URI_KEY, null),
@@ -1957,6 +1961,24 @@ fun importThemeStorePackage(
                 editor.putImportedWallpaper(wallpaper)
             }
 
+            if (!componentOnlyPackage) {
+                val passthrough = config.optJSONObject("uiPassthrough")
+                if (passthrough != null) {
+                    editor.putUiPassthroughPackage(passthrough)
+                } else pendingWallpaper?.let { wallpaper ->
+                    val legacy = UiPassthroughSettings(enabled = wallpaper.passthroughEnabled,
+                        surfaceOpacity = 1f - wallpaper.passthroughOpacity)
+                    editor.putUiPassthroughScope(null, legacy)
+                    CustomPageBackgroundTarget.entries.forEach { target ->
+                        editor.putUiPassthroughScope(target, legacy, overridesGlobal = false)
+                    }
+                }
+                config.optJSONObject("sidebarSurface")?.let { sidebar ->
+                    editor.putBoolean(SIDEBAR_SHOW_DIVIDERS_KEY, sidebar.getBoolean("showDividers"))
+                    editor.putFloat(SIDEBAR_BACKGROUND_OPACITY_KEY, sidebar.getDouble("backgroundOpacity").toFloat())
+                }
+            }
+
             if (hasStartupSound) {
                 editor.putOptionalString(CUSTOM_STARTUP_SOUND_URI_KEY, pendingStartupSoundUri)
                 pendingStartupSoundDurationSeconds?.let { durationSeconds ->
@@ -2959,6 +2981,15 @@ internal fun validateThemeStoreConfig(config: JSONObject) {
         }
     }
     config.optJSONObject("appearance")?.let(::validateThemeStoreAppearance)
+    config.optJSONObject("uiPassthrough")?.let(::validateUiPassthroughPackage)
+    config.optJSONObject("sidebarSurface")?.let { sidebar ->
+        require(sidebar.keys().asSequence().all { it == "showDividers" || it == "backgroundOpacity" } &&
+            sidebar.opt("showDividers") is Boolean) { "Invalid sidebar surface settings" }
+        val opacity = sidebar.opt("backgroundOpacity")
+        require(opacity is Number && opacity.toDouble().isFinite() && opacity.toDouble() in 0.0..1.0) {
+            "Invalid sidebar background opacity"
+        }
+    }
     config.optJSONObject("homeLayout")?.let(::validateThemeStoreHomeLayout)
     validateComponentStyleConfig(config)
 }

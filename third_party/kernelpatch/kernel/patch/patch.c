@@ -52,15 +52,16 @@ int resolve_pt_regs();
 int supercall_install();
 void module_init();
 void syscall_init();
+void syscall_dispatch_init();
 int kstorage_init();
 int su_compat_init();
+// int selinux_hide_init();
 
 #ifdef ANDROID
 int android_user_init();
 int android_sepolicy_flags_fix();
 #endif
 
-void init_patchsu();
 void init_sukisu_ultra();
 
 static void before_rest_init(hook_fargs4_t *args, void *udata)
@@ -73,6 +74,10 @@ static void before_rest_init(hook_fargs4_t *args, void *udata)
 
     if ((rc = bypass_kcfi())) goto out;
     log_boot("bypass_kcfi done: %d\n", rc);
+
+    /* Must precede supercall_install/su_compat_init so their hook_syscalln
+     * calls register with the dispatcher instead of patching the table. */
+    syscall_dispatch_init();
 
     if ((rc = resolve_struct())) goto out;
     log_boot("resolve_struct done: %d\n", rc);
@@ -133,11 +138,18 @@ static int extra_event_load_kpm(const patch_extra_item_t *extra, const char *arg
     return 0;
 }
 
-void extra_event_init(const char *event)
+void extra_event_init_args(const char *event, const char *args)
 {
     if (!event) return;
     log_boot("event: %s\n", event);
+    notify_modules_event(event, args, 0);
     on_each_extra_item(extra_event_load_kpm, (void *)event);
+}
+KP_EXPORT_SYMBOL(extra_event_init_args);
+
+void extra_event_init(const char *event)
+{
+    extra_event_init_args(event, 0);
 }
 KP_EXPORT_SYMBOL(extra_event_init);
 

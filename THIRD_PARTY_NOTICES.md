@@ -194,9 +194,9 @@ It is not an official SukiSU-Ultra distribution and does not imply endorsement
 by that project.
 
 The related early-boot runtime and image patcher are pinned from
-[SukiSU_KernelPatch_patch](https://github.com/ShirkNeko/SukiSU_KernelPatch_patch)
+[SukiSU_KernelPatch_patch](https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch)
 at commit
-[`c5f0785dc7fac22a846eecc6392f34198d8e18b5`](https://github.com/ShirkNeko/SukiSU_KernelPatch_patch/commit/c5f0785dc7fac22a846eecc6392f34198d8e18b5).
+[`72bf62025e9c72e07b64c77db0801891f1088429`](https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/commit/72bf62025e9c72e07b64c77db0801891f1088429) (0.13.9).
 The vendored source, declared license, source-date metadata, excluded build
 artifacts, and local hardening are recorded in
 `third_party/kernelpatch/SOURCE.json` and `docs/SUKISU_KPM_NOTICE.md`.

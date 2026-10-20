@@ -85,6 +85,33 @@ enum class CustomPageBackgroundTarget(
         cropBottomKey = "custom_page_background_kpm_crop_bottom",
         videoDurationSecondsKey = "custom_page_background_kpm_video_duration_seconds",
     ),
+    Store(
+        id = "store", mainPageIndex = -1, titleRes = R.string.settings_page_background_store,
+        wallpaperUriKey = "custom_page_background_store_wallpaper_uri",
+        videoUriKey = "custom_page_background_store_video_uri",
+        opacityKey = "custom_page_background_store_opacity",
+        cropLeftKey = "custom_page_background_store_crop_left", cropTopKey = "custom_page_background_store_crop_top",
+        cropRightKey = "custom_page_background_store_crop_right", cropBottomKey = "custom_page_background_store_crop_bottom",
+        videoDurationSecondsKey = "custom_page_background_store_video_duration_seconds",
+    ),
+    Templates(
+        id = "templates", mainPageIndex = -1, titleRes = R.string.settings_page_background_templates,
+        wallpaperUriKey = "custom_page_background_templates_wallpaper_uri",
+        videoUriKey = "custom_page_background_templates_video_uri",
+        opacityKey = "custom_page_background_templates_opacity",
+        cropLeftKey = "custom_page_background_templates_crop_left", cropTopKey = "custom_page_background_templates_crop_top",
+        cropRightKey = "custom_page_background_templates_crop_right", cropBottomKey = "custom_page_background_templates_crop_bottom",
+        videoDurationSecondsKey = "custom_page_background_templates_video_duration_seconds",
+    ),
+    About(
+        id = "about", mainPageIndex = -1, titleRes = R.string.about,
+        wallpaperUriKey = "custom_page_background_about_wallpaper_uri",
+        videoUriKey = "custom_page_background_about_video_uri",
+        opacityKey = "custom_page_background_about_opacity",
+        cropLeftKey = "custom_page_background_about_crop_left", cropTopKey = "custom_page_background_about_crop_top",
+        cropRightKey = "custom_page_background_about_crop_right", cropBottomKey = "custom_page_background_about_crop_bottom",
+        videoDurationSecondsKey = "custom_page_background_about_video_duration_seconds",
+    ),
     Install(
         id = "install",
         mainPageIndex = -1,
@@ -101,7 +128,7 @@ enum class CustomPageBackgroundTarget(
 
     companion object {
         fun fromMainPageIndex(page: Int): CustomPageBackgroundTarget? {
-            return entries.firstOrNull { it.mainPageIndex == page }
+            return entries.firstOrNull { page >= 0 && it.mainPageIndex == page }
         }
     }
 
@@ -139,6 +166,9 @@ data class CustomPageBackgroundSet(
     val settings: CustomBackgroundState = CustomBackgroundState(),
     val kpm: CustomBackgroundState = CustomBackgroundState(),
     val install: CustomBackgroundState = CustomBackgroundState(),
+    val store: CustomBackgroundState = CustomBackgroundState(),
+    val templates: CustomBackgroundState = CustomBackgroundState(),
+    val about: CustomBackgroundState = CustomBackgroundState(),
 ) {
     operator fun get(target: CustomPageBackgroundTarget): CustomBackgroundState {
         return when (target) {
@@ -148,6 +178,9 @@ data class CustomPageBackgroundSet(
             CustomPageBackgroundTarget.Settings -> settings
             CustomPageBackgroundTarget.Kpm -> kpm
             CustomPageBackgroundTarget.Install -> install
+            CustomPageBackgroundTarget.Store -> store
+            CustomPageBackgroundTarget.Templates -> templates
+            CustomPageBackgroundTarget.About -> about
         }
     }
 
@@ -302,6 +335,9 @@ internal fun SharedPreferences.readCustomPageBackgroundSet(): CustomPageBackgrou
         settings = readCustomPageBackgroundState(CustomPageBackgroundTarget.Settings),
         kpm = readCustomPageBackgroundState(CustomPageBackgroundTarget.Kpm),
         install = readCustomPageBackgroundState(CustomPageBackgroundTarget.Install),
+        store = readCustomPageBackgroundState(CustomPageBackgroundTarget.Store),
+        templates = readCustomPageBackgroundState(CustomPageBackgroundTarget.Templates),
+        about = readCustomPageBackgroundState(CustomPageBackgroundTarget.About),
     )
 }
 
