@@ -86,16 +86,20 @@ of KernelSU/ApkeSU source itself.
 6. Native GKI KPM attribution and scope
 ---------------------------------------
 
-The Native GKI KPM interface is declared as a SukiSU-compatible ApkeSU
+The Native GKI KPM interface is declared as a SukiSU-compatible SterSU
 implementation, not as an official SukiSU-Ultra release. The interface
 reference is pinned to SukiSU-Ultra commit
-`9fbe8fe8ca90c62c259c5894bf96d02ac31209b9`; the early-boot KernelPatch/KPIMG
-source snapshot is pinned separately to
-`72bf62025e9c72e07b64c77db0801891f1088429` (0.13.9). The URLs, license data, and exact
-scope are recorded in `docs/SUKISU_KPM_NOTICE.md` and
-`third_party/kernelpatch/SOURCE.json`.
+`31255c460caefef75e98b3406dd40efcc00fad38`. The bundled kpimg/kptools are
+unmodified assets from that commit, runtime version 0.13.0. Their provenance,
+hashes, license text and same-version source reference are recorded in
+`third_party/sukisu-runtime/` and `docs/SUKISU_KPM_NOTICE.md`. The source
+reference is SukiSU_KernelPatch_patch tag 0.13.0, commit
+`762e6fb446f58020691b83509873268f6af634f2`; byte-reproducibility of the upstream
+assets has not been verified. Preserve the source reference and GPL license
+when redistributing. The separately vendored, hardened 0.13.9 source is retained
+for experiments and is not the source of the bundled upstream assets.
 
-The ApkeSU bridge is confined to the `CONFIG_KSU=y`, `CONFIG_KPM=y` AArch64
+The SterSU bridge is confined to the `CONFIG_KSU=y`, `CONFIG_KPM=y` AArch64
 GKI path. The LKM/KPatch-Next backend is separate. No upstream license is
 replaced by this declaration; each imported or derived file remains governed
 by its SPDX header and the applicable upstream license.

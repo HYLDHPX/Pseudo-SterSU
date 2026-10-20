@@ -2,6 +2,19 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+if [[ "${BUILD_FROM_SOURCE:-0}" != 1 ]]; then
+    if [[ "${NO_INSTALL:-0}" == 1 || "${KEEP_STAGING:-0}" == 1 || -n "${SOURCE_PATH:-}" ]]; then
+        echo "Source-build options require BUILD_FROM_SOURCE=1 and a non-production OUTPUT_DIR." >&2
+        exit 2
+    fi
+    args=()
+    if [[ -n "${OUTPUT_DIR:-}" ]]; then args+=(--output "$OUTPUT_DIR"); fi
+    exec python3 "$ROOT/scripts/sync_sukisu_runtime.py" "${args[@]}"
+fi
+if [[ -z "${OUTPUT_DIR:-}" || "$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$OUTPUT_DIR")" == "$ROOT/userspace/ksud/bin/aarch64" ]]; then
+    echo "Experimental source builds require a non-production OUTPUT_DIR; release assets stay pinned to SukiSU." >&2
+    exit 2
+fi
 SOURCE=${SOURCE_PATH:-"$ROOT/third_party/kernelpatch"}
 OUTPUT=${OUTPUT_DIR:-"$ROOT/userspace/ksud/bin/aarch64"}
 NDK=${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-}}

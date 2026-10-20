@@ -741,7 +741,7 @@ private fun NativeKpmScreen(
                     caps = caps,
                     loading = loading,
                     busy = busy,
-                    entryCount = entries.size,
+                    entryCount = entries.count { it.stored },
                     showGuide = showNativeGuide,
                     onToggleGuide = { showNativeGuide = !showNativeGuide },
                     onImport = { importLauncher.launch(arrayOf("*/*")) },
@@ -1564,7 +1564,7 @@ private fun KpmEntryCard(
                         Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.module_more_actions))
                     }
                     DropdownMenu(expanded = showActions, onDismissRequest = { showActions = false }) {
-                        if (entry.enabled) {
+                        if (entry.stored && entry.enabled) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.kpm_disable)) },
                                 onClick = { showActions = false; onEnableChanged(false) },
@@ -1588,7 +1588,7 @@ private fun KpmEntryCard(
                             text = { Text(stringResource(R.string.kpm_remove)) },
                             onClick = { showActions = false; onDelete() },
                             leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null) },
-                            enabled = !busy,
+                            enabled = !busy && entry.stored,
                         )
                     }
                 }
@@ -1606,7 +1606,7 @@ private fun KpmEntryCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(
+                if (entry.stored) Text(
                     text = stringResource(
                         if (entry.enabled) R.string.kpm_boot_enabled else R.string.kpm_boot_disabled,
                     ),
@@ -1650,7 +1650,7 @@ private fun KpmEntryCard(
                 )
             }
             when {
-                !entry.enabled -> Button(
+                entry.stored && !entry.enabled -> Button(
                     onClick = { onEnableChanged(true) },
                     enabled = !busy && managementEnabled,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),

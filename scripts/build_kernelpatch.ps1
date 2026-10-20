@@ -3,6 +3,7 @@ param(
     [string]$NdkPath = "",
     [string]$SourcePath = "",
     [string]$OutputDir = "",
+    [switch]$FromSource,
     [switch]$NoInstall,
     [switch]$KeepStaging
 )
@@ -21,6 +22,20 @@ if (![long]::TryParse($env:SOURCE_DATE_EPOCH, [ref]$parsedSourceDateEpoch) -or $
 $env:TZ = "UTC"
 
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+if (!$FromSource) {
+    if ($NoInstall -or $KeepStaging -or ![string]::IsNullOrWhiteSpace($SourcePath)) {
+        throw "Source-build options require -FromSource and a non-production -OutputDir."
+    }
+    $syncArgs = @((Join-Path $PSScriptRoot "sync_sukisu_runtime.py"))
+    if (![string]::IsNullOrWhiteSpace($OutputDir)) { $syncArgs += @("--output", $OutputDir) }
+    & python @syncArgs
+    if ($LASTEXITCODE -ne 0) { throw "Pinned SukiSU runtime synchronization failed." }
+    exit 0
+}
+if ([string]::IsNullOrWhiteSpace($OutputDir) -or
+    [IO.Path]::GetFullPath($OutputDir) -eq [IO.Path]::GetFullPath((Join-Path $repo "userspace\ksud\bin\aarch64"))) {
+    throw "Experimental source builds require a non-production -OutputDir; release assets stay pinned to SukiSU."
+}
 if ([string]::IsNullOrWhiteSpace($SourcePath)) {
     $SourcePath = Join-Path $repo "third_party\kernelpatch"
 }

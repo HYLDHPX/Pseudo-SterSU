@@ -19,6 +19,9 @@ use crate::kpm_backend::{
 };
 use crate::{defs, kpatch_next, kpm_backend, ksu_uapi, ksucalls};
 
+#[path = "kpm_native.rs"]
+mod native;
+
 const MANIFEST_NAME: &str = "manifest.json";
 const IMAGE_NAME: &str = "module.kpm";
 const MANIFEST_VERSION: u64 = 1;
@@ -559,6 +562,9 @@ fn unload_runtime(id: &str) -> Result<()> {
 // The policy is deliberately kept next to the imported images so it survives
 // Manager updates while remaining outside the module enumeration.
 fn read_policy() -> Result<bool> {
+    if backend() == KpmBackend::NativeGki {
+        return native::read_policy();
+    }
     ensure_kpm_root()?;
     let path = Path::new(defs::KPM_POLICY_PATH);
     let metadata = match fs::symlink_metadata(path) {
@@ -1560,6 +1566,12 @@ pub fn recover_boot_state() {
             return;
         }
     };
+    if backend() == KpmBackend::NativeGki {
+        if let Err(error) = native::recover() {
+            warn!("GKI KPM boot recovery failed: {error:#}");
+        }
+        return;
+    }
     recover_boot_state_inner();
 }
 
@@ -1571,6 +1583,12 @@ pub fn load_enabled_at_boot() {
             return;
         }
     };
+    if backend() == KpmBackend::NativeGki {
+        if let Err(error) = native::load_at_boot() {
+            warn!("GKI KPM boot loading failed: {error:#}");
+        }
+        return;
+    }
     recover_boot_state_inner();
     let policy_enabled = match read_policy() {
         Ok(enabled) => enabled,
@@ -1751,6 +1769,12 @@ pub fn mark_boot_completed() {
             return;
         }
     };
+    if backend() == KpmBackend::NativeGki {
+        if let Err(error) = native::clear_pending() {
+            warn!("GKI KPM boot-completed cleanup failed: {error:#}");
+        }
+        return;
+    }
     match backend() {
         KpmBackend::NativeGki => {
             if let Err(error) = clear_pending() {
@@ -2069,6 +2093,9 @@ fn set_policy_inner(enabled: bool) -> Result<()> {
 
 pub fn set_policy(enabled: bool) -> Result<()> {
     let _lock = acquire_operation_lock()?;
+    if backend() == KpmBackend::NativeGki {
+        return native::set_policy(enabled);
+    }
     set_policy_inner(enabled)
 }
 
@@ -2093,6 +2120,10 @@ fn manifest_json(id: &str, manifest: &KpmManifest, live: Option<bool>) -> Value 
 }
 
 pub fn print_list() -> Result<()> {
+    if backend() == KpmBackend::NativeGki {
+        let _lock = acquire_operation_lock()?;
+        return native::print_list();
+    }
     ensure_supported_backend()?;
     ensure_kpm_root()?;
     let live = match live_names() {
@@ -2124,6 +2155,10 @@ pub fn print_list() -> Result<()> {
 }
 
 pub fn print_info(id: &str) -> Result<()> {
+    if backend() == KpmBackend::NativeGki {
+        let _lock = acquire_operation_lock()?;
+        return native::print_info(id);
+    }
     let selected = ensure_supported_backend()?;
     validate_id(id)?;
     let manifest = read_manifest(id)?;
@@ -2270,6 +2305,9 @@ fn import_inner(path: &Path, args: &str, trusted: bool, force: bool, enable: boo
 
 pub fn import(path: &Path, args: &str, trusted: bool, force: bool, enable: bool) -> Result<()> {
     let _lock = acquire_operation_lock()?;
+    if backend() == KpmBackend::NativeGki {
+        return native::import(path, args, trusted, force, enable);
+    }
     import_inner(path, args, trusted, force, enable)
 }
 
@@ -2327,11 +2365,17 @@ fn enable_module_inner(id: &str) -> Result<()> {
 
 pub fn enable_module(id: &str) -> Result<()> {
     let _lock = acquire_operation_lock()?;
+    if backend() == KpmBackend::NativeGki {
+        return native::set_enabled(id, true);
+    }
     enable_module_inner(id)
 }
 
 pub fn disable_module(id: &str) -> Result<()> {
     let _lock = acquire_operation_lock()?;
+    if backend() == KpmBackend::NativeGki {
+        return native::set_enabled(id, false);
+    }
     let selected = ensure_supported_backend()?;
     let mut manifest = read_manifest(id)?;
     let previous_manifest = manifest.clone();
@@ -2372,6 +2416,9 @@ pub fn disable_module(id: &str) -> Result<()> {
 
 pub fn remove_module(id: &str) -> Result<()> {
     let _lock = acquire_operation_lock()?;
+    if backend() == KpmBackend::NativeGki {
+        return native::remove(id);
+    }
     let selected = ensure_supported_backend()?;
     validate_id(id)?;
     if is_live(id).with_context(|| {
@@ -2397,6 +2444,9 @@ pub fn remove_module(id: &str) -> Result<()> {
 
 pub fn load_module(id: &str) -> Result<()> {
     let _lock = acquire_operation_lock()?;
+    if backend() == KpmBackend::NativeGki {
+        return native::load(id);
+    }
     validate_id(id)?;
     ensure!(!is_live(id)?, "KPM is already loaded");
     let manifest = read_manifest(id)?;

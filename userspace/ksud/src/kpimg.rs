@@ -14,8 +14,17 @@ const MAX_KERNEL: usize = 128 * 1024 * 1024 - 8192;
 const MAX_TOOL: usize = 16 * 1024 * 1024;
 const MAX_LOG: usize = 256 * 1024;
 const PRESET_HEADER: usize = 64;
-const PRESET_SIZE: usize = 1416;
-const HEADER_BACKUP: usize = PRESET_HEADER + 104 + 56;
+const PRESET_SIZE: usize = 1400;
+const HEADER_BACKUP: usize = PRESET_HEADER + 104 + 40;
+
+fn preset_layout(image: &[u8]) -> Result<(usize, usize)> {
+    match image.get(9..12).context("truncated kpimg version")? {
+        [0, 13, 0] => Ok((PRESET_SIZE, HEADER_BACKUP)),
+        // Recognize existing images and explicit legacy overrides as well.
+        [9, 13, 0] => Ok((1416, PRESET_HEADER + 104 + 56)),
+        _ => anyhow::bail!("unsupported kpimg preset version; use the pinned SukiSU runtime"),
+    }
+}
 
 #[derive(clap::Args, Debug)]
 pub struct BootPatchKpimgArgs {
@@ -28,7 +37,7 @@ pub struct BootPatchKpimgArgs {
     /// Override the bundled KPM runtime
     #[arg(long)]
     pub kpimg: Option<PathBuf>,
-    /// Override the bundled static Android AArch64 patcher
+    /// Override the bundled Android AArch64 patcher (unrecognized overrides must be static)
     #[arg(long)]
     pub kptools: Option<PathBuf>,
     /// Replace an existing output file (never an input)
@@ -108,6 +117,7 @@ fn validate_kpimg(bytes: &[u8]) -> Result<()> {
         u64_at(bytes, 16)? & 2 != 0,
         "kpimg was not built for Android"
     );
+    preset_layout(bytes)?;
     Ok(())
 }
 
@@ -144,7 +154,18 @@ fn validate_kptools(bytes: &[u8]) -> Result<()> {
     for index in 0..count {
         let pos = phoff + index * entry_size;
         let kind = u32::from_le_bytes(bytes[pos..pos + 4].try_into()?);
-        ensure!(kind != 3, "kptools must be static (PT_INTERP is forbidden)");
+        if kind == 3 {
+            // Upstream's exact bundled tool uses Android's system linker. Do
+            // not relax the static-only rule for arbitrary dynamic overrides.
+            let source: serde_json::Value = serde_json::from_str(include_str!(
+                "../../../third_party/sukisu-runtime/SOURCE.json"
+            ))?;
+            ensure!(
+                source["artifacts"]["kptools"]["sha256"].as_str()
+                    == Some(sha256::digest(bytes).as_str()),
+                "only the pinned SukiSU kptools may use PT_INTERP; other overrides must be static"
+            );
+        }
         if kind == 1 {
             let offset = u64_at(bytes, pos + 8)?;
             let size = u64_at(bytes, pos + 32)?;
@@ -219,7 +240,7 @@ fn marker(image: &[u8]) -> Result<Option<usize>> {
             continue;
         }
         // A string in kernel rodata is not itself proof of an injected runtime.
-        if offset % 4096 != 0 || offset + PRESET_SIZE > image.len() {
+        if offset % 4096 != 0 || offset + PRESET_HEADER + 48 > image.len() {
             continue;
         }
         let original = usize::try_from(u64_at(image, offset + PRESET_HEADER + 8)?)?;
@@ -227,6 +248,11 @@ fn marker(image: &[u8]) -> Result<Option<usize>> {
         if original < 64 || original.checked_add(4095).map(|n| n & !4095) != Some(offset) {
             continue;
         }
+        let (preset_size, _) = preset_layout(&image[offset..])?;
+        ensure!(
+            offset + preset_size <= image.len(),
+            "truncated kpimg preset"
+        );
         ensure!(
             size > 4096
                 && offset
@@ -246,6 +272,7 @@ fn marker(image: &[u8]) -> Result<Option<usize>> {
 
 fn validate_patched(original: &[u8], patched: &[u8], runtime: &[u8]) -> Result<usize> {
     validate_arm64(patched)?;
+    let (_, header_backup) = preset_layout(runtime)?;
     let offset = marker(patched)?.context("patcher output has no valid kpimg preset")?;
     ensure!(
         u64_at(patched, offset + PRESET_HEADER + 8)? == original.len() as u64,
@@ -264,7 +291,7 @@ fn validate_patched(original: &[u8], patched: &[u8], runtime: &[u8]) -> Result<u
         "injected runtime code mismatch"
     );
     ensure!(
-        patched.get(offset + HEADER_BACKUP..offset + HEADER_BACKUP + 8) == original.get(..8),
+        patched.get(offset + header_backup..offset + header_backup + 8) == original.get(..8),
         "original kernel entry backup mismatch"
     );
     let entry = if original.starts_with(b"MZ") { 4 } else { 0 };
@@ -327,14 +354,9 @@ fn drain(mut source: impl Read) -> io::Result<Vec<u8>> {
     }
 }
 
-fn run_patcher(
-    tool: &Path,
-    input: &Path,
-    runtime: &Path,
-    output: &Path,
-    timeout: Duration,
-) -> Result<()> {
-    let mut child = Command::new(tool)
+fn patcher_command(tool: &Path, input: &Path, runtime: &Path, output: &Path) -> Command {
+    let mut command = Command::new(tool);
+    command
         .arg("-p")
         .arg("-i")
         .arg(input)
@@ -342,11 +364,26 @@ fn run_patcher(
         .arg(runtime)
         .arg("-o")
         .arg(output)
+        // The upstream 0.13.0 CLI requires a non-NULL -s argument, even
+        // though SukiSU removes the APatch root/supercall entry points.
+        // An explicit empty value satisfies that CLI without adding a key.
+        .args(["-s", ""]);
+    command
+}
+
+fn run_patcher(
+    tool: &Path,
+    input: &Path,
+    runtime: &Path,
+    output: &Path,
+    timeout: Duration,
+) -> Result<()> {
+    let mut child = patcher_command(tool, input, runtime, output)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .context("cannot execute static AArch64 kptools (requires an Android AArch64 host)")?;
+        .context("cannot execute AArch64 kptools (requires an Android AArch64 host)")?;
     let stdout = child.stdout.take().context("missing patcher stdout")?;
     let stderr = child.stderr.take().context("missing patcher stderr")?;
     let out_thread = thread::spawn(move || drain(stdout));
@@ -500,6 +537,20 @@ pub fn print_info(args: &BootInfoKpimgArgs) -> Result<()> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn upstream_patcher_receives_explicit_empty_compatibility_key() {
+        let command = patcher_command(
+            Path::new("kptools"),
+            Path::new("Image"),
+            Path::new("kpimg"),
+            Path::new("Image.patched"),
+        );
+        let args: Vec<_> = command.get_args().collect();
+        assert_eq!(args.len(), 9);
+        assert_eq!(args[7], std::ffi::OsStr::new("-s"));
+        assert_eq!(args[8], std::ffi::OsStr::new(""));
+    }
+
     fn raw_kernel() -> Vec<u8> {
         let mut image = vec![0; 8192];
         image[..4].copy_from_slice(&0x1400_0010u32.to_le_bytes());
@@ -525,6 +576,7 @@ mod tests {
     fn runtime() -> Vec<u8> {
         let mut image = vec![0; 8192];
         image[..8].copy_from_slice(MAGIC);
+        image[10] = 13;
         image[16..24].copy_from_slice(&2u64.to_le_bytes());
         image[4096..].fill(0xa5);
         image
@@ -545,6 +597,7 @@ mod tests {
     }
 
     fn injected(kernel: &[u8], runtime: &[u8]) -> Vec<u8> {
+        let (_, header_backup) = preset_layout(runtime).unwrap();
         let offset = (kernel.len() + 4095) & !4095;
         let mut image = kernel.to_vec();
         image.resize(offset, 0);
@@ -552,7 +605,7 @@ mod tests {
         image[offset + 72..offset + 80].copy_from_slice(&(kernel.len() as u64).to_le_bytes());
         image[offset + 80..offset + 88].copy_from_slice(&(runtime.len() as u64).to_le_bytes());
         image[offset + 104..offset + 112].copy_from_slice(&(offset as u64).to_le_bytes());
-        image[offset + HEADER_BACKUP..offset + HEADER_BACKUP + 8].copy_from_slice(&kernel[..8]);
+        image[offset + header_backup..offset + header_backup + 8].copy_from_slice(&kernel[..8]);
         image[..4].copy_from_slice(&(0x1400_0000 | ((offset as u32 + 4096) / 4)).to_le_bytes());
         image
     }
@@ -623,6 +676,33 @@ mod tests {
         image = tool();
         image[32..40].copy_from_slice(&u64::MAX.to_le_bytes());
         assert!(validate_kptools(&image).is_err());
+    }
+
+    #[test]
+    fn validates_pinned_upstream_pair_and_rejects_modified_dynamic_tool() {
+        let runtime = include_bytes!("../bin/aarch64/kpimg");
+        let tool = include_bytes!("../bin/aarch64/kptools");
+        assert!(validate_kpimg(runtime).is_ok());
+        assert_eq!((runtime[11], runtime[10], runtime[9]), (0, 13, 0));
+        assert!(validate_kptools(tool).is_ok());
+        let mut modified = tool.to_vec();
+        *modified.last_mut().unwrap() ^= 1;
+        assert!(validate_kptools(&modified).is_err());
+        let kernel = raw_kernel();
+        assert!(validate_patched(&kernel, &injected(&kernel, runtime), runtime).is_ok());
+    }
+
+    #[test]
+    fn recognizes_legacy_preset_and_rejects_unknown_versions() {
+        let mut image = runtime();
+        image[9] = 9;
+        assert_eq!(preset_layout(&image).unwrap(), (1416, 224));
+        let kernel = raw_kernel();
+        let patched = injected(&kernel, &image);
+        assert!(validate_patched(&kernel, &patched, &image).is_ok());
+        assert_eq!(marker(&patched).unwrap(), Some(8192));
+        image[9] = 8;
+        assert!(validate_kpimg(&image).is_err());
     }
 
     #[test]

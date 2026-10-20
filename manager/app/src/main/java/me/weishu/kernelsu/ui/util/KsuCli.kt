@@ -166,6 +166,7 @@ data class KpmCaps(
 
 data class KpmEntry(
     val id: String,
+    val stored: Boolean = true,
     val name: String = "",
     val version: String = "",
     val license: String = "",
@@ -1126,6 +1127,7 @@ fun parseKpmEntries(content: String): List<KpmEntry> {
             add(
                 KpmEntry(
                     id = id,
+                    stored = obj.optBoolean("stored", true),
                     name = obj.optString("name", id),
                     version = obj.optString("version", ""),
                     license = obj.optString("license", ""),

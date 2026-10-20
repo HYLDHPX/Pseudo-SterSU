@@ -406,6 +406,28 @@ fn nul_terminated_string(buffer: &[u8], label: &str) -> io::Result<String> {
     Ok(String::from_utf8_lossy(&buffer[..end]).trim().to_string())
 }
 
+fn extension_kpm_enabled() -> io::Result<Option<bool>> {
+    let mut cmd = ksu_uapi::ksu_extension_cmd {
+        id: ksu_uapi::ksu_extension_id_KSU_EXTENSION_KPM,
+        op: ksu_uapi::KSU_EXTENSION_GET,
+        supported: 0,
+        reserved: 0,
+        value: 0,
+        user_ptr: 0,
+    };
+    match ksuctl(ksu_uapi::KSU_IOCTL_EXTENSION, &raw mut cmd) {
+        Ok(0) => Ok(Some(
+            cmd.supported & ksu_uapi::KSU_FEATURE_FLAG_SUPPORTED != 0 && cmd.value != 0,
+        )),
+        Ok(_) => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "KPM extension GET returned an unexpected result",
+        )),
+        Err(error) if crate::kpm_abi::extension_ioctl_missing(&error) => Ok(None),
+        Err(error) => Err(error),
+    }
+}
+
 fn legacy_native_kpm_enabled() -> bool {
     if is_late_load() || is_lkm_mode() {
         return false;
@@ -415,10 +437,16 @@ fn legacy_native_kpm_enabled() -> bool {
 }
 
 pub fn is_native_kpm() -> bool {
+    if is_lkm_mode() || is_late_load() {
+        return false;
+    }
+    match extension_kpm_enabled() {
+        Ok(Some(enabled)) => return enabled,
+        Err(_) => return false,
+        Ok(None) => {}
+    }
     let info = get_info();
-    !is_lkm_mode()
-        && !is_late_load()
-        && (info.flags & ksu_uapi::KSU_GET_INFO_FLAG_NATIVE_KPM != 0 || legacy_native_kpm_enabled())
+    info.flags & ksu_uapi::KSU_GET_INFO_FLAG_NATIVE_KPM != 0 || legacy_native_kpm_enabled()
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -437,6 +465,33 @@ pub struct NativeKpmCaps {
 
 const MAX_NATIVE_KPM_COUNT: i32 = 64;
 
+fn probed_native_kpm_caps() -> NativeKpmCaps {
+    let probe = native_kpm_probe();
+    let ready = probe.is_ok();
+    NativeKpmCaps {
+        abi_version: 1,
+        backend: ksu_uapi::KSU_KPM_BACKEND_NATIVE_GKI,
+        capabilities: ksu_uapi::KSU_KPM_CAP_ABI
+            | if ready {
+                ksu_uapi::KSU_KPM_CAP_LOAD
+                    | ksu_uapi::KSU_KPM_CAP_UNLOAD
+                    | ksu_uapi::KSU_KPM_CAP_LIST
+                    | ksu_uapi::KSU_KPM_CAP_CONTROL
+                    | ksu_uapi::KSU_KPM_CAP_INFO
+                    | ksu_uapi::KSU_KPM_CAP_VERSION
+            } else {
+                0
+            },
+        max_image_size: 4 * 1024 * 1024,
+        max_loaded: 64,
+        max_name_len: 31,
+        max_args_len: 254,
+        probe_error: probe.as_ref().err().map_or(0, negative_errno),
+        loader_ready: ready,
+        late_load: is_late_load(),
+    }
+}
+
 pub fn get_native_kpm_caps() -> io::Result<NativeKpmCaps> {
     if !is_native_kpm() {
         return Ok(NativeKpmCaps {
@@ -451,6 +506,12 @@ pub fn get_native_kpm_caps() -> io::Result<NativeKpmCaps> {
             loader_ready: false,
             late_load: is_late_load(),
         });
+    }
+
+    // Current SukiSU kernels use only the unified extension. Never send a
+    // downstream capability ioctl to a kernel which advertised this ABI.
+    if extension_kpm_enabled()? == Some(true) {
+        return Ok(probed_native_kpm_caps());
     }
 
     let mut cmd = ksu_uapi::ksu_kpm_caps_cmd {
@@ -506,38 +567,7 @@ pub fn get_native_kpm_caps() -> io::Result<NativeKpmCaps> {
                     late_load: is_late_load(),
                 });
             }
-            match native_kpm_probe() {
-                Ok(_) => Ok(NativeKpmCaps {
-                    abi_version: 1,
-                    backend: ksu_uapi::KSU_KPM_BACKEND_NATIVE_GKI,
-                    capabilities: ksu_uapi::KSU_KPM_CAP_ABI
-                        | ksu_uapi::KSU_KPM_CAP_LOAD
-                        | ksu_uapi::KSU_KPM_CAP_UNLOAD
-                        | ksu_uapi::KSU_KPM_CAP_LIST
-                        | ksu_uapi::KSU_KPM_CAP_CONTROL
-                        | ksu_uapi::KSU_KPM_CAP_INFO
-                        | ksu_uapi::KSU_KPM_CAP_VERSION,
-                    max_image_size: 4 * 1024 * 1024,
-                    max_loaded: 64,
-                    max_name_len: 31,
-                    max_args_len: 1023,
-                    probe_error: 0,
-                    loader_ready: true,
-                    late_load: false,
-                }),
-                Err(probe_error) => Ok(NativeKpmCaps {
-                    abi_version: 1,
-                    backend: ksu_uapi::KSU_KPM_BACKEND_NATIVE_GKI,
-                    capabilities: ksu_uapi::KSU_KPM_CAP_ABI,
-                    max_image_size: 4 * 1024 * 1024,
-                    max_loaded: 64,
-                    max_name_len: 31,
-                    max_args_len: 1023,
-                    probe_error: negative_errno(&probe_error),
-                    loader_ready: false,
-                    late_load: is_late_load(),
-                }),
-            }
+            Ok(probed_native_kpm_caps())
         }
         Err(error) => Err(error),
     }
@@ -557,7 +587,24 @@ fn native_kpm_call(control_code: u32, arg1: u64, arg2: u64) -> io::Result<i32> {
         arg2,
         result_code: (&raw mut result) as u64,
     };
-    ksuctl(ksu_uapi::KSU_IOCTL_KPM, &raw mut cmd)?;
+    let mut extension = ksu_uapi::ksu_extension_cmd {
+        id: ksu_uapi::ksu_extension_id_KSU_EXTENSION_KPM,
+        op: ksu_uapi::KSU_EXTENSION_IO,
+        supported: 0,
+        reserved: 0,
+        value: 0,
+        user_ptr: (&raw mut cmd) as u64,
+    };
+    let transport = ksuctl(ksu_uapi::KSU_IOCTL_EXTENSION, &raw mut extension);
+    let transported = crate::kpm_abi::extension_or_legacy(transport, || {
+        ksuctl(ksu_uapi::KSU_IOCTL_KPM, &raw mut cmd)
+    })?;
+    if transported != 0 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "KPM transport returned an unexpected result",
+        ));
+    }
     if result < 0 {
         let errno = result.checked_neg().unwrap_or(libc::EIO);
         Err(io::Error::from_raw_os_error(errno))
@@ -587,13 +634,14 @@ pub fn native_kpm_probe() -> io::Result<String> {
 }
 
 pub fn native_kpm_load(path: &str, args: &str) -> io::Result<()> {
-    if path.is_empty() || path.len() >= 256 {
+    // Upstream copies at most 255 bytes, including the required terminator.
+    if path.is_empty() || path.len() >= 255 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "Native KPM path is too long",
         ));
     }
-    if args.len() > 1023 {
+    if args.len() > 254 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "Native KPM arguments are too long",
@@ -636,7 +684,9 @@ pub fn native_kpm_num() -> io::Result<i32> {
 }
 
 pub fn native_kpm_list() -> io::Result<String> {
-    let mut buffer = vec![0u8; 4096];
+    // Upstream's shared scratch area is 1024 bytes, even when userspace asks
+    // for more. Never request a copy beyond that allocation.
+    let mut buffer = vec![0u8; 1024];
     let result = native_kpm_call(
         ksu_uapi::SUKISU_KPM_LIST,
         buffer.as_mut_ptr() as u64,
@@ -670,7 +720,9 @@ pub fn native_kpm_info(name: &str) -> io::Result<String> {
     }
     let name = CString::new(name)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "KPM name contains NUL"))?;
-    let mut buffer = vec![0u8; 256];
+    // INFO has no capacity argument and upstream may copy the full scratch
+    // area. Older SterSU kernels copy only 256 bytes into this larger buffer.
+    let mut buffer = vec![0u8; 1024];
     let result = native_kpm_call(
         ksu_uapi::SUKISU_KPM_INFO,
         name.as_ptr() as u64,

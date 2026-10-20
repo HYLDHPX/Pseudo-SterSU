@@ -1,5 +1,21 @@
 use std::io;
 
+pub fn extension_ioctl_missing(error: &io::Error) -> bool {
+    // Android/Linux ENOTTY and ENOSYS mean the transport is absent. A denied
+    // or unsupported KPM operation must never be retried through another ABI.
+    matches!(error.raw_os_error(), Some(25 | 38))
+}
+
+pub fn extension_or_legacy<T>(
+    result: io::Result<T>,
+    legacy: impl FnOnce() -> io::Result<T>,
+) -> io::Result<T> {
+    match result {
+        Err(error) if extension_ioctl_missing(&error) => legacy(),
+        result => result,
+    }
+}
+
 pub fn kpimg_version(image: &[u8]) -> Option<String> {
     if image.len() < 12 || !image.starts_with(b"KP1158\0\0") {
         return None;
@@ -79,8 +95,35 @@ pub fn parse_info_output(buffer: &[u8], operation_result: i32) -> io::Result<Str
 #[cfg(test)]
 mod tests {
     use super::{
-        format_runtime_version, kpimg_version, native_load_failure_hint, parse_info_output,
+        extension_or_legacy, format_runtime_version, kpimg_version, native_load_failure_hint,
+        parse_info_output,
     };
+    use std::io;
+
+    #[test]
+    fn only_missing_extension_transport_can_retry_legacy() {
+        for errno in [25, 38] {
+            assert_eq!(
+                extension_or_legacy(Err(io::Error::from_raw_os_error(errno)), || Ok(7)).unwrap(),
+                7
+            );
+        }
+        for errno in [1, 2, 5, 14, 22, 95] {
+            let error =
+                extension_or_legacy::<i32>(Err(io::Error::from_raw_os_error(errno)), || {
+                    panic!("must not repeat a failed KPM operation")
+                })
+                .unwrap_err();
+            assert_eq!(error.raw_os_error(), Some(errno));
+        }
+        assert_eq!(
+            extension_or_legacy(Ok(0), || panic!(
+                "must not repeat a successful KPM operation"
+            ))
+            .unwrap(),
+            0
+        );
+    }
 
     #[test]
     fn reads_the_bundled_binary_version_not_source_defines() {

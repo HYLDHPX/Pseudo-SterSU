@@ -224,6 +224,7 @@ fn assemble_bootstrap() {
 }
 
 fn assert_release_assets() {
+    println!("cargo:rerun-if-changed=../../third_party/sukisu-runtime/SOURCE.json");
     for name in ["kpimg", "kptools"] {
         println!("cargo:rerun-if-changed=bin/aarch64/{name}");
     }
@@ -245,11 +246,21 @@ fn assert_release_assets() {
          `cross build --package ksuinit --target aarch64-unknown-linux-musl --release`",
         ksuinit.display()
     );
+    let source: serde_json::Value =
+        serde_json::from_str(include_str!("../../third_party/sukisu-runtime/SOURCE.json"))
+            .expect("invalid pinned SukiSU runtime manifest");
     for name in ["kpimg", "kptools"] {
         let path = Path::new(&manifest_dir).join(asset_dir).join(name);
         assert!(
             path.is_file(),
             "missing {}; run scripts/build_kernelpatch first",
+            path.display()
+        );
+        let bytes = fs::read(&path).expect("cannot read bundled KernelPatch asset");
+        assert_eq!(
+            Some(sha256::digest(&bytes).as_str()),
+            source["artifacts"][name]["sha256"].as_str(),
+            "{} is not the pinned SukiSU runtime; run scripts/sync_sukisu_runtime.py",
             path.display()
         );
     }

@@ -41,6 +41,8 @@ mod kpimg;
 mod kpm;
 mod kpm_abi;
 mod kpm_backend;
+#[cfg(any(target_os = "android", test))]
+mod kpm_store;
 #[cfg(target_os = "android")]
 #[allow(nonstandard_style, unused, unsafe_op_in_unsafe_fn)]
 mod ksu_uapi;

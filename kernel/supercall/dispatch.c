@@ -15,6 +15,7 @@
 #include <linux/abk_control.h>
 #endif
 #include "uapi/supercall.h"
+#include "uapi/extension.h"
 #include "supercall/internal.h"
 #include "arch.h" // IWYU pragma: keep
 #include "policy/allowlist.h"
@@ -994,6 +995,49 @@ static int do_get_kpm_caps(void __user *arg)
     return 0;
 }
 
+/* Match SukiSU's KPM extension layout without enabling unrelated extensions.
+ * GET advertises build-time availability, not an attached executable loader. */
+static int do_extension(void __user *arg)
+{
+    struct ksu_extension_cmd cmd;
+
+    if (copy_from_user(&cmd, arg, sizeof(cmd)))
+        return -EFAULT;
+    if (cmd.reserved)
+        return -EINVAL;
+    if (cmd.id != KSU_EXTENSION_KPM)
+        return -EOPNOTSUPP;
+
+    switch (cmd.op) {
+    case KSU_EXTENSION_GET:
+        cmd.supported = 0;
+        cmd.value = 0;
+        cmd.user_ptr = 0;
+#if defined(CONFIG_KPM) && !defined(MODULE)
+        if (!ksu_late_loaded) {
+            cmd.supported = KSU_FEATURE_FLAG_SUPPORTED;
+            cmd.value = 1;
+        }
+#endif
+        return copy_to_user(arg, &cmd, sizeof(cmd)) ? -EFAULT : 0;
+    case KSU_EXTENSION_IO:
+#if defined(CONFIG_KPM) && !defined(MODULE)
+        if (ksu_late_loaded)
+            return -EOPNOTSUPP;
+        if (!cmd.user_ptr)
+            return -EFAULT;
+        return do_kpm((void __user *)(unsigned long)cmd.user_ptr);
+#else
+        return -EOPNOTSUPP;
+#endif
+    case KSU_EXTENSION_SET:
+    case KSU_EXTENSION_WIPE:
+        return -EOPNOTSUPP;
+    default:
+        return -EINVAL;
+    }
+}
+
 #if IS_ENABLED(CONFIG_ABK_CONTROL)
 static int do_abk_control_get_status(void __user *arg)
 {
@@ -1306,6 +1350,12 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
         .cmd = KSU_IOCTL_GET_KPM_CAPS,
         .name = "GET_KPM_CAPS",
         .handler = do_get_kpm_caps,
+        .perm_check = manager_or_root
+    },
+    {
+        .cmd = KSU_IOCTL_EXTENSION,
+        .name = "EXTENSION",
+        .handler = do_extension,
         .perm_check = manager_or_root
     },
 #ifdef CONFIG_KPM

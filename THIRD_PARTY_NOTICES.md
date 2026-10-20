@@ -185,26 +185,28 @@ limitations.
 6. SukiSU-compatible GKI KPM interface
 ---------------------------------------
 
-ApkeSU's Native GKI KPM interface is an explicitly declared compatibility
+SterSU's Native GKI KPM interface is an explicitly declared compatibility
 implementation. Its ABI and GKI integration were designed with reference to
 [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra), audited at
 commit
-[`9fbe8fe8ca90c62c259c5894bf96d02ac31209b9`](https://github.com/SukiSU-Ultra/SukiSU-Ultra/commit/9fbe8fe8ca90c62c259c5894bf96d02ac31209b9).
+[`31255c460caefef75e98b3406dd40efcc00fad38`](https://github.com/SukiSU-Ultra/SukiSU-Ultra/commit/31255c460caefef75e98b3406dd40efcc00fad38).
 It is not an official SukiSU-Ultra distribution and does not imply endorsement
 by that project.
 
-The related early-boot runtime and image patcher are pinned from
-[SukiSU_KernelPatch_patch](https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch)
-at commit
-[`72bf62025e9c72e07b64c77db0801891f1088429`](https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/commit/72bf62025e9c72e07b64c77db0801891f1088429) (0.13.9).
-The vendored source, declared license, source-date metadata, excluded build
-artifacts, and local hardening are recorded in
-`third_party/kernelpatch/SOURCE.json` and `docs/SUKISU_KPM_NOTICE.md`.
+The early-boot runtime and image patcher are the unmodified `kpimg` and
+`kptools` Manager assets from that same SukiSU-Ultra commit. The actual bundled
+runtime version is 0.13.0. Artifact hashes, Git blob IDs and the GPL-2.0-or-later
+license are recorded in `third_party/sukisu-runtime/`. Same-version source:
+[SukiSU_KernelPatch_patch 0.13.0](https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/tree/762e6fb446f58020691b83509873268f6af634f2).
+This is a source reference, not a verified reproducible-build claim.
+The local `third_party/kernelpatch` 0.13.9 hardening is retained for experiments
+but is not included in those upstream binary assets. The default build pins
+the SukiSU pair; see `docs/SUKISU_KPM_NOTICE.md` for scope and compatibility.
 
-The ApkeSU implementation is limited to an AArch64 built-in GKI bridge
+The SterSU implementation is limited to an AArch64 built-in GKI bridge
 (`CONFIG_KSU=y`, `CONFIG_KPM=y`) and the declared KPM UAPI. Its supercall
 authorization, ksud state machine, import validation, rescue recovery,
-logging, and Manager integration are ApkeSU-specific. LKM and late-load builds
+logging, and Manager integration are SterSU-specific. LKM and late-load builds
 do not use this backend; they use the separate KPatch-Next path. This notice
 does not relicense any upstream source: SPDX headers, upstream license texts,
 and the source-availability requirements remain binding.

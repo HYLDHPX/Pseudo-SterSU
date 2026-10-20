@@ -1,0 +1,29 @@
+{
+  "name": "SukiSU-Ultra bundled KernelPatch runtime",
+  "upstream": "https://github.com/SukiSU-Ultra/SukiSU-Ultra",
+  "commit": "31255c460caefef75e98b3406dd40efcc00fad38",
+  "checked_date": "2026-10-20",
+  "release": "0.13.0",
+  "asset_directory": "manager/app/src/main/assets",
+  "license": "GPL-2.0-or-later",
+  "source_reference": {
+    "upstream": "https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch",
+    "tag": "0.13.0",
+    "commit": "762e6fb446f58020691b83509873268f6af634f2",
+    "note": "Same-version source reference, not a claim of a byte-reproducible build of the upstream assets."
+  },
+  "artifacts": {
+    "kpimg": {
+      "size": 180160,
+      "sha256": "b76a533c8175a4ed6f5eb95f48fc1ba2824b35be463c7d7604f52379b58f94c1",
+      "git_blob": "0ea18e93d7bc771c32cc508084941a978d451370"
+    },
+    "kptools": {
+      "size": 316768,
+      "sha256": "dfacbc47b3efd92c696a1e294294e860ae11326fec9787c772f7bc2ebcac3add",
+      "git_blob": "c257bd04603c904614bf645660ef82d33ff55140",
+      "interpreter": "/system/bin/linker64"
+    }
+  },
+  "policy": "Ship the unmodified upstream asset pair. The locally hardened 0.13.9 source in third_party/kernelpatch is not the source of these binaries and is not selected by the default release build."
+}

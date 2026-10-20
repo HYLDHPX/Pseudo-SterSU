@@ -1,5 +1,7 @@
 """Host regression tests for the vendored Native GKI KPM integration (no flashing)."""
 import json
+import hashlib
+import importlib.util
 import pathlib
 import re
 import subprocess
@@ -89,15 +91,53 @@ int main(void) {
 
 class RuntimeTests(unittest.TestCase):
     def test_version_and_artifact_match(self):
+        metadata = json.loads((ROOT / "third_party/sukisu-runtime/SOURCE.json").read_text())
+        for name, artifact in metadata["artifacts"].items():
+            data = (ROOT / "userspace/ksud/bin/aarch64" / name).read_bytes()
+            self.assertEqual(len(data), artifact["size"])
+            self.assertEqual(hashlib.sha256(data).hexdigest(), artifact["sha256"])
+            self.assertEqual(hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest(), artifact["git_blob"])
+        image = (ROOT / "userspace/ksud/bin/aarch64/kpimg").read_bytes()
+        self.assertEqual(image[:8], b"KP1158\0\0")
+        self.assertEqual(f"{image[11]}.{image[10]}.{image[9]}", metadata["release"])
+        for name in (b"sukisu_kpm_version\0", b"sukisu_kpm_list\0", b"sukisu_kpm_control\0"):
+            self.assertIn(name, image)
+
+    def test_sync_rejects_corrupted_artifact(self):
+        spec = importlib.util.spec_from_file_location("sync", ROOT / "scripts/sync_sukisu_runtime.py")
+        sync = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sync)
+        metadata = json.loads(sync.MANIFEST.read_text())
+        for name in metadata["artifacts"]:
+            image = (ROOT / "userspace/ksud/bin/aarch64" / name).read_bytes()
+            sync.validate(name, image, metadata)
+            with self.assertRaises(ValueError):
+                sync.validate(name, image[:-1] + bytes([image[-1] ^ 1]), metadata)
+
+    def test_upstream_preset_matches_rust_patcher(self):
+        header = ROOT / "third_party/sukisu-runtime/preset.h"
+        source = ('#include <stddef.h>\n' + f'#include "{header.as_posix()}"\n' +
+                  '_Static_assert(sizeof(preset_t) == 1400, "preset size");\n' +
+                  '_Static_assert(offsetof(preset_t, setup.kimg_size) == 72, "original size");\n' +
+                  '_Static_assert(offsetof(preset_t, setup.kpimg_size) == 80, "runtime size");\n' +
+                  '_Static_assert(offsetof(preset_t, setup.setup_offset) == 104, "setup offset");\n' +
+                  '_Static_assert(offsetof(preset_t, setup.header_backup) == 208, "entry backup");\n' +
+                  'int main(void) { return 0; }\n')
+        rust = (ROOT / "userspace/ksud/src/kpimg.rs").read_text()
+        self.assertIn("const PRESET_SIZE: usize = 1400;", rust)
+        self.assertIn("const HEADER_BACKUP: usize = PRESET_HEADER + 104 + 40;", rust)
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory)
+            (path / "test.c").write_text(source)
+            subprocess.run(["cc", "-Wall", "-Werror", "-o", str(path / "test"), str(path / "test.c")], check=True)
+            subprocess.run([str(path / "test")], check=True)
+
+    def test_experimental_source_version(self):
+        # This is NOT the source of the pinned upstream production binaries.
         metadata = json.loads((VENDOR / "SOURCE.json").read_text())
         defines = dict(re.findall(r"#define (MAJOR|MINOR|PATCH) (\d+)", (VENDOR / "version").read_text()))
         version = ".".join(defines[key] for key in ("MAJOR", "MINOR", "PATCH"))
         self.assertEqual(version, metadata["release"])
-        image = (ROOT / "userspace/ksud/bin/aarch64/kpimg").read_bytes()
-        self.assertEqual(image[:8], b"KP1158\0\0")
-        self.assertEqual(f"{image[11]}.{image[10]}.{image[9]}", version)
-        for name in (b"symbol_lookup_name\0", b"kp_feature_list\0", b"kp_symbol_list\0"):
-            self.assertIn(name, image)
 
     def test_preset_contract_is_identical(self):
         self.assertEqual((VENDOR / "kernel/include/preset.h").read_text(), (VENDOR / "tools/preset.h").read_text())
