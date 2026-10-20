@@ -267,22 +267,16 @@ internal fun SettingsSidebarScreen(
                     item(key = "sidebar_settings_shortcuts") {
                         val repository = stringResource(R.string.home_learn_kernelsu_url).trimEnd('/')
                         SidebarSettingsCard {
-                            SidebarSettingsEntry(
-                                stringResource(R.string.settings_device_text_edit),
-                                stringResource(R.string.settings_device_text_summary),
-                                Icons.Rounded.Edit,
-                                enabled = !device.loading,
-                            ) {
-                                modelDraft = device.customModel.orEmpty()
-                                processorDraft = device.customProcessor.orEmpty()
-                                systemDraft = device.customSystem.orEmpty()
-                                showDeviceTextEditor = true
-                            }
-                            HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant)
                             BoxWithConstraints(Modifier.fillMaxWidth().padding(8.dp)) {
                                 val columns = settingsShortcutColumns(maxWidth.value, LocalDensity.current.fontScale)
                                 val shortcuts = listOf(
                                     SettingsShortcut(R.string.settings_shortcut_color_mode, Icons.Rounded.DarkMode, { showColorMode = true }),
+                                    SettingsShortcut(R.string.settings_device_text_edit, Icons.Rounded.Edit, {
+                                        modelDraft = device.customModel.orEmpty()
+                                        processorDraft = device.customProcessor.orEmpty()
+                                        systemDraft = device.customSystem.orEmpty()
+                                        showDeviceTextEditor = true
+                                    }, enabled = !device.loading),
                                     SettingsShortcut(R.string.settings_shortcut_share, Icons.Rounded.Share, {
                                         launchExternal(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                                             type = "text/plain"
@@ -304,7 +298,7 @@ internal fun SettingsSidebarScreen(
                                         Row(Modifier.fillMaxWidth()) {
                                             row.forEach { shortcut ->
                                                 Column(
-                                                    Modifier.weight(1f).clickable(role = Role.Button, onClick = shortcut.onClick)
+                                                    Modifier.weight(1f).clickable(enabled = shortcut.enabled, role = Role.Button, onClick = shortcut.onClick)
                                                         .heightIn(min = 88.dp).padding(horizontal = 3.dp, vertical = 14.dp),
                                                     horizontalAlignment = Alignment.CenterHorizontally,
                                                     verticalArrangement = Arrangement.spacedBy(7.dp),
@@ -460,7 +454,12 @@ internal fun SettingsSidebarScreen(
     UninstallDialog(showUninstall, { showUninstall = false })
 }
 
-private data class SettingsShortcut(val label: Int, val icon: ImageVector, val onClick: () -> Unit)
+private data class SettingsShortcut(
+    val label: Int,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+    val enabled: Boolean = true,
+)
 
 @Composable
 private fun SidebarSettingsCard(content: @Composable ColumnScope.() -> Unit) {
