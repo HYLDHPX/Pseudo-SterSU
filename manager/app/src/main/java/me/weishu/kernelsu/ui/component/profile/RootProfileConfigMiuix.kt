@@ -1,6 +1,5 @@
 package me.weishu.kernelsu.ui.component.profile
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,13 +13,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,6 +34,7 @@ import me.weishu.kernelsu.profile.Groups
 import me.weishu.kernelsu.toRawFlags
 import me.weishu.kernelsu.toRootProfileFlags
 import me.weishu.kernelsu.ui.component.miuix.SuperEditArrow
+import me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight
 import me.weishu.kernelsu.ui.util.isSepolicyValid
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -181,7 +183,7 @@ private fun GroupsPanel(
         onDismissRequest = { showDialog.value = false },
         insideMargin = DpSize(0.dp, 24.dp),
         content = {
-            Column(modifier = Modifier.heightIn(max = 500.dp)) {
+            Column(modifier = Modifier.heightIn(max = adaptiveDialogContentMaxHeight().coerceAtMost(500.dp))) {
                 LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                     items(groups) { group ->
                         CheckboxPreference(
@@ -287,7 +289,7 @@ private fun RootProfileFlagPanel(
         onDismissRequest = { showDialog.value = false },
         insideMargin = DpSize(0.dp, 24.dp),
         content = {
-            Column(modifier = Modifier.heightIn(max = 500.dp)) {
+            Column(modifier = Modifier.heightIn(max = adaptiveDialogContentMaxHeight().coerceAtMost(500.dp))) {
                 LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                     items(caps) { cap ->
                         CheckboxPreference(
@@ -373,7 +375,7 @@ private fun CapsPanel(
         onDismissRequest = { showDialog.value = false },
         insideMargin = DpSize(0.dp, 24.dp),
         content = {
-            Column(modifier = Modifier.heightIn(max = 500.dp)) {
+            Column(modifier = Modifier.heightIn(max = adaptiveDialogContentMaxHeight().coerceAtMost(500.dp))) {
                 LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                     items(caps) { cap ->
                         CheckboxPreference(
@@ -461,8 +463,8 @@ private fun SELinuxPanel(
         title = stringResource(R.string.profile_selinux_context),
         onDismissRequest = { showDialog.value = false },
         content = {
-            Column(modifier = Modifier.heightIn(max = 500.dp)) {
-                Column(modifier = Modifier.weight(1f, fill = false)) {
+            Column(modifier = Modifier.heightIn(max = adaptiveDialogContentMaxHeight().coerceAtMost(500.dp))) {
+                Column(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                     TextField(
                         value = domain,
                         onValueChange = { domain = it },
@@ -474,7 +476,7 @@ private fun SELinuxPanel(
                             borderColor = if (isDomainValid) {
                                 colorScheme.primary
                             } else {
-                                Color.Red.copy(alpha = if (isSystemInDarkTheme()) 0.3f else 0.6f)
+                                MaterialTheme.colorScheme.error
                             },
                         ),
                         keyboardOptions = KeyboardOptions(
@@ -494,7 +496,7 @@ private fun SELinuxPanel(
                             borderColor = if (isRulesValid) {
                                 colorScheme.primary
                             } else {
-                                Color.Red.copy(alpha = if (isSystemInDarkTheme()) 0.3f else 0.6f)
+                                MaterialTheme.colorScheme.error
                             },
                         ),
                         keyboardOptions = KeyboardOptions(

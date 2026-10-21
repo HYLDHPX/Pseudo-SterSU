@@ -77,7 +77,7 @@ import me.weishu.kernelsu.ui.util.module.Shortcut
 import me.weishu.kernelsu.ui.viewmodel.SettingsViewModel
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.TopAppBar
+import me.weishu.kernelsu.ui.component.AdaptiveTopAppBar as TopAppBar
 
 private val FullImageCrop = CustomWallpaperCrop(0f, 0f, 1f, 1f)
 
@@ -317,6 +317,8 @@ private fun LauncherIconPickerContent(
 }
 
 internal fun launcherIconColumnCount(width: Dp): Int = when {
+    width < 280.dp -> 2
+    width < 360.dp -> 3
     width < 600.dp -> 4
     width < 840.dp -> 5
     else -> 6

@@ -149,6 +149,7 @@ import me.weishu.kernelsu.ui.component.material.SnackBarHost
 import me.weishu.kernelsu.ui.component.material.TonalCard
 import me.weishu.kernelsu.ui.component.statustag.StatusTag
 import me.weishu.kernelsu.ui.util.reboot
+import me.weishu.kernelsu.ui.util.currentAppWindowSize
 import top.yukonga.miuix.kmp.nav.gesture.WindowNavigationEventBridge
 
 @SuppressLint("StringFormatInvalid")
@@ -217,7 +218,7 @@ fun ModulePagerMaterial(
             expanded
         }
     }
-    val showInstallFab = uiState.installButtonVisible
+    val showInstallFab = uiState.installButtonVisible && !(sidebar && currentAppWindowSize().canShowSidebar)
 
     val shortcutState = rememberModuleShortcutState(context)
     val showShortcutDialog = remember { mutableStateOf(false) }

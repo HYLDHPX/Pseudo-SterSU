@@ -71,7 +71,9 @@ class SidebarDesignWorkspaceTest {
             "config.side.isAtStart(layoutDirection)", "tablet = tablet").forEach { assertTrue(it, workspace.contains(it)) }
         assertFalse(workspace.contains("SidebarRebootPopup("))
         assertFalse(workspace.contains("reboot("))
-        assertTrue(workspace.contains("screenHeightDp - 48"))
+        assertTrue(workspace.contains("val window = me.weishu.kernelsu.ui.util.currentAppWindowSize()"))
+        assertTrue(workspace.contains("(window.heightDp - 48f).coerceAtLeast(0f).dp"))
+        assertTrue(workspace.contains(".verticalScroll(rememberScrollState()).padding(16.dp)"))
         assertFalse(workspace.contains("coerceIn(200, 540)"))
     }
 

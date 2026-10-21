@@ -2,6 +2,8 @@ package me.weishu.kernelsu.ui.component.dialog
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -69,7 +71,7 @@ fun ConfirmDialogMaterial(
                         restrictedBaseUrl = RegistryUrls.DEFAULT_BASE_URL,
                     )
                     visuals.isMarkdown -> MarkdownContent(content = content, isMarkdown = true)
-                    else -> Text(text = content)
+                    else -> Text(text = content, modifier = Modifier.verticalScroll(rememberScrollState()))
                     }
                 }
             },

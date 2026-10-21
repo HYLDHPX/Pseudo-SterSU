@@ -7,6 +7,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -123,52 +125,58 @@ fun SendLogDialog(
         onDismissRequest = onDismissRequest,
         insideMargin = DpSize(0.dp, 0.dp),
         content = {
-            MiuixText(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp, bottom = 12.dp),
-                text = stringResource(R.string.send_log),
-                fontSize = MiuixTheme.textStyles.title4.fontSize,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                color = colorScheme.onSurface
-            )
-            ArrowPreference(
-                title = stringResource(id = R.string.save_log),
-                startAction = {
-                    MiuixIcon(
-                        Icons.Rounded.Save,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 16.dp),
-                        tint = colorScheme.onSurface
-                    )
-                },
-                onClick = saveLog,
-                insideMargin = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-            )
-            ArrowPreference(
-                title = stringResource(id = R.string.send_log),
-                startAction = {
-                    MiuixIcon(
-                        Icons.Rounded.Share,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 16.dp),
-                        tint = colorScheme.onSurface
-                    )
-                },
-                onClick = shareLog,
-                insideMargin = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-            )
-            MiuixTextButton(
-                text = stringResource(id = android.R.string.cancel),
-                onClick = {
-                    onDismissRequest()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 24.dp)
-                    .padding(horizontal = 24.dp)
-            )
+            Column(
+                Modifier.fillMaxWidth()
+                    .heightIn(max = me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight())
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                MiuixText(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp, bottom = 12.dp),
+                    text = stringResource(R.string.send_log),
+                    fontSize = MiuixTheme.textStyles.title4.fontSize,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    color = colorScheme.onSurface
+                )
+                ArrowPreference(
+                    title = stringResource(id = R.string.save_log),
+                    startAction = {
+                        MiuixIcon(
+                            Icons.Rounded.Save,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 16.dp),
+                            tint = colorScheme.onSurface
+                        )
+                    },
+                    onClick = saveLog,
+                    insideMargin = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                )
+                ArrowPreference(
+                    title = stringResource(id = R.string.send_log),
+                    startAction = {
+                        MiuixIcon(
+                            Icons.Rounded.Share,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 16.dp),
+                            tint = colorScheme.onSurface
+                        )
+                    },
+                    onClick = shareLog,
+                    insideMargin = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                )
+                MiuixTextButton(
+                    text = stringResource(id = android.R.string.cancel),
+                    onClick = {
+                        onDismissRequest()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp, bottom = 24.dp)
+                        .padding(horizontal = 24.dp)
+                )
+            }
         }
     )
 }
@@ -183,8 +191,10 @@ private fun SidebarSendLogDialog(
     if (!show) return
 
     val sidebar = rememberSidebarWidgetConfig()
-    val railWidth = (if (LocalConfiguration.current.smallestScreenWidthDp >= 600) 96.dp else 80.dp) *
-        LocalDensity.current.fontScale.coerceIn(1f, 1.2f)
+    val window = me.weishu.kernelsu.ui.util.currentAppWindowSize()
+    val railWidth = if (window.canShowSidebar) {
+        (if (window.widthDp >= 600f) 96.dp else 80.dp) * LocalDensity.current.fontScale.coerceIn(1f, 1.2f)
+    } else 0.dp
     val railAtStart = sidebar.side.isAtStart(LocalLayoutDirection.current)
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -212,7 +222,8 @@ private fun SidebarSendLogDialog(
                     contentColor = MaterialTheme.colorScheme.onSurface,
                     tonalElevation = 2.dp,
                 ) {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.heightIn(max = me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight())
+                        .verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.material3.Text(
                             text = stringResource(R.string.send_log),
                             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),

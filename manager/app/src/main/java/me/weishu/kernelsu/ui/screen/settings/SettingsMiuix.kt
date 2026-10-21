@@ -134,7 +134,7 @@ import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as Icon
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import me.weishu.kernelsu.ui.component.passthrough.MiuixText as Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
+import me.weishu.kernelsu.ui.component.AdaptiveTopAppBar as TopAppBar
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference

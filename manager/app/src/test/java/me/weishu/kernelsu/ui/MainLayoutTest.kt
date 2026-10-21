@@ -380,6 +380,11 @@ class MainLayoutTest {
     }
 
     @Test
+    fun appProfileAlwaysFollowsTheSuperuserBackgroundTarget() {
+        assertEquals(CustomPageBackgroundTarget.Superuser, customPageBackgroundTarget(Route.AppProfile(10258)))
+    }
+
+    @Test
     fun storeTemplatesAndAboutHaveIndependentBackgroundTargets() {
         listOf(Route.ThemeStore, Route.ThemeStoreMy, Route.ThemeStoreCustomize,
             Route.ThemeStoreLibrary).forEach { route ->

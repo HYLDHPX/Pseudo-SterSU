@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -92,7 +91,7 @@ import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import me.weishu.kernelsu.ui.component.passthrough.MiuixText as Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar
+import me.weishu.kernelsu.ui.component.AdaptiveTopAppBar as TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -199,14 +198,6 @@ fun SuperUserPagerMiuix(
                                     }
                                 )
 
-                                TextButton(
-                                    text = stringResource(superUserSortLabel(uiState.sortOption)),
-                                    onClick = { showSortPopup.value = true },
-                                    modifier = Modifier.widthIn(max = 156.dp).heightIn(min = 48.dp),
-                                )
-                            }
-
-                            Box {
                                 val showTopPopup = remember { mutableStateOf(false) }
                                 OverlayListPopup(
                                     show = showTopPopup.value,
@@ -217,13 +208,23 @@ fun SuperUserPagerMiuix(
                                     },
                                     content = {
                                         val isMultiUser = uiState.userIds.size > 1
-                                        val size = if (isMultiUser) 4 else 3
+                                        val size = if (isMultiUser) 5 else 4
                                         ListPopupColumn {
+                                            DropdownImpl(
+                                                text = stringResource(R.string.superuser_sort_menu, stringResource(superUserSortLabel(uiState.sortOption))),
+                                                isSelected = false,
+                                                optionSize = size,
+                                                index = 0,
+                                                onSelectedIndexChange = {
+                                                    showTopPopup.value = false
+                                                    showSortPopup.value = true
+                                                },
+                                            )
                                             DropdownImpl(
                                                 text = stringResource(R.string.settings_sulog),
                                                 isSelected = false,
                                                 optionSize = size,
-                                                index = 0,
+                                                index = 1,
                                                 onSelectedIndexChange = {
                                                     showTopPopup.value = false
                                                     actions.onOpenSulog()
@@ -233,7 +234,7 @@ fun SuperUserPagerMiuix(
                                                 text = stringResource(R.string.superuser_app_tools_title),
                                                 isSelected = false,
                                                 optionSize = size,
-                                                index = 1,
+                                                index = 2,
                                                 onSelectedIndexChange = {
                                                     showTopPopup.value = false
                                                     actions.onOpenAppTools()
@@ -247,7 +248,7 @@ fun SuperUserPagerMiuix(
                                                     actions.onToggleShowSystemApps()
                                                     showTopPopup.value = false
                                                 },
-                                                index = 2
+                                                index = 3
                                             )
                                             if (isMultiUser) {
                                                 DropdownImpl(
@@ -258,7 +259,7 @@ fun SuperUserPagerMiuix(
                                                         actions.onToggleShowOnlyPrimaryUserApps()
                                                         showTopPopup.value = false
                                                     },
-                                                    index = 3
+                                                    index = 4
                                                 )
                                             }
                                         }

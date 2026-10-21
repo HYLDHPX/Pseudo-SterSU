@@ -103,7 +103,7 @@ import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.SliderDefaults
 import top.yukonga.miuix.kmp.basic.TabRow
 import me.weishu.kernelsu.ui.component.passthrough.MiuixText as Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
+import me.weishu.kernelsu.ui.component.AdaptiveTopAppBar as TopAppBar
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back

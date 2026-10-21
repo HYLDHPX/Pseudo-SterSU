@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +26,7 @@ import kotlinx.coroutines.launch
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
+import me.weishu.kernelsu.ui.LocalMainPagerState
 import me.weishu.kernelsu.data.script.ScriptRepository
 import me.weishu.kernelsu.ui.LocalUiMode
 import me.weishu.kernelsu.ui.UiMode
@@ -35,6 +37,7 @@ import me.weishu.kernelsu.ui.screen.flash.FlashIt
 import me.weishu.kernelsu.ui.screen.modulerepo.downloadFailureMessage
 import me.weishu.kernelsu.ui.screen.scriptrun.ScriptRunArg
 import me.weishu.kernelsu.ui.util.download
+import me.weishu.kernelsu.ui.util.currentAppWindowSize
 import me.weishu.kernelsu.ui.viewmodel.ModuleViewModel
 import me.weishu.kernelsu.ui.webui.WebUIActivity
 
@@ -199,6 +202,20 @@ fun ModulePager(
             viewModel.markNeedRefresh()
         },
     )
+
+    if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) {
+        val mainPagerState = LocalMainPagerState.current
+        val pickModuleZip = rememberModuleZipPicker(actions.onOpenFlash)
+        val latestPickModuleZip by rememberUpdatedState(pickModuleZip)
+        val installAvailable = isCurrentPage && rawUiState.installButtonVisible && currentAppWindowSize().canShowSidebar
+        DisposableEffect(mainPagerState, installAvailable) {
+            val action: (() -> Unit)? = if (installAvailable) ({ latestPickModuleZip() }) else null
+            mainPagerState.moduleInstallAction = action
+            onDispose {
+                if (mainPagerState.moduleInstallAction === action) mainPagerState.moduleInstallAction = null
+            }
+        }
+    }
 
     wallpaperEditorRequest?.let { request ->
         ModuleWallpaperEditorDialog(

@@ -2,6 +2,8 @@
 <resources>
     <string name="settings_sidebar_intro">你的设备，你的使用方式</string>
     <string name="settings_sidebar_version">miuix（美化版）· 管理器 %1$s</string>
+    <string name="settings_home_style_version">%1$s · 管理器 %2$s</string>
+    <string name="settings_home_appearance_summary">商店、界面风格、配色与昼夜模式</string>
     <string name="settings_sidebar_appearance">外观和主题</string>
     <string name="settings_sidebar_appearance_summary">界面风格、配色与侧栏设计</string>
     <string name="settings_sidebar_more">更多设置</string>

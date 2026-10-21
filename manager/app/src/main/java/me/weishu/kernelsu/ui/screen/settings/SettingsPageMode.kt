@@ -1,37 +1,42 @@
 package me.weishu.kernelsu.ui.screen.settings
 
 import android.content.Context
-import androidx.compose.foundation.layout.Box
+import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.AccountTree
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Dashboard
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.AlertDialog
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.Surface
+import androidx.compose.material3.RadioButton
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import me.weishu.kernelsu.R
-import me.weishu.kernelsu.ui.theme.immersiveSurfaceColor
+import me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight
 
 private const val SETTINGS_PAGE_MODE_KEY = "settings_page_mode"
 
@@ -63,85 +68,82 @@ fun setSettingsPageMode(context: Context, mode: SettingsPageMode) {
     }
 }
 
+@get:StringRes
+internal val SettingsPageMode.labelRes: Int
+    get() = when (this) {
+        SettingsPageMode.Categories -> R.string.settings_page_mode_categories
+        SettingsPageMode.Overview -> R.string.settings_page_mode_overview
+    }
+
 @Composable
-fun SettingsPageModeButton(
+internal fun SettingsPageModeCard(
     currentMode: SettingsPageMode,
     onModeChange: (SettingsPageMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val contentDescription = stringResource(R.string.settings_page_mode_select)
-    Box(modifier = modifier) {
-        TooltipBox(
-            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                positioning = TooltipAnchorPosition.Below,
-            ),
-            tooltip = {
-                PlainTooltip { Text(contentDescription) }
-            },
-            state = rememberTooltipState(),
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+    SettingsHomeCard(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { showDialog = true }
+                .heightIn(min = 76.dp).padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
-                color = immersiveSurfaceColor(
-                    defaultColor = MaterialTheme.colorScheme.surfaceContainer,
-                    darkAlpha = 0.62f,
-                    lightAlpha = 0.72f,
-                ),
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                shape = RoundedCornerShape(8.dp),
-                tonalElevation = 2.dp,
+            Icon(Icons.Rounded.Dashboard, null, Modifier.size(26.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.settings_page_mode_select), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(currentMode.labelRes), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(18.dp))
+        }
+    }
+    if (showDialog) {
+        SettingsPageModeDialog(
+            currentMode = currentMode,
+            onModeChange = onModeChange,
+            onDismissRequest = { showDialog = false },
+        )
+    }
+}
+
+@Composable
+internal fun SettingsPageModeDialog(
+    currentMode: SettingsPageMode,
+    onModeChange: (SettingsPageMode) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.settings_page_mode_select)) },
+        text = {
+            Column(
+                Modifier.heightIn(max = adaptiveDialogContentMaxHeight())
+                    .verticalScroll(rememberScrollState()).selectableGroup(),
             ) {
-                IconButton(
-                    onClick = { expanded = true },
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
+                SettingsPageMode.entries.forEach { mode ->
+                    val selected = mode == currentMode
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .selectable(selected = selected, role = Role.RadioButton) {
+                                onDismissRequest()
+                                if (!selected) onModeChange(mode)
+                            }.heightIn(min = 56.dp).padding(horizontal = 4.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Icon(
-                            imageVector = when (currentMode) {
-                                SettingsPageMode.Categories -> Icons.Rounded.AccountTree
-                                SettingsPageMode.Overview -> Icons.Rounded.Dashboard
-                            },
-                            contentDescription = contentDescription,
-                            modifier = Modifier.size(22.dp),
+                            if (mode == SettingsPageMode.Categories) Icons.Rounded.AccountTree else Icons.Rounded.Dashboard,
+                            null, Modifier.size(24.dp),
                         )
+                        Text(stringResource(mode.labelRes), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                        RadioButton(selected = selected, onClick = null)
                     }
                 }
             }
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            SettingsPageMode.entries.forEach { mode ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(
-                                when (mode) {
-                                    SettingsPageMode.Categories -> R.string.settings_page_mode_categories
-                                    SettingsPageMode.Overview -> R.string.settings_page_mode_overview
-                                }
-                            )
-                        )
-                    },
-                    onClick = {
-                        expanded = false
-                        if (mode != currentMode) onModeChange(mode)
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = when (mode) {
-                                SettingsPageMode.Categories -> Icons.Rounded.AccountTree
-                                SettingsPageMode.Overview -> Icons.Rounded.Dashboard
-                            },
-                            contentDescription = null,
-                        )
-                    },
-                    trailingIcon = {
-                        if (mode == currentMode) Icon(Icons.Rounded.Check, contentDescription = null)
-                    },
-                )
-            }
-        }
-    }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) { Text(stringResource(android.R.string.cancel)) }
+        },
+    )
 }

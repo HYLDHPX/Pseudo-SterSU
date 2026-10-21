@@ -55,7 +55,7 @@ import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.ButtonGroupDefaults
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
-import androidx.compose.material3.LargeFlexibleTopAppBar
+import me.weishu.kernelsu.ui.component.material.ExpressiveTopAppBar as LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -193,7 +193,7 @@ fun ColorPaletteScreenMaterial(
                     listOf(ColorMode.DARK_AMOLED) to stringResource(R.string.settings_theme_mode_dark)
                 )
 
-                options.chunked(4).forEach { rowOptions ->
+                options.chunked(if (me.weishu.kernelsu.ui.util.currentAppWindowSize().narrow) 2 else 4).forEach { rowOptions ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)

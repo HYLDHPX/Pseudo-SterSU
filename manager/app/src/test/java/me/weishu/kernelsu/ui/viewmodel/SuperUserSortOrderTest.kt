@@ -1,6 +1,7 @@
 package me.weishu.kernelsu.ui.viewmodel
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Test
 
 class SuperUserSortOrderTest {
@@ -74,5 +75,63 @@ class SuperUserSortOrderTest {
         assertEquals(emptyList<App>(), emptyList<App>().sortedWith(order))
         val single = listOf(App("Single", 100, 0))
         assertEquals(single, single.sortedWith(order))
+    }
+
+    @Test
+    fun onlyNewestAppMovesToTheFrontAndTheInputIsUnchanged() {
+        val apps = listOf(App("Root", 200, 0), App("A", 100, 3), App("Newest", 400, 3), App("B", 300, 3))
+        val result = moveMostRecentlyInstalledFirst(apps) { it.timestamp }
+        assertEquals(listOf("Newest", "Root", "A", "B"), result.map { it.name })
+        assertEquals(listOf("Root", "A", "Newest", "B"), apps.map { it.name })
+    }
+
+    @Test
+    fun newestAppAlreadyFirstKeepsTheOriginalList() {
+        val apps = listOf(App("Newest", 400, 3), App("Root", 100, 0), App("A", 200, 3))
+        assertSame(apps, moveMostRecentlyInstalledFirst(apps) { it.timestamp })
+    }
+
+    @Test
+    fun equalInstallationTimesPromoteOnlyTheFirstMatchingApp() {
+        val apps = listOf(App("Root", 100, 0), App("First", 400, 3), App("A", 200, 3), App("Second", 400, 3))
+        val result = moveMostRecentlyInstalledFirst(apps) { it.timestamp }
+        assertEquals(listOf("First", "Root", "A", "Second"), result.map { it.name })
+    }
+
+    @Test
+    fun equalTimesThroughoutKeepTheOriginalList() {
+        val apps = listOf(App("A", 100, 3), App("B", 100, 0), App("C", 100, 3))
+        assertSame(apps, moveMostRecentlyInstalledFirst(apps) { it.timestamp })
+    }
+
+    @Test
+    fun pinningSupportsEmptyAndSingleItemLists() {
+        val empty = emptyList<App>()
+        assertSame(empty, moveMostRecentlyInstalledFirst(empty) { it.timestamp })
+        val single = listOf(App("Single", 100, 0))
+        assertSame(single, moveMostRecentlyInstalledFirst(single) { it.timestamp })
+    }
+
+    @Test
+    fun newestMemberOfSharedUidGroupDeterminesThePinnedGroup() {
+        val older = listOf(App("Root", 100, 0))
+        val shared = listOf(App("Primary", 50, 0), App("NewMember", 300, 3))
+        val other = listOf(App("Other", 200, 3))
+        val groups = listOf(older, shared, other)
+        assertEquals(listOf(shared, older, other), moveMostRecentlyInstalledFirst(groups) { group -> group.maxOf { it.timestamp } })
+    }
+
+    @Test
+    fun pinningDoesNotDependOnTheCurrentTimeOrTimestampSubtraction() {
+        val apps = listOf(App("Old", Long.MIN_VALUE, 0), App("Newest", Long.MAX_VALUE, 3), App("Middle", 0, 3))
+        assertEquals(listOf("Newest", "Old", "Middle"), moveMostRecentlyInstalledFirst(apps) { it.timestamp }.map { it.name })
+    }
+
+    @Test
+    fun repeatedPinningDoesNotDuplicateOrReorderOtherApps() {
+        val apps = listOf(App("A", 100, 3), App("B", 400, 0), App("C", 200, 3))
+        val pinned = moveMostRecentlyInstalledFirst(apps) { it.timestamp }
+        assertSame(pinned, moveMostRecentlyInstalledFirst(pinned) { it.timestamp })
+        assertEquals(listOf("B", "A", "C"), pinned.map { it.name })
     }
 }

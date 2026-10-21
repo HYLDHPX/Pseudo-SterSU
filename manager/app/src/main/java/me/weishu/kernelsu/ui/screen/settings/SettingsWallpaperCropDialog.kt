@@ -58,7 +58,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -120,8 +119,7 @@ fun SettingsWallpaperCropDialog(
     }
     val dialogTitle = title ?: stringResource(R.string.settings_wallpaper_crop)
     val dialogEmptyText = emptyText ?: stringResource(R.string.settings_wallpaper_not_selected)
-    val maxDialogContentHeight = (LocalConfiguration.current.screenHeightDp.dp * 0.72f)
-        .coerceAtLeast(360.dp)
+    val maxDialogContentHeight = me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight()
 
     OverlayDialog(
         show = true,

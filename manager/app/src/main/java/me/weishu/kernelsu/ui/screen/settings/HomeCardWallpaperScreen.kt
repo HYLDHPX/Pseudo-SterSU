@@ -687,7 +687,8 @@ private fun HomeCardWallpaperPreviewDialog(
         title = stringResource(target.previewLabelRes),
         onDismissRequest = onDismissRequest,
         content = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(modifier = Modifier.heightIn(max = me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight())
+                .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 HomeCardWallpaperLivePreviewFrame(
                     target = target,
                     title = title,
@@ -759,11 +760,12 @@ private fun HomeCardWallpaperPagePreviewDialog(
         title = stringResource(R.string.home_card_wallpaper_full_preview),
         onDismissRequest = onDismissRequest,
         content = {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(modifier = Modifier.heightIn(max = me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 620.dp)
+                        .weight(1f, fill = false)
                         .verticalScroll(rememberScrollState())
                         .background(
                             MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.72f),

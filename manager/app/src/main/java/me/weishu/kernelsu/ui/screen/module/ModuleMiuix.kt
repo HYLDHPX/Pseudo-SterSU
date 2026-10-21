@@ -149,7 +149,7 @@ import top.yukonga.miuix.kmp.basic.SnackbarResult
 import me.weishu.kernelsu.ui.component.passthrough.MiuixText as Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.basic.TopAppBar
+import me.weishu.kernelsu.ui.component.AdaptiveTopAppBar as TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.basic.Switch as MiuixSwitch
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -913,7 +913,7 @@ fun ModuleItem(
                                     textDecoration = textDecoration,
                                     onTextLayout = { nameTextLayout = it }
                                 )
-                            }.first().measure(Constraints(constraints.minWidth, nameMax, constraints.minHeight, constraints.maxHeight))
+                            }.first().measure(Constraints(0, nameMax, 0, constraints.maxHeight))
 
                             val width = (namePlaceable.width + reserved).coerceIn(constraints.minWidth, constraints.maxWidth)
                             val height = maxOf(namePlaceable.height, metaPlaceable?.height ?: 0)

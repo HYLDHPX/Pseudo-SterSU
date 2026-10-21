@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
@@ -101,7 +103,7 @@ fun ConfirmDialogMiuix(
                             restrictedBaseUrl = RegistryUrls.DEFAULT_BASE_URL,
                         )
                         visuals.isMarkdown -> MarkdownContent(content = content, isMarkdown = true)
-                        else -> Text(text = content)
+                        else -> Text(text = content, modifier = Modifier.verticalScroll(rememberScrollState()))
                         }
                     }
                     Row(
@@ -141,8 +143,9 @@ fun ConfirmDialogMiuix(
                         button.place(0, 0)
                     }
                 } else {
-                    val button = measurables[1].measure(constraints)
-                    val lazyList = measurables[0].measure(constraints.copy(maxHeight = constraints.maxHeight - button.height))
+                    val button = measurables[1].measure(constraints.copy(minHeight = 0))
+                    val lazyList = measurables[0].measure(constraints.copy(minHeight = 0,
+                        maxHeight = (constraints.maxHeight - button.height).coerceAtLeast(0)))
                     layout(constraints.maxWidth, lazyList.height + button.height) {
                         lazyList.place(0, 0)
                         button.place(0, lazyList.height)

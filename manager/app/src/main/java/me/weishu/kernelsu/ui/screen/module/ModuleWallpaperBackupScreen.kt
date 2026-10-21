@@ -90,7 +90,7 @@ import me.weishu.kernelsu.ui.viewmodel.ModuleViewModel
 import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
-import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
+import me.weishu.kernelsu.ui.component.AdaptiveTopAppBar as MiuixTopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 
 private data class PendingModuleWallpaperImport(

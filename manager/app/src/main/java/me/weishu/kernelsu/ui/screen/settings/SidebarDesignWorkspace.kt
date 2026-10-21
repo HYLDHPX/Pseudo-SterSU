@@ -251,6 +251,7 @@ private fun SidebarDesignPreview(config: SidebarWidgetConfig, dark: Boolean, onD
     val customIcons = LocalCustomNavigationIcons.current
     val destinations = orderSidebarDestinations(config.navigationOrder, mainDestinations(main.kpmActive, main.stealthModeEnabled))
     val configuration = LocalConfiguration.current
+    val window = me.weishu.kernelsu.ui.util.currentAppWindowSize()
     val layoutDirection = LocalLayoutDirection.current
     // Do not compress the real rail into a thumbnail: that hides its widgets in compact mode.
     // The dialog scrolls around a device-height rail instead.
@@ -259,7 +260,7 @@ private fun SidebarDesignPreview(config: SidebarWidgetConfig, dark: Boolean, onD
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.widthIn(max = 480.dp).fillMaxWidth()
-                .heightIn(max = (LocalConfiguration.current.screenHeightDp - 48).coerceAtLeast(160).dp)
+                .heightIn(max = (window.heightDp - 48f).coerceAtLeast(0f).dp)
                 .verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.sidebar_editor_preview), style = MaterialTheme.typography.titleLarge)
                 SidebarDesignChoice(stringResource(R.string.sidebar_palette_mode),

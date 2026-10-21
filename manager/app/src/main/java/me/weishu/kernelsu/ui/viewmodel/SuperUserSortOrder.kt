@@ -24,3 +24,14 @@ internal fun <T> superUserSortComparator(
         else -> compareBy(stateRank).then(order)
     }
 }
+
+internal fun <T> moveMostRecentlyInstalledFirst(
+    items: List<T>,
+    firstInstallTime: (T) -> Long,
+): List<T> {
+    val newestIndex = items.indices.maxByOrNull { firstInstallTime(items[it]) } ?: return items
+    if (newestIndex == 0) return items
+    return items.toMutableList().apply {
+        add(0, removeAt(newestIndex))
+    }
+}

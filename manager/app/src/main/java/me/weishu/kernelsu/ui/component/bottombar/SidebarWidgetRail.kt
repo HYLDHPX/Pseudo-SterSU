@@ -47,6 +47,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.HorizontalDivider
@@ -151,12 +152,18 @@ fun SidebarWidgetRail(
     val customIcons = LocalCustomNavigationIcons.current
     val config = rememberSidebarWidgetConfig()
     val navigator = LocalNavigator.current
+    val moduleInstallAction = mainPagerState.moduleInstallAction
+    val activeDestination = selectedDestination ?: mainPagerState.destinationForPage()
+    val showModuleInstall = moduleInstallAction != null && mainPagerState.fullFeatured &&
+        !mainPagerState.stealthModeEnabled && shouldShowSidebarModuleInstall(
+            activeDestination, navigator.backStack.lastOrNull() as? Route,
+        )
     val orderedDestinations = remember(config.navigationOrder, destinations) {
         orderSidebarDestinations(config.navigationOrder, destinations)
     }
     SidebarRailLayout(
         config = config,
-        navigationCount = orderedDestinations.size,
+        navigationCount = orderedDestinations.size + if (showModuleInstall) 1 else 0,
         tablet = tablet,
         modifier = modifier,
         onAvatarClick = { navigator.push(Route.SidebarWidgetSettings) },
@@ -167,7 +174,7 @@ fun SidebarWidgetRail(
         ),
     ) {
         orderedDestinations.forEach { destination ->
-            val selected = (selectedDestination ?: mainPagerState.destinationForPage()) == destination
+            val selected = activeDestination == destination
             val label = customIcons.labelFor(destination, stringResource(destination.label))
             val badge = badgeFor(destination, navigationBadge)
             val contentColor = LocalContentColor.current
@@ -200,8 +207,25 @@ fun SidebarWidgetRail(
                 }
             }
         }
+        if (showModuleInstall) {
+            SidebarRailItem(
+                selected = false,
+                label = stringResource(R.string.module_install),
+                iconOnly = config.iconOnlyNavigation,
+                role = Role.Button,
+                onClick = { mainPagerState.moduleInstallAction?.invoke() },
+            ) {
+                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(28.dp))
+            }
+        }
     }
 }
+
+internal fun shouldShowSidebarModuleInstall(destination: MainDestination, route: Route?): Boolean =
+    destination == MainDestination.Module && when (route) {
+        Route.Main, Route.Home, Route.SuperUser, Route.Module, Route.Settings -> true
+        else -> false
+    }
 
 /** Shared by the live rail and its settings preview. */
 @Composable

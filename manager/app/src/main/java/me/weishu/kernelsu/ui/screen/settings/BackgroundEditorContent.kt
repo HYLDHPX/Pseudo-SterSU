@@ -185,6 +185,11 @@ internal fun BackgroundSettingsContent(
 private fun BackgroundScopeSelector(scopeKey: String, onSelect: (String) -> Unit) {
     val scopes = listOf(GLOBAL_BACKGROUND_SCOPE_KEY) + CustomPageBackgroundTarget.entries.map(::pageScopeKey)
     val selectedIndex = scopes.indexOf(scopeKey).coerceAtLeast(0)
+    if (me.weishu.kernelsu.ui.util.currentAppWindowSize().compactNavigation) {
+        AppearanceEditorTargetPicker(R.string.background_editor_scope, scopes.map { backgroundScopeTitle(it) },
+            selectedIndex, { onSelect(scopes[it]) })
+        return
+    }
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
     LaunchedEffect(scopeKey) {
         val visibleIndices = listState.layoutInfo.visibleItemsInfo.map { it.index }

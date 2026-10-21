@@ -35,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,7 +66,7 @@ fun SettingsNavigationIconPreviewDialog(
         onDismissRequest = onDismissRequest,
         content = {
             Column(
-                modifier = Modifier.heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.72f)
+                modifier = Modifier.heightIn(max = me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight())
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {

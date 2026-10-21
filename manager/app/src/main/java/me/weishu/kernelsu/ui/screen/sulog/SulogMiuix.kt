@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -90,7 +90,7 @@ import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import me.weishu.kernelsu.ui.component.passthrough.MiuixText as Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar
+import me.weishu.kernelsu.ui.component.AdaptiveTopAppBar as TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -262,10 +262,10 @@ fun SulogScreenMiuix(
                 defaultResult = {},
                 searchBarTopPadding = dynamicTopPadding,
             ) {
-                val imeBottomPadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
+                        .imePadding()
                         .overScrollVertical(),
                 ) {
                     item {
@@ -276,9 +276,6 @@ fun SulogScreenMiuix(
                         errorMessage = state.errorMessage,
                         onEntryClick = { selectedEntry = it },
                     )
-                    item {
-                        Spacer(Modifier.height(imeBottomPadding))
-                    }
                 }
             }
         },

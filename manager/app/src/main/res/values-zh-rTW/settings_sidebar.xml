@@ -2,6 +2,8 @@
 <resources>
     <string name="settings_sidebar_intro">你的裝置，你的使用方式</string>
     <string name="settings_sidebar_version">側欄元件 · 管理器 %1$s</string>
+    <string name="settings_home_style_version">%1$s · 管理器 %2$s</string>
+    <string name="settings_home_appearance_summary">商店、介面風格、配色與晝夜模式</string>
     <string name="settings_sidebar_appearance">外觀與主題</string>
     <string name="settings_sidebar_appearance_summary">介面風格、配色與側欄設計</string>
     <string name="settings_sidebar_more">更多設定</string>

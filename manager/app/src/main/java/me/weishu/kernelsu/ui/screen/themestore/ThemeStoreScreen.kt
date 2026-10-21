@@ -20,6 +20,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +30,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -409,6 +415,8 @@ fun ThemeStoreScreen(
     StoreScaffold(
         title = stringResource(if (selectedPage == ThemeStorePage.Styles && selectedStyleId != null)
             R.string.interface_style_details else R.string.store_title),
+        // The navigation surface paints the bottom inset; its buttons remain in the safe area.
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
         onBack = {
             if (selectedPage == ThemeStorePage.Styles && selectedStyleId != null) selectedStyleId = null
             else actions.onBack()
@@ -485,7 +493,7 @@ private fun ThemeStoreResponsiveLayout(
             ThemeStoreContentFrame(
                 showBackButton = showBackButton,
                 onBack = onBack,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().navigationBarsPadding(),
                 content = content,
             )
         } else if (useNavigationRail) {
@@ -493,12 +501,11 @@ private fun ThemeStoreResponsiveLayout(
                 ThemeStoreNavigationRail(
                     selectedPage = selectedPage,
                     onSelected = onSelected,
-                    modifier = Modifier.navigationBarsPadding(),
                 )
                 ThemeStoreContentFrame(
                     showBackButton = showBackButton,
                     onBack = onBack,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).navigationBarsPadding(),
                     content = content,
                 )
             }
@@ -507,13 +514,12 @@ private fun ThemeStoreResponsiveLayout(
                 ThemeStoreContentFrame(
                     showBackButton = showBackButton,
                     onBack = onBack,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).consumeWindowInsets(WindowInsets.navigationBars),
                     content = content,
                 )
                 ThemeStoreNavigationBar(
                     selectedPage = selectedPage,
                     onSelected = onSelected,
-                    modifier = Modifier.navigationBarsPadding(),
                 )
             }
         }
@@ -556,8 +562,9 @@ internal fun ThemeStoreNavigationBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 72.dp)
             .background(palette.navigationSurface)
+            .navigationBarsPadding()
+            .heightIn(min = 72.dp)
             .selectableGroup(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -619,6 +626,7 @@ internal fun ThemeStoreNavigationRail(
             .fillMaxHeight()
             .width(96.dp)
             .background(palette.navigationSurface)
+            .navigationBarsPadding()
             .padding(horizontal = 8.dp, vertical = 12.dp)
             .selectableGroup(),
         horizontalAlignment = Alignment.CenterHorizontally,

@@ -34,9 +34,13 @@ import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedButton
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
@@ -71,7 +75,7 @@ import me.weishu.kernelsu.ui.theme.withUiPassthrough
 import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
-import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
+import me.weishu.kernelsu.ui.component.AdaptiveTopAppBar as MiuixTopAppBar
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
@@ -175,6 +179,23 @@ internal fun AppearanceEditorTargetPicker(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
 ) {
+    if (me.weishu.kernelsu.ui.util.currentAppWindowSize().compactNavigation) {
+        var expanded by rememberSaveable { mutableStateOf(false) }
+        Box(Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(labels.getOrNull(selectedIndex).orEmpty(), modifier = Modifier.weight(1f),
+                    maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Icon(Icons.Rounded.ExpandMore, stringResource(titleRes), Modifier.size(20.dp))
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                labels.forEachIndexed { index, label ->
+                    DropdownMenuItem(text = { Text(label) }, onClick = { expanded = false; onSelect(index) },
+                        trailingIcon = if (index == selectedIndex) { { Icon(Icons.Rounded.Check, null) } } else null)
+                }
+            }
+        }
+        return
+    }
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
     LaunchedEffect(selectedIndex) {
         if (listState.layoutInfo.visibleItemsInfo.none { it.index == selectedIndex }) {

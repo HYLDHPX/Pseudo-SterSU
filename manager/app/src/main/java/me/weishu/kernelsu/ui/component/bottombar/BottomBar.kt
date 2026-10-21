@@ -38,6 +38,7 @@ import me.weishu.kernelsu.ui.util.CustomNavigationIconSlot
 import me.weishu.kernelsu.ui.util.CustomNavigationIconState
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.util.shouldShowSplitPane
+import me.weishu.kernelsu.ui.util.currentAppWindowSize
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.utils.PagerNavigationSpringSpec
@@ -64,6 +65,9 @@ class MainPagerState(
 
     var stealthModeEnabled by mutableStateOf(initialStealthModeEnabled)
         private set
+
+    // Registered by the visible module page; never retained after that page is disposed.
+    internal var moduleInstallAction: (() -> Unit)? by mutableStateOf(null)
 
     private var navJob: Job? = null
     private var kpmReconfigurationJob: Job? = null
@@ -428,7 +432,7 @@ internal fun CustomNavigationIconSet.labelFor(destination: MainDestination, fall
 
 @Composable
 fun useNavigationRail(): Boolean {
-    if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) return true
+    if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) return currentAppWindowSize().canShowSidebar
     return shouldShowSplitPane()
 }
 
@@ -442,6 +446,11 @@ fun BottomBar(
     val mainState = LocalMainPagerState.current
     if (!mainState.fullFeatured || mainState.stealthModeEnabled) return
     val destinations = mainDestinations(mainState.kpmActive, mainState.stealthModeEnabled)
+
+    if (currentAppWindowSize().compactNavigation) {
+        CompactBottomBar(navigationBadge, destinations, modifier)
+        return
+    }
 
     if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) {
         SidebarWidgetRail(navigationBadge, destinations, modifier)

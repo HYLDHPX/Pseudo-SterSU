@@ -96,12 +96,6 @@ fun SettingsOverviewScreen(
                         fontWeight = FontWeight.SemiBold,
                     )
                 },
-                actions = {
-                    SettingsPageModeButton(
-                        currentMode = SettingsPageMode.Overview,
-                        onModeChange = onPageModeChange,
-                    )
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = immersiveScrolledTopBarColor(
@@ -178,6 +172,13 @@ fun SettingsOverviewScreen(
                         }
                     }
                 }
+                item(key = "overview_layout") {
+                    SettingsPageModeCard(
+                        currentMode = SettingsPageMode.Overview,
+                        onModeChange = onPageModeChange,
+                        modifier = Modifier.widthIn(max = if (wide) 980.dp else 640.dp).fillMaxWidth(),
+                    )
+                }
             }
         }
     }
@@ -185,7 +186,7 @@ fun SettingsOverviewScreen(
 
 @Composable
 private fun OverviewIntroCard(shape: RoundedCornerShape, modifier: Modifier = Modifier) {
-    Surface(
+    SettingsHomeCard(
         modifier = modifier,
         color = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -234,7 +235,7 @@ private fun OverviewStyleCard(
     val styleRes = InterfaceStyle.entries.firstOrNull { it.value == uiState.uiMode }?.labelRes
         ?: R.string.settings_ui_mode
     val activeStyleName = installedName ?: stringResource(styleRes)
-    Surface(
+    SettingsHomeCard(
         modifier = modifier,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -318,7 +319,7 @@ private fun OverviewPrimaryCard(
     onOpenCategory: (SettingsCategory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    SettingsHomeCard(
         modifier = modifier,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -395,7 +396,8 @@ private fun OverviewQuickSection(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(start = 3.dp),
         )
-        overviewQuickCategories.chunked(columns).forEach { pair ->
+        val fittedColumns = if (me.weishu.kernelsu.ui.util.currentAppWindowSize().narrow) 1 else columns
+        overviewQuickCategories.chunked(fittedColumns).forEach { pair ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -423,7 +425,7 @@ private fun OverviewQuickTile(
     modifier: Modifier = Modifier,
 ) {
     val accent = categoryAccent(category)
-    Surface(
+    SettingsHomeCard(
         modifier = modifier.clickable(onClick = onClick),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         contentColor = MaterialTheme.colorScheme.onSurface,

@@ -22,7 +22,8 @@ class ModuleSidebarHeaderTest {
     fun searchFieldUsesTheSharedSurfaceWithoutFadingItsContents() {
         val inlineSearch = searchBar.substringAfter("fun InlineSearchAppBar(").substringBefore("fun SearchAppBar(")
         assertTrue(inlineSearch.contains("immersiveSurfaceColor(MaterialTheme.colorScheme.surfaceContainerLow)"))
-        assertTrue(inlineSearch.contains("shape = RoundedCornerShape(if (useWallpaperSurface) 12.dp else 28.dp)"))
+        assertTrue(inlineSearch.contains("val searchShape = RoundedCornerShape(if (useWallpaperSurface) 12.dp else 28.dp)"))
+        assertTrue(inlineSearch.contains("shape = searchShape"))
         assertTrue(inlineSearch.contains("contentColor = MaterialTheme.colorScheme.onSurface"))
         assertFalse(inlineSearch.contains(".alpha("))
     }

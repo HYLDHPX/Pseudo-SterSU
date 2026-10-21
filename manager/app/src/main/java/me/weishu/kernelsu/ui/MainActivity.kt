@@ -38,6 +38,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.captionBar
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -965,6 +968,8 @@ class MainActivity : ComponentActivity() {
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
+                                                .windowInsetsPadding(WindowInsets.captionBar)
+                                                .imePadding()
                                                 .customClickSound(clickSoundUri, clickSoundVolume)
                                                 .then(
                                                     if (globalGlassBackdrop != null && !kpmWebViewSurfaceActive) {
@@ -985,7 +990,7 @@ class MainActivity : ComponentActivity() {
                                                 )
                                             // Keep the rail outside NavDisplay across main, module repository,
                                             // and settings scenes so the animated content keeps one width.
-                                            val hostedSidebarRail = shouldHostSidebarRail(
+                                            val hostedSidebarRail = me.weishu.kernelsu.ui.util.currentAppWindowSize().canShowSidebar && shouldHostSidebarRail(
                                                 route = currentRoute,
                                                 settingsSidebarActive = settingsSidebarActive,
                                                 fullFeatured = mainPagerState.fullFeatured,
@@ -1156,6 +1161,7 @@ internal fun customPageBackgroundTarget(
             if (storeAncestor) CustomPageBackgroundTarget.Store else CustomPageBackgroundTarget.Settings
         Route.Install -> CustomPageBackgroundTarget.Install
         Route.Kpm -> CustomPageBackgroundTarget.Kpm
+        is Route.AppProfile -> CustomPageBackgroundTarget.Superuser
         Route.AppProfileTemplate, is Route.TemplateEditor -> CustomPageBackgroundTarget.Templates
         Route.About -> CustomPageBackgroundTarget.About
         else -> if (route.isStoreRoute()) CustomPageBackgroundTarget.Store else null
@@ -1639,7 +1645,7 @@ fun MainScreen(
         LocalLiquidGlassBackdrop provides blurBackdrop,
     ) {
         val contentReady = rememberContentReady()
-        val pagerContent = @Composable { bottomInnerPadding: Dp ->
+        val currentPagerContent = androidx.compose.runtime.rememberUpdatedState<@Composable (Dp) -> Unit> { bottomInnerPadding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1751,6 +1757,13 @@ fun MainScreen(
             }
         }
 
+        // Reparent the same pages when resizing switches between a rail and a bottom bar.
+        // A plain composable lambda at different call sites would discard local page state.
+        val pagerContent = remember {
+            androidx.compose.runtime.movableContentOf<Dp> { bottomInnerPadding ->
+                currentPagerContent.value(bottomInnerPadding)
+            }
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1836,7 +1849,7 @@ fun MainScreen(
                     resolveMainContentBottomPadding(
                         scaffoldPadding = innerPadding.calculateBottomPadding(),
                         systemNavigationPadding = systemNavigationPadding,
-                        floatingBarEnabled = enableFloatingBottomBar,
+                        floatingBarEnabled = enableFloatingBottomBar && !me.weishu.kernelsu.ui.util.currentAppWindowSize().compactNavigation,
                         navigationBarVisible = navigationBarVisibilityState.visible,
                     ),
                 )

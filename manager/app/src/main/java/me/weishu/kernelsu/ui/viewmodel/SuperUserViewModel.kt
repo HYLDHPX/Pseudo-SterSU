@@ -280,7 +280,10 @@ class SuperUserViewModel(
         val sortOption = _uiState.value.sortOption
         val searchText = _uiState.value.searchStatus.searchText
         val (sorted, searchResults, recentlyInstalledResults) = withContext(Dispatchers.IO) {
-            val s = if (resort) sortGroups(grouped, sortOption) else grouped
+            val ordered = if (resort) sortGroups(grouped, sortOption) else grouped
+            val s = moveMostRecentlyInstalledFirst(ordered) { group ->
+                group.apps.maxOfOrNull { it.packageInfo.firstInstallTime } ?: group.primary.packageInfo.firstInstallTime
+            }
             Triple(s, filterSearchResults(s, searchText), buildRecentlyInstalledGroups(s))
         }
         _uiState.update {

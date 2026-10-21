@@ -146,6 +146,7 @@
     <string name="refresh_refresh">正在刷新…</string>
     <string name="refresh_complete">刷新成功</string>
     <string name="module_repos">模組倉庫</string>
+    <string name="module_repo_search_hint">搜尋模組、ID 或作者</string>
     <string name="module_repos_source_code">源碼</string>
     <string name="module_repos_sort_updated">更新時間</string>
     <string name="module_repos_sort_name">名稱</string>
@@ -201,6 +202,7 @@
     <string name="settings_version_mismatch_warning">版本不相符警告</string>
     <string name="settings_version_mismatch_warning_summary">管理器與 SterSU 驅動版本不相符時顯示警告。</string>
     <string name="menu_sort">排序</string>
+    <string name="superuser_sort_menu">排序：%1$s</string>
     <string name="sort_by_name">應用名</string>
     <string name="sort_by_package_name">套件名</string>
     <string name="sort_by_install_time">安裝時間</string>

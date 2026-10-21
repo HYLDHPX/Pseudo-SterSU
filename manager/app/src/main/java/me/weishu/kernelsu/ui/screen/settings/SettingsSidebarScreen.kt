@@ -23,13 +23,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,6 +50,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ViewSidebar
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Info
@@ -63,7 +66,6 @@ import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Surface
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -78,6 +80,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -97,6 +100,7 @@ import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.weishu.kernelsu.BuildConfig
 import me.weishu.kernelsu.R
+import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.component.dialog.rememberLoadingDialog
 import me.weishu.kernelsu.ui.component.material.ExpressiveScaffold
 import me.weishu.kernelsu.ui.component.miuix.SendLogDialog
@@ -109,8 +113,9 @@ import me.weishu.kernelsu.ui.theme.SidebarUiTokens
 import me.weishu.kernelsu.ui.theme.immersivePageColor
 import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.util.FULL_CUSTOM_WALLPAPER_CROP
+import me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight
 
-/** Compact, device-oriented settings for the sidebar style; other styles keep their layouts. */
+/** Device-oriented settings shared by sidebar, seasonal and pixel interface styles. */
 @Composable
 internal fun SettingsSidebarScreen(
     uiState: SettingsUiState,
@@ -121,15 +126,23 @@ internal fun SettingsSidebarScreen(
     onSetColorMode: (ColorMode) -> Unit,
 ) {
     val context = LocalContext.current
+    val sidebarStyle = uiState.uiMode == InterfaceStyle.SidebarWidget.value
+    val styleName = uiState.installedInterfaceStyles
+        .firstOrNull { it.style.id == uiState.activeInterfaceStyleId && uiState.isInterfaceStyleActive(it.style) }
+        ?.style?.name
+        ?: uiState.installedInterfaceStyles.firstOrNull { uiState.isInterfaceStyleActive(it.style) }?.style?.name
+        ?: stringResource(settingsHomeStyleLabelRes(uiState))
+    val pageColor = immersivePageColor(if (sidebarStyle) MaterialTheme.colorScheme.surface else Color.Transparent)
     val deviceViewModel = viewModel<SettingsDeviceViewModel>()
     val device by deviceViewModel.state.collectAsStateWithLifecycle()
     var showAllSettings by rememberSaveable { mutableStateOf(false) }
-    var showPhotoActions by rememberSaveable { mutableStateOf(false) }
     var showDeviceTextEditor by rememberSaveable { mutableStateOf(false) }
+    val deviceEditorScrollState = rememberScrollState()
     var modelDraft by rememberSaveable { mutableStateOf("") }
     var processorDraft by rememberSaveable { mutableStateOf("") }
     var systemDraft by rememberSaveable { mutableStateOf("") }
     var showColorMode by rememberSaveable { mutableStateOf(false) }
+    var showPageMode by rememberSaveable { mutableStateOf(false) }
     var showLogs by rememberSaveable { mutableStateOf(false) }
     var showUninstall by rememberSaveable { mutableStateOf(false) }
     val loadingDialog = rememberLoadingDialog()
@@ -144,7 +157,6 @@ internal fun SettingsSidebarScreen(
         }
     }
     fun choosePhoto() {
-        showPhotoActions = false
         runCatching { photoLauncher.launch(arrayOf("image/*")) }.onFailure {
             Toast.makeText(context, R.string.settings_shortcut_unavailable, Toast.LENGTH_LONG).show()
         }
@@ -157,12 +169,11 @@ internal fun SettingsSidebarScreen(
     }
     BackHandler(showAllSettings) { showAllSettings = false }
     val animationsEnabled = rememberSystemAnimationsEnabled()
-    val layoutDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
+    val contentLayoutDirection = LocalLayoutDirection.current
+    val layoutDirection = if (contentLayoutDirection == LayoutDirection.Rtl) -1 else 1
     AnimatedContent(
         targetState = showAllSettings,
-        modifier = Modifier.fillMaxSize().background(
-            immersivePageColor(MaterialTheme.colorScheme.surface),
-        ).clipToBounds(),
+        modifier = Modifier.fillMaxSize().background(pageColor).clipToBounds(),
         transitionSpec = {
             if (!animationsEnabled) {
                 ContentTransform(EnterTransition.None, ExitTransition.None, sizeTransform = null)
@@ -197,63 +208,67 @@ internal fun SettingsSidebarScreen(
             ExpressiveScaffold(
                 modifier = Modifier.fillMaxSize(),
                 contentMaxWidth = SidebarUiTokens.DetailMaxWidth,
-                containerColor = immersivePageColor(MaterialTheme.colorScheme.surface),
+                containerColor = pageColor,
                 contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout)
-                    .only(WindowInsetsSides.Top),
+                    .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
                 topBar = {
                     TopAppBar(
                         title = { Text(stringResource(R.string.settings), fontWeight = FontWeight.SemiBold) },
-                        actions = {
-                            SettingsPageModeButton(SettingsPageMode.Categories, onPageModeChange)
-                        },
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = immersiveTopBarColor(MaterialTheme.colorScheme.surface),
+                            containerColor = immersiveTopBarColor(if (sidebarStyle) MaterialTheme.colorScheme.surface else Color.Transparent),
                         ),
                     )
                 },
             ) { padding ->
+                val contentInsets = PaddingValues(
+                    start = padding.calculateStartPadding(contentLayoutDirection),
+                    top = padding.calculateTopPadding(),
+                    end = padding.calculateEndPadding(contentLayoutDirection),
+                )
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    // Keep scrolling cards below the transparent app bar, not behind its actions.
+                    modifier = Modifier.fillMaxSize()
+                        .padding(contentInsets)
+                        .consumeWindowInsets(contentInsets)
+                        .clipToBounds(),
                     contentPadding = PaddingValues(
                         start = 16.dp, end = 16.dp,
-                        top = padding.calculateTopPadding() + 4.dp,
+                        top = 4.dp,
                         bottom = padding.calculateBottomPadding() + bottomInnerPadding + 20.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(SidebarUiTokens.SectionSpacing),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     item(key = "sidebar_settings_intro") {
-                        SidebarSettingsCard {
+                        SettingsHomeCard {
                             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("SterSU", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
                                         modifier = Modifier.weight(1f))
-                                    Icon(Icons.AutoMirrored.Rounded.ViewSidebar, null, Modifier.size(30.dp))
+                                    Icon(if (sidebarStyle) Icons.AutoMirrored.Rounded.ViewSidebar else Icons.Rounded.Palette,
+                                        null, Modifier.size(30.dp))
                                 }
                                 Text(stringResource(R.string.settings_sidebar_intro), style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold)
-                                Text(stringResource(R.string.settings_sidebar_version, BuildConfig.VERSION_NAME),
+                                Text(stringResource(R.string.settings_home_style_version, styleName, BuildConfig.VERSION_NAME),
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                TextButton(onClick = openSidebar, contentPadding = PaddingValues(horizontal = 0.dp)) {
-                                    Text(stringResource(R.string.sidebar_widget_settings_title))
-                                    Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.padding(start = 8.dp).size(18.dp))
+                                if (sidebarStyle) {
+                                    TextButton(onClick = openSidebar, contentPadding = PaddingValues(horizontal = 0.dp)) {
+                                        Text(stringResource(R.string.sidebar_widget_settings_title))
+                                        Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.padding(start = 8.dp).size(18.dp))
+                                    }
                                 }
                             }
                         }
                     }
                     item(key = "sidebar_settings_device") {
-                        SettingsDeviceCard(
-                            state = device,
-                            onEditPhoto = {
-                                if (device.photo == null) choosePhoto() else showPhotoActions = true
-                            },
-                        )
+                        SettingsDeviceCard(state = device)
                     }
                     item(key = "sidebar_settings_navigation") {
-                        SidebarSettingsCard {
+                        SettingsHomeCard {
                             SidebarSettingsEntry(
                                 stringResource(R.string.settings_sidebar_appearance),
-                                stringResource(R.string.settings_sidebar_appearance_summary),
+                                stringResource(if (sidebarStyle) R.string.settings_sidebar_appearance_summary else R.string.settings_home_appearance_summary),
                                 Icons.Rounded.Palette,
                             ) { onOpenCategory(SettingsCategory.Appearance) }
                             HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant)
@@ -266,7 +281,7 @@ internal fun SettingsSidebarScreen(
                     }
                     item(key = "sidebar_settings_shortcuts") {
                         val repository = stringResource(R.string.home_learn_kernelsu_url).trimEnd('/')
-                        SidebarSettingsCard {
+                        SettingsHomeCard {
                             BoxWithConstraints(Modifier.fillMaxWidth().padding(8.dp)) {
                                 val columns = settingsShortcutColumns(maxWidth.value, LocalDensity.current.fontScale)
                                 val shortcuts = listOf(
@@ -277,6 +292,7 @@ internal fun SettingsSidebarScreen(
                                         systemDraft = device.customSystem.orEmpty()
                                         showDeviceTextEditor = true
                                     }, enabled = !device.loading),
+                                    SettingsShortcut(R.string.settings_page_mode_select, Icons.Rounded.Dashboard, { showPageMode = true }),
                                     SettingsShortcut(R.string.settings_shortcut_share, Icons.Rounded.Share, {
                                         launchExternal(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                                             type = "text/plain"
@@ -320,37 +336,15 @@ internal fun SettingsSidebarScreen(
         }
     }
 
-    if (showPhotoActions) {
-        AlertDialog(
-            onDismissRequest = { showPhotoActions = false },
-            title = { Text(stringResource(R.string.settings_device_photo)) },
-            text = {
-                Column {
-                    TextButton(onClick = ::choosePhoto, enabled = !device.busy) {
-                        Text(stringResource(R.string.settings_device_photo_choose))
-                    }
-                    TextButton(onClick = {
-                        showPhotoActions = false
-                        deviceViewModel.editPhoto()
-                    }, enabled = !device.busy) { Text(stringResource(R.string.settings_device_photo_crop)) }
-                    TextButton(onClick = {
-                        showPhotoActions = false
-                        deviceViewModel.clearPhoto()
-                    }, enabled = !device.busy) { Text(stringResource(R.string.settings_device_photo_reset)) }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showPhotoActions = false }) { Text(stringResource(android.R.string.cancel)) }
-            },
-        )
-    }
-    if (showDeviceTextEditor) {
+    // Retain text drafts and scroll position while the crop dialog temporarily replaces this one.
+    if (showDeviceTextEditor && device.editing == null) {
         AlertDialog(
             onDismissRequest = { showDeviceTextEditor = false },
             title = { Text(stringResource(R.string.settings_device_text_edit)) },
             text = {
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    modifier = Modifier.heightIn(max = adaptiveDialogContentMaxHeight())
+                        .verticalScroll(deviceEditorScrollState),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     OutlinedTextField(
@@ -392,6 +386,36 @@ internal fun SettingsSidebarScreen(
                     }) {
                         Text(stringResource(R.string.settings_device_text_reset))
                     }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Text(
+                        stringResource(R.string.settings_device_photo),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Column {
+                        TextButton(
+                            onClick = ::choosePhoto,
+                            enabled = !device.loading && !device.busy,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        ) {
+                            Text(stringResource(R.string.settings_device_photo_choose))
+                        }
+                        if (device.photo != null) {
+                            TextButton(
+                                onClick = deviceViewModel::editPhoto,
+                                enabled = !device.loading && !device.busy,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                            ) {
+                                Text(stringResource(R.string.settings_device_photo_edit))
+                            }
+                            TextButton(
+                                onClick = deviceViewModel::clearPhoto,
+                                enabled = !device.loading && !device.busy,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                            ) {
+                                Text(stringResource(R.string.settings_device_photo_reset))
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -416,6 +440,13 @@ internal fun SettingsSidebarScreen(
             title = stringResource(R.string.settings_device_photo_crop),
             editorAspectRatio = 1f, defaultCrop = FULL_CUSTOM_WALLPAPER_CROP,
             allowTransforms = false,
+        )
+    }
+    if (showPageMode) {
+        SettingsPageModeDialog(
+            currentMode = SettingsPageMode.Categories,
+            onModeChange = onPageModeChange,
+            onDismissRequest = { showPageMode = false },
         )
     }
     if (showColorMode) {
@@ -462,16 +493,6 @@ private data class SettingsShortcut(
 )
 
 @Composable
-private fun SidebarSettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        shape = MaterialTheme.shapes.large,
-    ) { Column(content = content) }
-}
-
-@Composable
 private fun SidebarSettingsEntry(
     title: String,
     summary: String,
@@ -494,10 +515,10 @@ private fun SidebarSettingsEntry(
 }
 
 @Composable
-private fun SettingsDeviceCard(state: SettingsDeviceState, onEditPhoto: () -> Unit) {
+private fun SettingsDeviceCard(state: SettingsDeviceState) {
     val context = LocalContext.current
     val unknown = stringResource(if (state.loading) R.string.loading else R.string.settings_device_unknown)
-    SidebarSettingsCard {
+    SettingsHomeCard {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
                 state.customModel ?: state.info.model ?: unknown,
@@ -515,9 +536,7 @@ private fun SettingsDeviceCard(state: SettingsDeviceState, onEditPhoto: () -> Un
                 val photo: @Composable (Modifier) -> Unit = { modifier ->
                     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
-                            Modifier.fillMaxWidth().heightIn(min = 164.dp, max = 240.dp)
-                                .clickable(enabled = !state.loading && !state.busy, role = Role.Button,
-                                    onClickLabel = stringResource(R.string.settings_device_photo_choose), onClick = onEditPhoto),
+                            Modifier.fillMaxWidth().heightIn(min = 164.dp, max = 240.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             val bitmap = state.bitmap
@@ -537,9 +556,6 @@ private fun SettingsDeviceCard(state: SettingsDeviceState, onEditPhoto: () -> Un
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                 }
                             }
-                        }
-                        TextButton(onClick = onEditPhoto, enabled = !state.loading && !state.busy) {
-                            Text(stringResource(if (state.photo == null) R.string.settings_device_photo_choose else R.string.settings_device_photo_edit))
                         }
                     }
                 }

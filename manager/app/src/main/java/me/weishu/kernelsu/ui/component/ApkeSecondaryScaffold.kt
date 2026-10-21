@@ -184,7 +184,7 @@ fun ApkeSecondaryScaffold(
                                     )
                                 }
                             },
-                            actions = actions,
+                            actions = { AdaptiveTopBarActions(actions) },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = immersiveTopBarColor(if (sidebar) pageColor else Color.Transparent),
                                 scrolledContainerColor = immersiveScrolledTopBarColor(

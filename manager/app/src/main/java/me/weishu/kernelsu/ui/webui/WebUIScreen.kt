@@ -12,11 +12,9 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.runtime.Composable
@@ -64,10 +62,10 @@ fun WebUIScreen(
     val systemBarsInsets = WindowInsets.systemBars
     val imeInsets = WindowInsets.ime
     val backgroundScrollFollowState = LocalBackgroundScrollFollowState.current
-    val innerPadding = when {
-        webUIState.isInsetsEnabled -> imeInsets.asPaddingValues()
-        respectSafeDrawingInsets -> drawingInsets.asPaddingValues()
-        else -> PaddingValues()
+    val contentInsets = when {
+        webUIState.isInsetsEnabled -> imeInsets
+        respectSafeDrawingInsets -> drawingInsets
+        else -> WindowInsets(0, 0, 0, 0)
     }
     val fileLauncher = rememberFileLauncher(webUIState)
 
@@ -120,7 +118,8 @@ fun WebUIScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(innerPadding)
+            // The Manager host may already have consumed the keyboard/caption insets.
+            .windowInsetsPadding(contentInsets)
     ) {
         webUIState.webView?.let { webView ->
             AndroidView(

@@ -51,8 +51,11 @@ class SidebarRebootWallpaperTest {
         assertTrue(popup.contains("Color.Black.copy(alpha = 0.56f)"))
         assertTrue(popup.contains(".background(tileColor)"))
         assertTrue(popup.contains("options.chunked(columns)"))
-        assertTrue(popup.contains(".aspectRatio(1f)"))
-        assertTrue(popup.contains(".heightIn(max = (screen.screenHeightDp - 40)"))
+        assertTrue(popup.contains(".height(gridLayout.tileHeightDp.dp)"))
+        assertTrue(popup.contains("val window = currentAppWindowSize()"))
+        assertTrue(popup.contains(".heightIn(max = (window.heightDp - 40f).coerceAtLeast(0f).dp)"))
+        assertTrue(popup.contains("(window.widthDp - 24f).coerceIn(0f, 288f).dp"))
+        assertTrue(popup.contains("sidebarRebootGridLayout(menuWidth.value, fontScale)"))
         assertTrue(popup.contains(".verticalScroll(rememberScrollState())"))
         assertTrue(popup.contains("onReboot(option.reason)"))
     }

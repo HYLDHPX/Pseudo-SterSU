@@ -127,21 +127,27 @@ fun EditText(
                 )
             }
         ) { measurables, constraints ->
-            val leftConstraints = constraints.copy(maxWidth = constraints.maxWidth / 2)
+            val stacked = constraints.maxWidth < 300.dp.roundToPx()
+            val leftConstraints = constraints.copy(minWidth = 0, minHeight = 0,
+                maxWidth = if (stacked) constraints.maxWidth else constraints.maxWidth / 2)
             val hasSummary = measurables.size > 2
             val titleText = measurables[0].measure(leftConstraints)
             val summaryText = (if (hasSummary) measurables[1] else null)?.measure(leftConstraints)
             val leftWidth = max(titleText.width, (summaryText?.width ?: 0))
             val leftHeight = titleText.height + (summaryText?.height ?: 0)
-            val rightWidth = constraints.maxWidth - leftWidth - 16.dp.roundToPx()
-            val rightConstraints = constraints.copy(maxWidth = rightWidth)
+            val rightWidth = if (stacked) constraints.maxWidth
+                else (constraints.maxWidth - leftWidth - 16.dp.roundToPx()).coerceAtLeast(0)
+            val rightConstraints = constraints.copy(minWidth = 0, minHeight = 0, maxWidth = rightWidth)
             val inputField = (if (hasSummary) measurables[2] else measurables[1]).measure(rightConstraints)
-            val totalHeight = max(leftHeight, inputField.height)
+            val gap = if (stacked) 8.dp.roundToPx() else 0
+            val totalHeight = (if (stacked) leftHeight + gap + inputField.height else max(leftHeight, inputField.height))
+                .coerceIn(constraints.minHeight, constraints.maxHeight)
             layout(constraints.maxWidth, totalHeight) {
-                val titleY = (totalHeight - leftHeight) / 2
+                val titleY = if (stacked) 0 else (totalHeight - leftHeight) / 2
                 titleText.placeRelative(0, titleY)
                 summaryText?.placeRelative(0, titleY + titleText.height)
-                inputField.placeRelative(constraints.maxWidth - inputField.width, (totalHeight - inputField.height) / 2)
+                inputField.placeRelative(constraints.maxWidth - inputField.width,
+                    if (stacked) leftHeight + gap else (totalHeight - inputField.height) / 2)
             }
         }
     }

@@ -38,7 +38,7 @@ import me.weishu.kernelsu.ui.viewmodel.SettingsViewModel
 import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
-import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
+import me.weishu.kernelsu.ui.component.AdaptiveTopAppBar as MiuixTopAppBar
 
 @Composable
 fun PreInstallStyleSettingsScreen() {

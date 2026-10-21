@@ -136,8 +136,8 @@ fun ModuleWallpaperEditorDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            val dialogWidth = (maxWidth - 32.dp).coerceAtMost(640.dp)
-            val dialogHeight = (maxHeight - 32.dp).coerceAtMost(760.dp)
+            val dialogWidth = (maxWidth - 32.dp).coerceIn(0.dp, 640.dp)
+            val dialogHeight = (maxHeight - 32.dp).coerceIn(0.dp, 760.dp)
             Surface(
                 modifier = Modifier.width(dialogWidth).height(dialogHeight),
                 shape = RoundedCornerShape(16.dp),

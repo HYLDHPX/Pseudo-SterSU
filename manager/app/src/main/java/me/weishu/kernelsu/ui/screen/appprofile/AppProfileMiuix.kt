@@ -6,9 +6,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,12 +24,17 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Security
@@ -40,10 +48,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,6 +74,7 @@ import me.weishu.kernelsu.ui.component.liquid.globalLiquidGlassSurface
 import me.weishu.kernelsu.ui.component.liquid.liquidGlassMiuixCardColors
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
 import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
+import me.weishu.kernelsu.ui.theme.uiPassthroughSurfaceColor
 import me.weishu.kernelsu.ui.util.BlurredBar
 import me.weishu.kernelsu.ui.util.listAppProfileTemplates
 import me.weishu.kernelsu.ui.util.ownerNameForUid
@@ -76,14 +90,13 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import me.weishu.kernelsu.ui.component.passthrough.MiuixText as Text
-import top.yukonga.miuix.kmp.basic.TopAppBar
+import me.weishu.kernelsu.ui.component.AdaptiveTopAppBar as TopAppBar
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.MoreCircle
 import top.yukonga.miuix.kmp.overlay.OverlayListPopup
-import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import me.weishu.kernelsu.ui.component.miuix.SunMoonSwitchPreference as SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -128,6 +141,7 @@ fun AppProfileScreenMiuix(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxHeight()
+                    .imePadding()
                     .padding(top = 16.dp)
                     .scrollEndHaptic()
                     .overScrollVertical()
@@ -147,7 +161,7 @@ fun AppProfileScreenMiuix(
                             AppIconImage(
                                 packageInfo = state.appGroup.primary.packageInfo,
                                 label = state.appGroup.primary.label,
-                                modifier = Modifier.size(64.dp)
+                                modifier = Modifier.size(48.dp)
                             )
                         },
                         appUid = state.uid,
@@ -222,10 +236,8 @@ private fun AppProfileInner(
                         text = appLabel,
                         color = colorScheme.onSurface,
                         fontWeight = FontWeight(550),
-                        modifier = Modifier
-                            .basicMarquee(),
-                        maxLines = 1,
-                        softWrap = false
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     if (isSpecialApp) {
                         Text(
@@ -282,28 +294,22 @@ private fun AppProfileInner(
                             softWrap = false
                         )
                     }
-                }
-                Column(
-                    modifier = Modifier,
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    if (userId != 0) {
+                    FlowRow(
+                        modifier = Modifier.padding(top = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (userId != 0) {
+                            StatusTag(
+                                label = "USER $userId",
+                                backgroundColor = colorScheme.secondaryVariant,
+                                contentColor = colorScheme.onSecondaryVariant,
+                            )
+                        }
                         StatusTag(
-                            label = "USER $userId",
-                            backgroundColor = colorScheme.primary.copy(alpha = 0.8f),
-                            contentColor = colorScheme.onPrimary
-                        )
-                        StatusTag(
-                            label = "UID $appId",
-                            backgroundColor = colorScheme.primary.copy(alpha = 0.8f),
-                            contentColor = colorScheme.onPrimary
-                        )
-                    } else {
-                        StatusTag(
-                            label = "UID $appUid",
-                            backgroundColor = colorScheme.primary.copy(alpha = 0.8f),
-                            contentColor = colorScheme.onPrimary
+                            label = "UID ${if (userId != 0) appId else appUid}",
+                            backgroundColor = colorScheme.secondaryVariant,
+                            contentColor = colorScheme.onSecondaryVariant,
                         )
                     }
                 }
@@ -342,7 +348,7 @@ private fun AppProfileInner(
         } else {
             Mode.Custom
         }
-        var rootMode by rememberSaveable {
+        var rootMode by rememberSaveable(profile.rootUseDefault, profile.rootTemplate) {
             mutableStateOf(initialRootMode)
         }
         val nonRootMode = if (profile.nonRootUseDefault) Mode.Default else Mode.Custom
@@ -378,8 +384,8 @@ private fun AppProfileInner(
                                     )
                                 )
                             }
-                            rootMode = Mode.Template
                         }
+                        rootMode = Mode.Template
                     }
                 }
             } else {
@@ -389,7 +395,7 @@ private fun AppProfileInner(
         Spacer(Modifier.height(12.dp))
 
         AnimatedVisibility(
-            visible = isRootGranted,
+            visible = isRootGranted && rootMode != Mode.Default,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
@@ -428,7 +434,7 @@ private fun AppProfileInner(
             }
         }
         AnimatedVisibility(
-            visible = !isRootGranted,
+            visible = !isRootGranted && nonRootMode == Mode.Custom,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
@@ -583,17 +589,6 @@ private fun ProfileBox(
     val defaultText = stringResource(R.string.profile_default)
     val templateText = stringResource(R.string.profile_template)
     val customText = stringResource(R.string.profile_custom)
-    val list =
-        remember(hasTemplate, defaultText, templateText, customText) {
-            buildList {
-                add(defaultText)
-                if (hasTemplate) {
-                    add(templateText)
-                }
-                add(customText)
-            }
-        }
-
     val modesAndTitles = remember(hasTemplate, defaultText, templateText, customText) {
         buildList {
             add(Mode.Default to defaultText)
@@ -603,7 +598,6 @@ private fun ProfileBox(
             add(Mode.Custom to customText)
         }
     }
-    val selectedIndex = modesAndTitles.indexOfFirst { it.first == mode }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -611,21 +605,67 @@ private fun ProfileBox(
             .profileLiquidGlassSurface(),
         colors = liquidGlassMiuixCardColors(),
     ) {
-        OverlayDropdownPreference(
+        BasicComponent(
             title = stringResource(R.string.profile),
-            items = list,
+            summary = mode.text,
             startAction = {
                 Icon(
                     Icons.Rounded.AccountCircle,
                     modifier = Modifier.padding(end = 6.dp),
                     contentDescription = null,
-                    tint = colorScheme.onBackground
+                    tint = colorScheme.onSurface
                 )
             },
-            selectedIndex = if (selectedIndex == -1) 0 else selectedIndex,
-        ) {
-            onModeChange(modesAndTitles[it].first)
+        )
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
+            val stackOptions = maxWidth < (modesAndTitles.size * 88 * LocalDensity.current.fontScale).dp
+            if (stackOptions) {
+                Column(
+                    modifier = Modifier.selectableGroup(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    modesAndTitles.forEach { (option, title) ->
+                        ProfileModeOption(title, mode == option, { onModeChange(option) }, Modifier.fillMaxWidth())
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.selectableGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    modesAndTitles.forEach { (option, title) ->
+                        ProfileModeOption(title, mode == option, { onModeChange(option) }, Modifier.weight(1f))
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun ProfileModeOption(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
+    val background = if (selected) colorScheme.primary else uiPassthroughSurfaceColor(colorScheme.surfaceContainerHigh)
+    val content = if (selected) colorScheme.onPrimary else colorScheme.onSurface
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(background)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .heightIn(min = 48.dp)
+            .padding(horizontal = 8.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = title,
+            color = content,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

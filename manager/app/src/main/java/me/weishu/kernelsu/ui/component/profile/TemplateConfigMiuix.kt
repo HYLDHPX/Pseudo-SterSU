@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.util.listAppProfileTemplates
+import me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight
 import me.weishu.kernelsu.ui.viewmodel.getTemplateInfoById
 import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as Icon
 import top.yukonga.miuix.kmp.preference.ArrowPreference
@@ -73,7 +74,7 @@ fun TemplateConfigMiuix(
                         )
                     }
                 },
-                maxHeight = 280.dp
+                maxHeight = adaptiveDialogContentMaxHeight().coerceAtMost(280.dp)
             )
             ArrowPreference(
                 title = stringResource(R.string.app_profile_template_view),

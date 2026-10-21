@@ -117,7 +117,7 @@ import top.yukonga.miuix.kmp.basic.TabRow
 import top.yukonga.miuix.kmp.basic.TabRowDefaults
 import me.weishu.kernelsu.ui.component.passthrough.MiuixText as Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar
+import me.weishu.kernelsu.ui.component.AdaptiveTopAppBar as TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -143,7 +143,7 @@ fun ModuleRepoScreenMiuix(
     state: ModuleRepoUiState,
     actions: ModuleRepoActions,
 ) {
-    val searchStatus = state.searchStatus
+    val searchStatus = state.searchStatus.copy(label = stringResource(R.string.module_repo_search_hint))
     val density = LocalDensity.current
 
     LaunchedEffect(searchStatus.searchText) {

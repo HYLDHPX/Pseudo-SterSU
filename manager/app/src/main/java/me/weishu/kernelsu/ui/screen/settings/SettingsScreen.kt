@@ -44,7 +44,7 @@ fun SettingPager(
     val onOpenCategory: (SettingsCategory) -> Unit = { category ->
         navigator.push(Route.SettingsCategory(category.routeValue))
     }
-    if (uiState.uiMode == InterfaceStyle.SidebarWidget.value && pageMode.value == SettingsPageMode.Categories) {
+    if (usesDeviceSettingsHome(uiState.uiMode) && pageMode.value == SettingsPageMode.Categories) {
         SettingsSidebarScreen(
             uiState = uiState,
             navigator = navigator,
@@ -75,4 +75,9 @@ fun SettingPager(
             return
         }
     }
+}
+
+internal fun usesDeviceSettingsHome(interfaceStyle: String): Boolean = when (interfaceStyle) {
+    InterfaceStyle.SidebarWidget.value, InterfaceStyle.Snow.value, InterfaceStyle.Pixel.value -> true
+    else -> false
 }

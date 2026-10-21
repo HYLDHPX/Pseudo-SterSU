@@ -1,6 +1,7 @@
 package me.weishu.kernelsu.ui.component.material
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -53,10 +55,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.ImeAction
@@ -67,6 +72,7 @@ import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.theme.immersiveSurfaceColor
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
+import me.weishu.kernelsu.R
 
 @Composable
 fun InlineSearchAppBar(
@@ -83,11 +89,12 @@ fun InlineSearchAppBar(
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
-    val topBarContainerColor = if (useWallpaperSurface) {
+    var searchFocused by remember { mutableStateOf(false) }
+    val searchShape = RoundedCornerShape(if (useWallpaperSurface) 12.dp else 28.dp)
+    val defaultTopBarContainerColor = if (useWallpaperSurface) {
         Color.Transparent
-    } else if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) {
-        MaterialTheme.colorScheme.surface
-    } else immersiveTopBarColor(MaterialTheme.colorScheme.surface)
+    } else MaterialTheme.colorScheme.surface
+    val topBarContainerColor = immersiveTopBarColor(defaultTopBarContainerColor)
     val searchContainerColor = if (useWallpaperSurface) {
         immersiveSurfaceColor(MaterialTheme.colorScheme.surfaceContainerLow)
     } else MaterialTheme.colorScheme.surfaceContainerHigh
@@ -112,18 +119,36 @@ fun InlineSearchAppBar(
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                     .padding(horizontal = 16.dp)
-                    .padding(bottom = 8.dp),
-                placeholder = { Text(searchHint) },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    .padding(top = 4.dp, bottom = 12.dp)
+                    .onFocusChanged { searchFocused = it.isFocused }
+                    .border(
+                        width = 1.dp,
+                        color = if (searchFocused) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        shape = searchShape,
+                    ),
+                textStyle = MaterialTheme.typography.bodyMedium,
+                placeholder = {
+                    Text(
+                        searchHint,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(22.dp)) },
                 trailingIcon = if (searchText.isNotEmpty()) {
                     {
                         IconButton(onClick = onClearClick) {
-                            Icon(Icons.Filled.Close, contentDescription = null)
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = stringResource(R.string.cloud_theme_clear_search),
+                                modifier = Modifier.size(20.dp),
+                            )
                         }
                     }
                 } else null,
                 singleLine = true,
-                shape = RoundedCornerShape(if (useWallpaperSurface) 12.dp else 28.dp),
+                shape = searchShape,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = {
                     focusManager.clearFocus()
@@ -132,6 +157,15 @@ fun InlineSearchAppBar(
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = searchContainerColor,
                     unfocusedContainerColor = searchContainerColor,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    focusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    cursorColor = MaterialTheme.colorScheme.primary,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),

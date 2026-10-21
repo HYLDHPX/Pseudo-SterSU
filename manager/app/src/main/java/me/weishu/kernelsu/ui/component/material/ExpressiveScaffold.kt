@@ -100,9 +100,10 @@ fun ExpressiveTopAppBar(
     windowInsets: WindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
-    if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) {
+    if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value || me.weishu.kernelsu.ui.util.currentAppWindowSize().compactNavigation) {
         TopAppBar(
-            title = title, navigationIcon = navigationIcon, actions = actions,
+            title = title, navigationIcon = navigationIcon,
+            actions = { me.weishu.kernelsu.ui.component.AdaptiveTopBarActions(actions) },
             colors = colors, windowInsets = windowInsets, scrollBehavior = scrollBehavior,
         )
     } else {

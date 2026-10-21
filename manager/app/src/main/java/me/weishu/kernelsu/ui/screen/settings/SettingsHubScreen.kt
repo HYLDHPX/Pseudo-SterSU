@@ -138,14 +138,6 @@ fun SettingsHubScreen(
                         fontWeight = FontWeight.SemiBold,
                     )
                 },
-                actions = {
-                    if (!isSidebarMoreSettings) {
-                        SettingsPageModeButton(
-                            currentMode = SettingsPageMode.Categories,
-                            onModeChange = onPageModeChange,
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = immersiveScrolledTopBarColor(
@@ -182,6 +174,15 @@ fun SettingsHubScreen(
                         .fillMaxWidth(),
                 )
             }
+            if (!isSidebarMoreSettings) {
+                item(key = "settings_layout") {
+                    SettingsPageModeCard(
+                        currentMode = SettingsPageMode.Categories,
+                        onModeChange = onPageModeChange,
+                        modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth(),
+                    )
+                }
+            }
         }
     }
 }
@@ -197,7 +198,7 @@ private fun SettingsCategoryCard(
 ) {
     val shape = RoundedCornerShape(if (compact) 12.dp else 8.dp)
     val accent = categoryAccent(category)
-    Surface(
+    SettingsHomeCard(
         color = immersiveSurfaceColor(MaterialTheme.colorScheme.surfaceContainerLow),
         contentColor = MaterialTheme.colorScheme.onSurface,
         shape = shape,

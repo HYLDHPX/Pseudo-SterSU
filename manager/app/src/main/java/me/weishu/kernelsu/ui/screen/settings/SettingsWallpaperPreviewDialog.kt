@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -74,7 +77,8 @@ private fun MiuixWallpaperPreviewDialog(
         title = stringResource(R.string.settings_wallpaper_preview),
         onDismissRequest = onDismissRequest,
         content = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(modifier = Modifier.heightIn(max = me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight())
+                .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 WallpaperPreviewFrame(
                     imageBitmap = imageBitmap,
                     uriString = uriString,

@@ -133,6 +133,7 @@ fun StoreScaffold(
     maxContentWidth: Dp = 1120.dp,
     actions: @Composable RowScope.() -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
+    contentWindowInsets: WindowInsets = WindowInsets.safeDrawing,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     StoreTheme {
@@ -144,7 +145,7 @@ fun StoreScaffold(
             } else {
                 MaterialTheme.colorScheme.background
             },
-            contentWindowInsets = WindowInsets.safeDrawing,
+            contentWindowInsets = contentWindowInsets,
             topBar = {
                 TopAppBar(
                     title = {
@@ -156,7 +157,7 @@ fun StoreScaffold(
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back))
                         }
                     },
-                    actions = actions,
+                    actions = { me.weishu.kernelsu.ui.component.AdaptiveTopBarActions(actions) },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = immersiveTopBarColor(if (immersiveBackgroundActive) {
                             Color.Transparent

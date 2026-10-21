@@ -202,8 +202,13 @@ private fun TopBar(
                     )
                 }
             }
-            if (showReboot && LocalInterfaceStyle.current != InterfaceStyle.SidebarWidget.value) {
-                RebootListPopup()
+            val sidebarStyle = LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
+            if (showReboot && (!sidebarStyle || !me.weishu.kernelsu.ui.util.currentAppWindowSize().canShowSidebar)) {
+                if (sidebarStyle) {
+                    me.weishu.kernelsu.ui.component.rebootlistpopup.SidebarRebootPopup()
+                } else {
+                    RebootListPopup()
+                }
             }
         },
         colors = expressiveTopAppBarColors(),

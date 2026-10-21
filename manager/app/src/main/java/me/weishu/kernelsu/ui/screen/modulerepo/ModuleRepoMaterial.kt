@@ -59,12 +59,11 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
+import me.weishu.kernelsu.ui.component.material.ExpressiveTopAppBar as LargeFlexibleTopAppBar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.SelectableDropdownMenuItem
-import androidx.compose.material3.SnackbarHostState
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -103,12 +102,13 @@ import me.weishu.kernelsu.ui.theme.LocalModuleDescriptionMaxLines
 import me.weishu.kernelsu.data.model.RepoModule
 import me.weishu.kernelsu.data.model.RepoRelease
 import me.weishu.kernelsu.ui.component.ScrollToTopOnChange
+import me.weishu.kernelsu.ui.component.SearchStatus
 import me.weishu.kernelsu.ui.component.dialog.ConfirmDialogHandle
 import me.weishu.kernelsu.ui.component.dialog.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.markdown.GithubMarkdown
 import me.weishu.kernelsu.ui.component.material.ExpressiveScaffold
 import me.weishu.kernelsu.ui.component.material.ExpressiveTabRow
-import me.weishu.kernelsu.ui.component.material.SearchAppBar
+import me.weishu.kernelsu.ui.component.material.InlineSearchAppBar
 import me.weishu.kernelsu.ui.component.material.SegmentedColumn
 import me.weishu.kernelsu.ui.component.material.SegmentedItemContainer
 import me.weishu.kernelsu.ui.component.material.SegmentedListItem
@@ -132,20 +132,28 @@ fun ModuleRepoScreenMaterial(
     val haptic = LocalHapticFeedback.current
     val listState = rememberLazyListState()
     val searchListState = rememberLazyListState()
+    val isSearching = state.searchStatus.searchText.isNotEmpty()
+    val visibleModules = if (isSearching) state.searchResults else state.modules
+    val visibleListState = if (isSearching) searchListState else listState
     val refreshTick = remember { mutableIntStateOf(0) }
     val pullToRefreshState = rememberPullToRefreshState()
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-    val snackbarHostState = remember { SnackbarHostState() }
-
     ExpressiveScaffold(
         topBar = {
-            SearchAppBar(
-                snackbarHostState = snackbarHostState,
-                title = { Text(text = stringResource(R.string.module_repos)) },
+            InlineSearchAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.module_repos),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 searchText = state.searchStatus.searchText,
+                searchHint = stringResource(R.string.module_repo_search_hint),
                 onSearchTextChange = actions.onSearchTextChange,
                 onClearClick = actions.onClearSearch,
+                useWallpaperSurface = true,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarBackButton(onClick = actions.onBack)
@@ -196,23 +204,6 @@ fun ModuleRepoScreenMaterial(
                         }
                     }
                 },
-                searchContent = { _, closeSearch ->
-                    val latestSearchResults = rememberUpdatedState(state.searchResults)
-                    ScrollToTopOnChange(
-                        searchListState,
-                        state.searchStatus.searchText,
-                    ) { latestSearchResults.value }
-                    RepoModuleList(
-                        modules = state.searchResults,
-                        installedVersions = state.installedVersions,
-                        listState = searchListState,
-                        modifier = Modifier.fillMaxSize(),
-                        onModuleClick = {
-                            closeSearch()
-                            actions.onOpenRepoDetail(it)
-                        }
-                    )
-                }
             )
         },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
@@ -246,6 +237,7 @@ fun ModuleRepoScreenMaterial(
         }
         if (!isLoading && contentReady) {
             val latestModules = rememberUpdatedState(state.modules)
+            val latestSearchResults = rememberUpdatedState(state.searchResults)
             val latestRefreshing = rememberUpdatedState(state.isRefreshing)
             ScrollToTopOnChange(
                 listState,
@@ -253,6 +245,13 @@ fun ModuleRepoScreenMaterial(
                 refreshTick.intValue,
                 isBusy = { latestRefreshing.value },
             ) { latestModules.value }
+            ScrollToTopOnChange(
+                searchListState,
+                state.sortOrder,
+                refreshTick.intValue,
+                state.searchStatus.searchText,
+                isBusy = { latestRefreshing.value },
+            ) { latestSearchResults.value }
             PullToRefreshBox(
                 modifier = Modifier
                     .fillMaxSize()
@@ -272,11 +271,23 @@ fun ModuleRepoScreenMaterial(
                     )
                 },
             ) {
-                RepoModuleList(
-                    modules = state.modules,
+                if (isSearching && visibleModules.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        if (state.searchStatus.resultStatus == SearchStatus.ResultStatus.EMPTY) {
+                            Text(
+                                text = stringResource(R.string.module_search_empty),
+                                modifier = Modifier.padding(24.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            LoadingIndicator()
+                        }
+                    }
+                } else RepoModuleList(
+                    modules = visibleModules,
                     installedVersions = state.installedVersions,
                     stale = state.stale,
-                    listState = listState,
+                    listState = visibleListState,
                     modifier = Modifier
                         .fillMaxSize()
                         .nestedScroll(scrollBehavior.nestedScrollConnection),

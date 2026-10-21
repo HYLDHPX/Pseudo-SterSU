@@ -2,6 +2,8 @@
 <resources>
     <string name="settings_sidebar_intro">Your device. Your workspace.</string>
     <string name="settings_sidebar_version">miuix (Enhanced) · Manager %1$s</string>
+    <string name="settings_home_style_version">%1$s · Manager %2$s</string>
+    <string name="settings_home_appearance_summary">Store, interface styles, colors and day and night mode</string>
     <string name="settings_sidebar_appearance">Appearance and themes</string>
     <string name="settings_sidebar_appearance_summary">Interface styles, colors and sidebar design</string>
     <string name="settings_sidebar_more">More settings</string>
