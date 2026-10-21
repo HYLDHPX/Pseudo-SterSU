@@ -36,7 +36,7 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.HourglassTop
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Checkbox
@@ -176,7 +176,7 @@ fun ForegroundToolProtectionScreen() {
                         enabled = !state.busy && !state.loadingStatus && !state.loadingApps,
                     ) {
                         Icon(
-                            Icons.Rounded.Refresh,
+                            Icons.Outlined.Refresh,
                             contentDescription = stringResource(R.string.foreground_tool_refresh),
                         )
                     }

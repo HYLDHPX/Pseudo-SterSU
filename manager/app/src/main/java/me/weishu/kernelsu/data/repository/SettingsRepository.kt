@@ -52,7 +52,6 @@ interface SettingsRepository {
     var colorSpec: String
     var monetSurfaceOpacity: Float
     var themePreset: String
-    var enablePredictiveBack: Boolean
     var enableSwipeDismiss: Boolean
     var pagerInterceptionMode: Int
     var enableBlur: Boolean

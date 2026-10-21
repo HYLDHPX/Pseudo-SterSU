@@ -23,7 +23,7 @@ import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -230,7 +230,7 @@ private fun CloudThemeStatisticsPanel(
             subtitle = stringResource(R.string.cloud_theme_ranking_method),
             action = {
                 IconButton(enabled = !refreshing, onClick = onRefresh) {
-                    Icon(Icons.Rounded.Refresh, stringResource(R.string.cloud_theme_refresh))
+                    Icon(Icons.Outlined.Refresh, stringResource(R.string.cloud_theme_refresh))
                 }
             },
         )
@@ -430,7 +430,7 @@ private fun CloudThemeRankingEmpty(
         )
         onRetry?.let {
             OutlinedButton(onClick = it) {
-                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(stringResource(R.string.cloud_theme_retry))
             }

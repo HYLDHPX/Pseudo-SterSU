@@ -27,7 +27,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.WarningAmber
@@ -187,7 +187,7 @@ fun AppFreezeScreen() {
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Rounded.Refresh,
+                        imageVector = Icons.Outlined.Refresh,
                         contentDescription = stringResource(R.string.refresh_refresh),
                     )
                 }

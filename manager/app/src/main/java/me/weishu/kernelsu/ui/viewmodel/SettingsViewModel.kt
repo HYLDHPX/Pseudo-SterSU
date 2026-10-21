@@ -104,7 +104,6 @@ class SettingsViewModel(
             val graphicsRendererFeatureEnabled = repo.graphicsRendererFeatureEnabled
             val miuixMonet = repo.miuixMonet
             val keyColor = repo.keyColor
-            val enablePredictiveBack = repo.enablePredictiveBack
             val appearance = withContext(Dispatchers.IO) {
                 AppearanceSnapshot(
                     uiMode = repo.uiMode,
@@ -290,7 +289,6 @@ class SettingsViewModel(
                     miuixMonet = miuixMonet,
                     keyColor = keyColor,
                     themePreset = if (it.themeMode == themeMode) themePreset.value else it.themePreset,
-                    enablePredictiveBack = enablePredictiveBack,
                     enableBlur = enableBlur,
                     enableFloatingBottomBar = enableFloatingBottomBar,
                     enableFloatingBottomBarBlur = enableFloatingBottomBarBlur,
@@ -971,11 +969,6 @@ class SettingsViewModel(
                 blurIntensity == ThemeAppearanceDefaults.BLUR_INTENSITY
         }
         return current ?: ThemePreset.CUSTOM
-    }
-
-    fun setEnablePredictiveBack(enabled: Boolean) {
-        repo.enablePredictiveBack = enabled
-        _uiState.update { it.copy(enablePredictiveBack = enabled) }
     }
 
     fun setEnableBlur(enabled: Boolean) {

@@ -18,7 +18,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -147,31 +146,29 @@ internal fun SidebarHomeCardOptions(config: SidebarWidgetConfig, onUpdate: (Side
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.sidebar_home_cards_scope), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(stringResource(R.string.sidebar_home_cards_edit_layout), style = MaterialTheme.typography.labelLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SidebarHomeLayout.entries.forEach { item ->
-                FilterChip(selected = layout == item, onClick = {
-                    layoutName = item.value
-                    selectedName = sidebarHomeCardIds(item).first().value
-                    imageError = false
-                }, enabled = !importing, label = { Text(stringResource(item.cardLayoutLabel())) }, modifier = Modifier.heightIn(min = 48.dp))
-            }
-        }
-        Text(stringResource(R.string.sidebar_home_cards_edit_card), style = MaterialTheme.typography.labelLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ids.forEach { id ->
-                FilterChip(selected = selected == id, onClick = { selectedName = id.value; imageError = false }, enabled = !importing,
-                    label = { Text(stringResource(id.cardLabel())) }, modifier = Modifier.heightIn(min = 48.dp))
-            }
-        }
-        Text(stringResource(R.string.sidebar_palette_mode), style = MaterialTheme.typography.labelLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(false, true).forEach { dark ->
-                FilterChip(selected = editingDark == dark, onClick = { editingDark = dark; imageError = false }, enabled = !importing,
-                    label = { Text(stringResource(if (dark) R.string.sidebar_palette_dark else R.string.sidebar_palette_light)) },
-                    modifier = Modifier.heightIn(min = 48.dp))
-            }
-        }
+        SidebarDesignChoice(
+            title = stringResource(R.string.sidebar_home_cards_edit_layout),
+            options = SidebarHomeLayout.entries.map { stringResource(it.cardLayoutLabel()) },
+            selectedIndex = SidebarHomeLayout.entries.indexOf(layout), enabled = !importing,
+            onSelected = {
+                val item = SidebarHomeLayout.entries[it]
+                layoutName = item.value
+                selectedName = sidebarHomeCardIds(item).first().value
+                imageError = false
+            },
+        )
+        SidebarDesignChoice(
+            title = stringResource(R.string.sidebar_home_cards_edit_card),
+            options = ids.map { stringResource(it.cardLabel()) },
+            selectedIndex = ids.indexOf(selected), enabled = !importing,
+            onSelected = { selectedName = ids[it].value; imageError = false },
+        )
+        SidebarDesignChoice(
+            title = stringResource(R.string.sidebar_palette_mode),
+            options = listOf(stringResource(R.string.sidebar_palette_light), stringResource(R.string.sidebar_palette_dark)),
+            selectedIndex = if (editingDark) 1 else 0, enabled = !importing,
+            onSelected = { editingDark = it == 1; imageError = false },
+        )
         HorizontalDivider()
         // Preview the selected theme, never a captured frame from the settings page.
         CompositionLocalProvider(LocalSidebarGlassBackdrop provides null) {
@@ -216,21 +213,19 @@ internal fun SidebarHomeCardOptions(config: SidebarWidgetConfig, onUpdate: (Side
             }, enabled = !importing, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.sidebar_home_cards_inherit)) }
         }
         HorizontalDivider()
-        Text(stringResource(R.string.sidebar_home_cards_material), style = MaterialTheme.typography.titleSmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SidebarCardMaterial.entries.forEach { material ->
-                FilterChip(selected = style.material == material, onClick = { updateStyle(style.copy(material = material)) },
-                    label = { Text(stringResource(material.cardMaterialLabel())) }, modifier = Modifier.heightIn(min = 48.dp))
-            }
-        }
+        SidebarDesignChoice(
+            title = stringResource(R.string.sidebar_home_cards_material),
+            options = SidebarCardMaterial.entries.map { stringResource(it.cardMaterialLabel()) },
+            selectedIndex = SidebarCardMaterial.entries.indexOf(style.material),
+            onSelected = { updateStyle(style.copy(material = SidebarCardMaterial.entries[it])) },
+        )
         if (style.material != SidebarCardMaterial.Default) {
-            Text(stringResource(R.string.sidebar_home_cards_gradient), style = MaterialTheme.typography.titleSmall)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SidebarCardGradient.entries.forEach { gradient ->
-                    FilterChip(selected = style.gradient == gradient, onClick = { updateStyle(style.copy(gradient = gradient)) },
-                        label = { Text(stringResource(gradient.cardGradientLabel())) }, modifier = Modifier.heightIn(min = 48.dp))
-                }
-            }
+            SidebarDesignChoice(
+                title = stringResource(R.string.sidebar_home_cards_gradient),
+                options = SidebarCardGradient.entries.map { stringResource(it.cardGradientLabel()) },
+                selectedIndex = SidebarCardGradient.entries.indexOf(style.gradient),
+                onSelected = { updateStyle(style.copy(gradient = SidebarCardGradient.entries[it])) },
+            )
             val tintLabel = stringResource(R.string.sidebar_home_cards_tint, (tint * 100).roundToInt())
             val tintState = remember { SliderState(tint, trackRange = 0.15f..1f) }
             tintState.value = tint

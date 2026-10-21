@@ -806,26 +806,11 @@ class MainActivity : ComponentActivity() {
                                 ) -> stableNavPopTransition()
                                 else -> instantNavTransition()
                             },
-                            predictivePopTransitionSpec = { _ ->
-                                if (sidebarStackTransitions) {
-                                    sidebarStackPopTransitionContentTransform(stackDirection)
-                                } else {
-                                    // Other styles can show transparent wallpaper layers through
-                                    // both scenes during an interactive back gesture.
-                                    instantNavTransitionContentTransform()
-                                }
-                            },
                             transitionEffects = NavDisplayTransitionEffects(
                                 enableCornerClip = false,
                                 dimAmount = 0f,
                                 blockInputDuringTransition = true,
-                                // The library's right-edge override replaces our pop spec.
-                                // Never let it animate a retained KPM WebView or a sidebar scene.
-                                popDirectionFollowsSwipeEdge = shouldAllowSwipeEdgePopOverride(
-                                    sidebarStyleActive = uiState.interfaceStyle == InterfaceStyle.SidebarWidget.value,
-                                    kpmPageActive = kpmPageActiveForNavigation,
-                                    stealthModeEnabled = uiState.stealthModeEnabled,
-                                ),
+                                popDirectionFollowsSwipeEdge = false,
                             ),
                         )
                     }
@@ -848,11 +833,15 @@ class MainActivity : ComponentActivity() {
                             navigationTransitionActive = false
                         }
                     }
+                    val pageBackgroundTarget = customPageBackgroundTarget(
+                        currentRoute,
+                        storeAncestor = navigator.backStack.any { (it as? Route).isStoreRoute() },
+                    )
                     val effectiveBackground = uiState.effectiveCustomBackground(
                         if (uiState.stealthModeEnabled) MainDestination.Home else mainPagerState.destinationForPage(),
-                        currentRoute,
+                        pageBackgroundTarget,
                     )
-                    val passthroughTarget = customPageBackgroundTarget(currentRoute) ?: when (
+                    val passthroughTarget = pageBackgroundTarget ?: when (
                         if (uiState.stealthModeEnabled) MainDestination.Home else mainPagerState.destinationForPage()
                     ) {
                         MainDestination.Home -> CustomPageBackgroundTarget.Home
@@ -1144,20 +1133,27 @@ class MainActivity : ComponentActivity() {
 
 private fun MainActivityUiState.effectiveCustomBackground(
     mainDestination: MainDestination,
-    currentRoute: Route?,
+    pageTarget: CustomPageBackgroundTarget?,
 ): CustomBackgroundState {
-    val routeBackground = customPageBackgroundTarget(currentRoute)
+    val routeBackground = pageTarget
         ?.let(customPageBackgrounds::get)
         ?.takeIf { it.hasMedia }
     if (routeBackground != null) {
         return routeBackground
     }
+    if (pageTarget != null) return globalCustomBackground()
 
     return customBackgroundForMainDestination(mainDestination)
 }
 
-internal fun customPageBackgroundTarget(route: Route?): CustomPageBackgroundTarget? {
+internal fun customPageBackgroundTarget(
+    route: Route?,
+    storeAncestor: Boolean = false,
+): CustomPageBackgroundTarget? {
     return when (route) {
+        // Editors follow their store/settings entry point, not the pager hidden underneath.
+        Route.Backgrounds, Route.HomeCardWallpapers, Route.InstallCardWallpapers, Route.NavigationIcons ->
+            if (storeAncestor) CustomPageBackgroundTarget.Store else CustomPageBackgroundTarget.Settings
         Route.Install -> CustomPageBackgroundTarget.Install
         Route.Kpm -> CustomPageBackgroundTarget.Kpm
         Route.AppProfileTemplate, is Route.TemplateEditor -> CustomPageBackgroundTarget.Templates
@@ -1920,12 +1916,6 @@ internal fun shouldUseSidebarStackNavigationTransitions(
     animationsEnabled: Boolean,
     stealthModeEnabled: Boolean = false,
 ): Boolean = sidebarStyleActive && !kpmPageActive && animationsEnabled && !stealthModeEnabled
-
-internal fun shouldAllowSwipeEdgePopOverride(
-    sidebarStyleActive: Boolean,
-    kpmPageActive: Boolean,
-    stealthModeEnabled: Boolean,
-): Boolean = !sidebarStyleActive && !kpmPageActive && !stealthModeEnabled
 
 internal fun shouldHostSidebarRail(
     route: Route?,

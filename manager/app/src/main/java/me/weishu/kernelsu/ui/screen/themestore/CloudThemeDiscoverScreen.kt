@@ -34,7 +34,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.NewReleases
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material3.FilterChip
@@ -282,7 +282,7 @@ private fun CloudThemeDiscoverHeader(
             subtitle = stringResource(R.string.store_redesign_theme_intro),
             action = {
                 IconButton(enabled = !refreshing, onClick = onRefresh) {
-                    Icon(Icons.Rounded.Refresh, stringResource(R.string.cloud_theme_refresh))
+                    Icon(Icons.Outlined.Refresh, stringResource(R.string.cloud_theme_refresh))
                 }
             },
         )
@@ -500,7 +500,7 @@ private fun CloudThemeEmptyState(
         )
         onRetry?.let {
             OutlinedButton(onClick = it) {
-                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.size(6.dp))
                 Text(stringResource(R.string.cloud_theme_retry))
             }

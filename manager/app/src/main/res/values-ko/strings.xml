@@ -304,8 +304,6 @@
     <string name="manager_force_update_title">업데이트 필요</string>
     <string name="manager_force_update_message">이 버전은 더 이상 지원되지 않습니다. 계속하려면 SterSU Manager %1$s(%2$d)으로 업데이트하세요.</string>
     <string name="manager_update_changelog">%1$s\n\n%2$s</string>
-    <string name="settings_enable_predictive_back">예측 뒤로 동작</string>
-    <string name="settings_enable_predictive_back_summary">예측 뒤로 제스처 지원을 활성화합니다.</string>
     <string name="settings_module_check_update_summary">설치된 모듈에서 사용 가능한 업데이트를 자동으로 확인합니다.</string>
     <string name="settings_version_mismatch_warning">버전 불일치 경고</string>
     <string name="settings_version_mismatch_warning_summary">Manager와 SterSU 드라이버 버전이 일치하지 않을 때 경고를 표시합니다.</string>
@@ -668,7 +666,6 @@
     <string name="settings_monet">모네 활성화</string>
     <string name="settings_monet_surface_opacity">Monet 표면 투명도</string>
     <string name="settings_monet_surface_opacity_summary">텍스트와 상태 대비를 유지하면서 카드와 컨테이너 투명도를 조정합니다.</string>
-    <string name="settings_predictive_back_apply_failed">예측 뒤로를 적용하지 못했습니다. 이전 설정을 유지했습니다.</string>
     <string name="theme_store_monet_title">Monet 색상</string>
     <string name="theme_store_monet_summary">기준 색상, 팔레트 스타일, 색상 사양과 표면 투명도를 설정합니다.</string>
     <string name="theme_store_monet_status">켜짐 · 표면 %1$d%%</string>

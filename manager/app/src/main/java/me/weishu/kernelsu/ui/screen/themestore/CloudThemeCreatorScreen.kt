@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.VerifiedUser
@@ -650,7 +651,7 @@ private fun CreatorQualificationPage(
                                     strokeWidth = 2.dp,
                                 )
                             } else {
-                                Icon(Icons.Rounded.Refresh, contentDescription = null)
+                                Icon(Icons.Outlined.Refresh, contentDescription = null)
                             }
                             Spacer(modifier = Modifier.size(6.dp))
                             Text(stringResource(R.string.cloud_theme_creator_check_status))
@@ -1264,7 +1265,7 @@ private fun CreatorRemotePackageCard(
                 if (verifying) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
-                    Icon(Icons.Rounded.Refresh, contentDescription = null)
+                    Icon(Icons.Outlined.Refresh, contentDescription = null)
                 }
                 Spacer(modifier = Modifier.size(7.dp))
                 Text(stringResource(R.string.cloud_theme_creator_verify_remote))
@@ -1374,7 +1375,7 @@ private fun CreatorRecordsPage(
                             CircularProgressIndicator(modifier = Modifier.size(19.dp), strokeWidth = 2.dp)
                         } else {
                             MiuixIcon(
-                                imageVector = Icons.Rounded.Refresh,
+                                imageVector = Icons.Outlined.Refresh,
                                 contentDescription = stringResource(
                                     R.string.cloud_theme_creator_check_status
                                 ),
@@ -1453,7 +1454,7 @@ private fun CreatorActivityErrorCard(
                 enabled = !loading,
                 onClick = onRetry,
             ) {
-                Icon(Icons.Rounded.Refresh, contentDescription = null)
+                Icon(Icons.Outlined.Refresh, contentDescription = null)
                 Spacer(modifier = Modifier.size(6.dp))
                 Text(stringResource(R.string.cloud_theme_creator_retry))
             }

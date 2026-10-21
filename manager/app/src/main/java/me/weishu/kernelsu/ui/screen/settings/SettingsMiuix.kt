@@ -383,12 +383,14 @@ fun SettingPagerMiuix(
                             checked = dayNightChecked,
                             onCheckedChange = actions.onSetDayNightMode,
                         )
-                        CategorizedMiuixActionRow(
-                            title = stringResource(R.string.sidebar_widget_settings_title),
-                            summary = stringResource(R.string.sidebar_design_entry_summary),
-                            icon = Icons.Rounded.Tune,
-                            onClick = actions.onOpenSidebarDesign,
-                        )
+                        if (uiState.isSidebarDesignEntryVisible) {
+                            CategorizedMiuixActionRow(
+                                title = stringResource(R.string.sidebar_widget_settings_title),
+                                summary = stringResource(R.string.sidebar_design_entry_summary),
+                                icon = Icons.Rounded.Tune,
+                                onClick = actions.onOpenSidebarDesign,
+                            )
+                        }
                     }
                     }
 

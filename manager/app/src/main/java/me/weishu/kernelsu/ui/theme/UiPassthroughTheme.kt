@@ -37,19 +37,25 @@ fun ColorScheme.withUiPassthrough(settings: UiPassthroughSettings): ColorScheme 
 }
 
 /** Change paint on surfaces, never alpha on a parent containing text or images. */
+fun Colors.withUiPassthrough(settings: UiPassthroughSettings): Colors {
+    if (!settings.enabled) return this
+    val alpha = settings.normalized().surfaceOpacity
+    return copy(
+        background = Color.Transparent,
+        surface = surface.withUiOpacity(alpha),
+        surfaceVariant = surfaceVariant.withUiOpacity(alpha),
+        surfaceContainer = surfaceContainer.withUiOpacity(alpha),
+        surfaceContainerHigh = surfaceContainerHigh.withUiOpacity(alpha),
+        surfaceContainerHighest = surfaceContainerHighest.withUiOpacity(alpha),
+    )
+}
+
 @Composable
 fun UiPassthroughTheme(settings: UiPassthroughSettings, content: @Composable () -> Unit) {
     val safe = settings.normalized()
     val base = LocalOriginalMiuixColors.current ?: MiuixTheme.colorScheme
     val materialBase = LocalOriginalMaterialColors.current ?: MaterialTheme.colorScheme
-    val colors = if (safe.enabled) base.copy(
-        background = Color.Transparent,
-        surface = base.surface.withUiOpacity(safe.surfaceOpacity),
-        surfaceVariant = base.surfaceVariant.withUiOpacity(safe.surfaceOpacity),
-        surfaceContainer = base.surfaceContainer.withUiOpacity(safe.surfaceOpacity),
-        surfaceContainerHigh = base.surfaceContainerHigh.withUiOpacity(safe.surfaceOpacity),
-        surfaceContainerHighest = base.surfaceContainerHighest.withUiOpacity(safe.surfaceOpacity),
-    ) else base
+    val colors = base.withUiPassthrough(safe)
     CompositionLocalProvider(
         LocalUiPassthroughSettings provides safe,
         LocalOriginalMaterialColors provides materialBase,

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Policy
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.UploadFile
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -598,7 +599,7 @@ fun SusfsPathConfigScreen() {
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.susfs_path_refresh)) },
-                                leadingIcon = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+                                leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },
                                 enabled = !loading && !applying && !importing && !exportingDiagnostics && !dirty,
                                 onClick = {
                                     showActionMenu = false

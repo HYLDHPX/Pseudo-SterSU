@@ -33,16 +33,16 @@ class SettingsCatalogTest {
     @Test
     fun appearanceCountTracksInterfaceSpecificEntry() {
         val base = SettingsUiState(uiMode = InterfaceStyle.Material.value)
-        assertEquals(4, SettingsCatalog.visibleEntryCount(SettingsCategory.Appearance, base))
+        assertEquals(3, SettingsCatalog.visibleEntryCount(SettingsCategory.Appearance, base))
         assertEquals(
-            5,
+            4,
             SettingsCatalog.visibleEntryCount(
                 SettingsCategory.Appearance,
                 base.copy(uiMode = InterfaceStyle.Miuix.value),
             ),
         )
         assertEquals(
-            5,
+            4,
             SettingsCatalog.visibleEntryCount(
                 SettingsCategory.Appearance,
                 base.copy(uiMode = InterfaceStyle.Pixel.value),
@@ -51,10 +51,28 @@ class SettingsCatalogTest {
     }
 
     @Test
-    fun sidebarDesignIsDiscoverableFromAppearanceForEveryStyle() {
+    fun sidebarDesignIsOnlyDiscoverableForTheBeautifiedMiuixStyle() {
         for (style in InterfaceStyle.entries) {
-            val entries = SettingsCatalog.entriesFor(SettingsCategory.Appearance, SettingsUiState(uiMode = style.value))
-            assertEquals(1, entries.count { it.key == "sidebar_design" })
+            val state = SettingsUiState(uiMode = style.value)
+            val expected = style == InterfaceStyle.SidebarWidget
+            val entries = SettingsCatalog.entriesFor(SettingsCategory.Appearance, state)
+            assertEquals(style.name, expected, state.isSidebarDesignEntryVisible)
+            assertEquals(style.name, if (expected) 1 else 0, entries.count { it.key == "sidebar_design" })
+        }
+    }
+
+    @Test
+    fun sidebarDesignDisappearsAfterSwitchingAwayWithoutClearingTheSavedStyle() {
+        val sidebar = SettingsUiState(
+            uiMode = InterfaceStyle.SidebarWidget.value,
+            activeInterfaceStyleId = "sidebar",
+        )
+        assertEquals(true, sidebar.isSidebarDesignEntryVisible)
+        for (style in InterfaceStyle.entries.filterNot { it == InterfaceStyle.SidebarWidget }) {
+            val switched = sidebar.copy(uiMode = style.value)
+            assertEquals(style.name, false, switched.isSidebarDesignEntryVisible)
+            assertEquals(style.name, false, SettingsCatalog.entriesFor(SettingsCategory.Appearance, switched)
+                .any { it.key == "sidebar_design" })
         }
     }
 

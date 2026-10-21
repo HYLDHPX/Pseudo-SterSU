@@ -350,13 +350,15 @@ private fun AppearanceSettingsContent(
             icon = Icons.Rounded.Storefront,
             onClick = { onOpen(Route.ThemeStore) },
         )
-        SettingsDivider()
-        SettingsActionRow(
-            title = stringResource(R.string.sidebar_widget_settings_title),
-            summary = stringResource(R.string.sidebar_design_entry_summary),
-            icon = Icons.Rounded.Tune,
-            onClick = { onOpen(Route.SidebarWidgetSettings) },
-        )
+        if (uiState.isSidebarDesignEntryVisible) {
+            SettingsDivider()
+            SettingsActionRow(
+                title = stringResource(R.string.sidebar_widget_settings_title),
+                summary = stringResource(R.string.sidebar_design_entry_summary),
+                icon = Icons.Rounded.Tune,
+                onClick = { onOpen(Route.SidebarWidgetSettings) },
+            )
+        }
         SettingsDivider()
         SettingsChoiceRow(
             title = stringResource(R.string.settings_ui_mode),

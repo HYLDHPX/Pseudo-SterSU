@@ -37,12 +37,8 @@ import java.util.Locale
 
 internal const val RECENTLY_INSTALLED_WINDOW_MILLIS = 60 * 60 * 1000L
 
-internal const val SORT_BY_NAME = 0
-internal const val SORT_BY_PACKAGE_NAME = 1
-internal const val SORT_BY_INSTALL_TIME = 2
-internal const val SORT_BY_UPDATE_TIME = 3
-
 private const val PREFS_SORT_OPTION = "superuser_sort_option"
+private const val PREFS_RECENT_SORT_DEFAULT = "superuser_recent_sort_default_applied"
 
 internal fun buildRecentlyInstalledGroups(
     groups: List<GroupedApps>,
@@ -148,7 +144,18 @@ class SuperUserViewModel(
     fun initializePreferences() {
         val showSystemApps = prefs.getBoolean("show_system_apps", false)
         val showOnlyPrimaryUserApps = prefs.getBoolean("show_only_primary_user_apps", false)
-        val sortOption = prefs.getInt(PREFS_SORT_OPTION, 0)
+        val recentDefaultApplied = prefs.getBoolean(PREFS_RECENT_SORT_DEFAULT, false)
+        val sortOption = resolveSuperUserSortOption(
+            savedOption = prefs.getInt(PREFS_SORT_OPTION, DEFAULT_SUPERUSER_SORT_OPTION),
+            recentDefaultApplied = recentDefaultApplied,
+        )
+        if (!recentDefaultApplied) {
+            // Apply the new default once; later manual sorting choices stay intact.
+            prefs.edit {
+                putInt(PREFS_SORT_OPTION, sortOption)
+                putBoolean(PREFS_RECENT_SORT_DEFAULT, true)
+            }
+        }
         _uiState.update {
             it.copy(
                 showSystemApps = showSystemApps,
@@ -159,7 +166,10 @@ class SuperUserViewModel(
     }
 
     fun updateSortOption(option: Int): Job {
-        prefs.edit { putInt(PREFS_SORT_OPTION, option) }
+        prefs.edit {
+            putInt(PREFS_SORT_OPTION, option)
+            putBoolean(PREFS_RECENT_SORT_DEFAULT, true)
+        }
         _uiState.update { it.copy(sortOption = option) }
         sortJob?.cancel()
         return viewModelScope.launch {
@@ -359,22 +369,18 @@ class SuperUserViewModel(
 
     private fun sortGroups(groups: List<GroupedApps>, sortOption: Int): List<GroupedApps> {
         val sortType = sortOption / 2
-        val reverse = sortOption % 2 != 0
-
         val collator = Collator.getInstance(Locale.getDefault())
         val base: Comparator<GroupedApps> = when (sortType) {
             SORT_BY_PACKAGE_NAME -> compareBy { it.primary.displayIdentifier }
-            SORT_BY_INSTALL_TIME -> compareBy { it.primary.packageInfo.firstInstallTime }
-            SORT_BY_UPDATE_TIME -> compareBy { it.primary.packageInfo.lastUpdateTime }
+            SORT_BY_INSTALL_TIME -> compareBy { group ->
+                group.apps.maxOfOrNull { it.packageInfo.firstInstallTime } ?: group.primary.packageInfo.firstInstallTime
+            }
+            SORT_BY_UPDATE_TIME -> compareBy { group ->
+                group.apps.maxOfOrNull { it.packageInfo.lastUpdateTime } ?: group.primary.packageInfo.lastUpdateTime
+            }
             else -> Comparator { a, b -> collator.compare(a.primary.label, b.primary.label) }
         }
-        val secondary = if (reverse) base.reversed() else base
-
-        return groups.sortedWith(Comparator { a, b ->
-            val ra = groupRank(a)
-            val rb = groupRank(b)
-            if (ra != rb) ra - rb else secondary.compare(a, b)
-        })
+        return groups.sortedWith(superUserSortComparator(sortOption, base, ::groupRank))
     }
 
     suspend fun fetchAppList() {

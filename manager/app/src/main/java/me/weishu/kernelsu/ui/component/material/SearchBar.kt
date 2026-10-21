@@ -64,6 +64,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.nav.gesture.WindowNavigationEventBridge
 import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
+import me.weishu.kernelsu.ui.theme.immersiveSurfaceColor
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
 
@@ -77,15 +78,22 @@ fun InlineSearchAppBar(
     navigationIcon: @Composable (() -> Unit)? = null,
     actions: @Composable (() -> Unit)? = null,
     scrollBehavior: TopAppBarScrollBehavior? = null,
+    useWallpaperSurface: Boolean = false,
+    topContentPadding: Dp = 0.dp,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
-    val topBarContainerColor = if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) {
+    val topBarContainerColor = if (useWallpaperSurface) {
+        Color.Transparent
+    } else if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) {
         MaterialTheme.colorScheme.surface
     } else immersiveTopBarColor(MaterialTheme.colorScheme.surface)
+    val searchContainerColor = if (useWallpaperSurface) {
+        immersiveSurfaceColor(MaterialTheme.colorScheme.surfaceContainerLow)
+    } else MaterialTheme.colorScheme.surfaceContainerHigh
 
     Surface(color = topBarContainerColor, contentColor = MaterialTheme.colorScheme.onSurface) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(top = topContentPadding)) {
             ExpressiveTopAppBar(
                 title = title,
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -115,15 +123,15 @@ fun InlineSearchAppBar(
                     }
                 } else null,
                 singleLine = true,
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(if (useWallpaperSurface) 12.dp else 28.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = {
                     focusManager.clearFocus()
                     keyboardController?.hide()
                 }),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedContainerColor = searchContainerColor,
+                    unfocusedContainerColor = searchContainerColor,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                 ),

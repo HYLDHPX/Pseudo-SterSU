@@ -33,7 +33,7 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Shuffle
@@ -164,7 +164,7 @@ fun DeviceIdentityScreen() {
                         enabled = !uiState.loading && !uiState.isBusy,
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.Refresh,
+                            imageVector = Icons.Outlined.Refresh,
                             contentDescription = stringResource(R.string.device_identity_refresh),
                         )
                     }
@@ -750,7 +750,7 @@ private fun DeviceIdentityErrorState(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Button(onClick = onRetry) {
-                Icon(Icons.Rounded.Refresh, contentDescription = null)
+                Icon(Icons.Outlined.Refresh, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.device_identity_retry))
             }

@@ -146,8 +146,6 @@
     <string name="safe_mode_module_disabled">Güvenli modda modül yükleme devre dışı bırakılmıştır</string>
     <string name="module_action_success">Modül işlemi başarıyla gerçekleştirildi.</string>
     <string name="app_profile_affects_following_apps">Aşağıdaki uygulamaları etkiler</string>
-    <string name="settings_enable_predictive_back">Tahmin edilebilir geri hareket</string>
-    <string name="settings_enable_predictive_back_summary">Tahminli geri hareket desteğini etkinleştir.</string>
     <string name="settings_module_check_update">Modül güncellemelerini kontrol et</string>
     <string name="home_pr_build_warning">Bu bir PR hata ayıklama sürümüdür. Üretim ortamında KESİNLİKLE KULLANMAYIN!</string>
     <string name="home_pr_kernel_warning">Çekirdek, PR imzası desteği ile derlenmiştir. Bu, üretim amaçlı bir çekirdek değildir!</string>

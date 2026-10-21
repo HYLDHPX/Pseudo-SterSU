@@ -6,11 +6,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,19 +21,19 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -52,6 +51,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -77,6 +77,7 @@ import me.weishu.kernelsu.ui.theme.skrootproTopBarColors
 import me.weishu.kernelsu.ui.util.BlurredBar
 import me.weishu.kernelsu.ui.util.ownerNameForUid
 import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
+import me.weishu.kernelsu.ui.viewmodel.DEFAULT_SUPERUSER_SORT_OPTION
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.DropdownImpl
@@ -96,8 +97,6 @@ import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.MoreCircle
-import top.yukonga.miuix.kmp.icon.extended.Notes
-import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -126,7 +125,7 @@ fun SuperUserPagerMiuix(
 
     val scrollBehavior = MiuixScrollBehavior()
     val dynamicTopPadding by remember {
-        derivedStateOf { 12.dp * (1f - scrollBehavior.state.collapsedFraction) }
+        derivedStateOf { 8.dp + 4.dp * (1f - scrollBehavior.state.collapsedFraction) }
     }
 
     val backdrop = rememberBlurBackdrop(enableBlur)
@@ -141,28 +140,11 @@ fun SuperUserPagerMiuix(
         topBar = {
             BlurredBar(backdrop) {
                 TopAppBar(
+                        modifier = Modifier.padding(top = 8.dp),
                         color = topBarColors.container,
                         titleColor = topBarColors.content,
                         title = stringResource(R.string.superuser),
-                        navigationIcon = {
-                            IconButton(
-                                onClick = actions.onOpenSulog,
-                            ) {
-                                Icon(
-                                    imageVector = MiuixIcons.Notes,
-                                    tint = topBarColors.content,
-                                    contentDescription = stringResource(R.string.settings_sulog)
-                                )
-                            }
-                        },
                         actions = {
-                            IconButton(onClick = actions.onOpenAppTools) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Apps,
-                                    tint = topBarColors.content,
-                                    contentDescription = stringResource(R.string.superuser_app_tools_title),
-                                )
-                            }
                             Box {
                                 val showSortPopup = remember { mutableStateOf(false) }
                                 OverlayListPopup(
@@ -173,23 +155,24 @@ fun SuperUserPagerMiuix(
                                     content = {
                                         ListPopupColumn {
                                             val sortResIds = listOf(
-                                                R.string.sort_by_name,
-                                                R.string.sort_by_package_name,
-                                                R.string.sort_by_install_time,
-                                                R.string.sort_by_update_time,
+                                                2 to R.string.sort_by_install_time,
+                                                0 to R.string.sort_by_name,
+                                                1 to R.string.sort_by_package_name,
+                                                3 to R.string.sort_by_update_time,
                                             )
                                             val currentSortType = uiState.sortOption / 2
                                             val isReverse = uiState.sortOption % 2 != 0
                                             val sortGroupSize = sortResIds.size + 1
 
-                                            sortResIds.forEachIndexed { index, resId ->
+                                            sortResIds.forEachIndexed { index, (type, resId) ->
                                                 DropdownImpl(
                                                     text = stringResource(resId),
                                                     optionSize = sortGroupSize,
-                                                    isSelected = currentSortType == index,
+                                                    isSelected = currentSortType == type,
                                                     index = index,
                                                     onSelectedIndexChange = {
-                                                        val newOption = index * 2 + (if (isReverse) 1 else 0)
+                                                        val newOption = if (type == 2) DEFAULT_SUPERUSER_SORT_OPTION
+                                                        else type * 2 + (if (isReverse) 1 else 0)
                                                         actions.onUpdateSortOption(newOption)
                                                         showSortPopup.value = false
                                                     }
@@ -216,16 +199,11 @@ fun SuperUserPagerMiuix(
                                     }
                                 )
 
-                                IconButton(
+                                TextButton(
+                                    text = stringResource(superUserSortLabel(uiState.sortOption)),
                                     onClick = { showSortPopup.value = true },
-                                    holdDownState = showSortPopup.value,
-                                ) {
-                                    Icon(
-                                        imageVector = MiuixIcons.Sort,
-                                        tint = topBarColors.content,
-                                        contentDescription = stringResource(R.string.menu_sort)
-                                    )
-                                }
+                                    modifier = Modifier.widthIn(max = 156.dp).heightIn(min = 48.dp),
+                                )
                             }
 
                             Box {
@@ -239,8 +217,28 @@ fun SuperUserPagerMiuix(
                                     },
                                     content = {
                                         val isMultiUser = uiState.userIds.size > 1
-                                        val size = if (isMultiUser) 2 else 1
+                                        val size = if (isMultiUser) 4 else 3
                                         ListPopupColumn {
+                                            DropdownImpl(
+                                                text = stringResource(R.string.settings_sulog),
+                                                isSelected = false,
+                                                optionSize = size,
+                                                index = 0,
+                                                onSelectedIndexChange = {
+                                                    showTopPopup.value = false
+                                                    actions.onOpenSulog()
+                                                },
+                                            )
+                                            DropdownImpl(
+                                                text = stringResource(R.string.superuser_app_tools_title),
+                                                isSelected = false,
+                                                optionSize = size,
+                                                index = 1,
+                                                onSelectedIndexChange = {
+                                                    showTopPopup.value = false
+                                                    actions.onOpenAppTools()
+                                                },
+                                            )
                                             DropdownImpl(
                                                 text = stringResource(R.string.show_system_apps),
                                                 isSelected = uiState.showSystemApps,
@@ -249,7 +247,7 @@ fun SuperUserPagerMiuix(
                                                     actions.onToggleShowSystemApps()
                                                     showTopPopup.value = false
                                                 },
-                                                index = 0
+                                                index = 2
                                             )
                                             if (isMultiUser) {
                                                 DropdownImpl(
@@ -260,7 +258,7 @@ fun SuperUserPagerMiuix(
                                                         actions.onToggleShowOnlyPrimaryUserApps()
                                                         showTopPopup.value = false
                                                     },
-                                                    index = 1
+                                                    index = 3
                                                 )
                                             }
                                         }
@@ -275,7 +273,7 @@ fun SuperUserPagerMiuix(
                                     Icon(
                                         imageVector = MiuixIcons.MoreCircle,
                                         tint = topBarColors.content,
-                                        contentDescription = null
+                                        contentDescription = stringResource(R.string.settings)
                                     )
                                 }
                             }
@@ -354,7 +352,7 @@ fun SuperUserPagerMiuix(
                     },
                     refreshTexts = refreshTexts,
                     contentPadding = PaddingValues(
-                        top = innerPadding.calculateTopPadding() + 6.dp,
+                        top = innerPadding.calculateTopPadding() + 12.dp,
                         start = innerPadding.calculateStartPadding(layoutDirection),
                         end = innerPadding.calculateEndPadding(layoutDirection)
                     ),
@@ -368,7 +366,7 @@ fun SuperUserPagerMiuix(
                                 .overScrollVertical()
                                 .nestedScroll(scrollBehavior.nestedScrollConnection),
                             contentPadding = PaddingValues(
-                                top = innerPadding.calculateTopPadding() + 6.dp,
+                                top = innerPadding.calculateTopPadding() + 12.dp,
                                 start = innerPadding.calculateStartPadding(layoutDirection),
                                 end = innerPadding.calculateEndPadding(layoutDirection)
                             ),
@@ -521,17 +519,7 @@ private fun GroupItem(
     onClickPrimary: () -> Unit,
 ) {
     val isInDarkTheme = isInDarkTheme()
-    val cardShape = pixelAwareMiuixCardShape(RoundedCornerShape(18.dp))
-    val cardBorder = if (isInDarkTheme) {
-        Color.White.copy(alpha = 0.10f)
-    } else {
-        Color(0xFFE2E7EF)
-    }
-    val packageColor = if (isInDarkTheme) {
-        Color(0xFFA8B4C2)
-    } else {
-        Color(0xFF69778A)
-    }
+    val cardShape = pixelAwareMiuixCardShape(RoundedCornerShape(16.dp))
 
     val rootBg = if (isInDarkTheme) Color(0xFF173A2A) else Color(0xFFE8F7EF)
     val rootFg = if (isInDarkTheme) Color(0xFF8DEDB7) else Color(0xFF0E6D43)
@@ -552,9 +540,9 @@ private fun GroupItem(
         }
     }
     Card(
-        cornerRadius = pixelAwareMiuixCardCornerRadius(18.dp),
+        cornerRadius = pixelAwareMiuixCardCornerRadius(16.dp),
         modifier = Modifier
-            .padding(horizontal = 12.dp)
+            .padding(horizontal = 16.dp)
             .padding(bottom = 8.dp)
             .globalLiquidGlassSurface(
                 shape = cardShape,
@@ -565,20 +553,20 @@ private fun GroupItem(
                 strokeAlpha = 0.66f,
                 cardStyle = FrostedGlassCardStyle.Ice,
             )
-            .snowMiuixCardSurface(shape = cardShape)
-            .border(width = 1.dp, color = cardBorder, shape = cardShape),
+            .snowMiuixCardSurface(shape = cardShape),
         colors = snowMiuixCardColors(),
         onClick = onClickPrimary,
         onLongPress = if (group.apps.size > 1) onToggleExpand else null,
         showIndication = true,
         insideMargin = PaddingValues(
-            start = 10.dp,
+            start = 12.dp,
             end = 12.dp,
-            top = if (isSnowInterfaceStyle()) 14.dp else 6.dp,
-            bottom = 6.dp,
+            top = if (isSnowInterfaceStyle()) 14.dp else 8.dp,
+            bottom = 8.dp,
         )
     ) {
         Row(
+            modifier = Modifier.heightIn(min = 48.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AppIconImage(
@@ -586,7 +574,7 @@ private fun GroupItem(
                 label = group.primary.label,
                 modifier = Modifier
                     .padding(end = 10.dp)
-                    .size(46.dp)
+                    .size(40.dp)
             )
             Column(
                 modifier = Modifier
@@ -594,11 +582,11 @@ private fun GroupItem(
             ) {
                 Text(
                     text = if (group.apps.size > 1) ownerNameForUid(group.uid) else group.primary.label,
-                    modifier = Modifier.basicMarquee(),
-                    fontWeight = FontWeight(550),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
                     color = colorScheme.onSurface,
-                    maxLines = 1,
-                    softWrap = false
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = if (group.apps.size > 1) {
@@ -606,23 +594,21 @@ private fun GroupItem(
                     } else {
                         group.primary.displayIdentifier
                     },
-                    modifier = Modifier
-                        .basicMarquee(),
-                    fontSize = 11.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight(450),
-                    color = packageColor,
+                    color = colorScheme.onSurfaceVariantSummary,
                     maxLines = 1,
-                    softWrap = false
+                    overflow = TextOverflow.Ellipsis,
                 )
-            }
-            if (tags.isNotEmpty()) {
-                Column(
-                    modifier = Modifier.padding(start = 12.dp),
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    tags.forEach { tag ->
-                        SuperUserStatusBadge(tag)
+                if (tags.isNotEmpty()) {
+                    FlowRow(
+                        modifier = Modifier.padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        tags.forEach { tag ->
+                            SuperUserStatusBadge(tag)
+                        }
                     }
                 }
             }

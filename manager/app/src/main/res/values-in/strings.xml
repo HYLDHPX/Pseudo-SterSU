@@ -201,8 +201,6 @@
     <string name="reboot_soft">Mulai ulang cepat</string>
     <string name="jailbreak_mode">Mode jailbreak</string>
     <string name="jailbreak_timeout">Proses jailbreak mungkin gagal, silakan periksa log</string>
-    <string name="settings_enable_predictive_back">Gerakan kembali prediktif</string>
-    <string name="settings_enable_predictive_back_summary">Aktifkan dukungan gerakan kembali prediktif.</string>
     <string name="home_pr_build_warning">Ini adalah versi PR debug untuk permintaan perubahan (Pull Requests). JANGAN gunakan di lingkungan produksi!</string>
     <string name="home_pr_kernel_warning">Kernel ini dibangun dengan dukungan tanda tangan PR (Pull Requests). Ini bukan kernel produksi!</string>
     <string name="jailbreak_flash_warning">Anda sedang dalam **Mode jailbreak**. Memasang partisi pada perangkat dengan **bootloader terkunci** akan merusak AVB (Android Verified Boot). dan dapat menyebabkan perangkat **gagal boot**.\n\nPastikan bootloader Anda tidak terkunci sebelum melanjutkan!</string>

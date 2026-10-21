@@ -182,8 +182,6 @@
     <string name="settings_module_top_bar_auto_hide_summary">捲動時隱藏模組頁頂部列，停止操作 5 秒後重新顯示。</string>
     <string name="settings_enable_glass">液態玻璃</string>
     <string name="settings_enable_glass_summary">啟用懸浮底欄的液態玻璃效果</string>
-    <string name="settings_enable_predictive_back">預測性返回手勢</string>
-    <string name="settings_enable_predictive_back_summary">啟用對預測性返回手勢的支援</string>
     <string name="settings_sucompat">傳統 su 命令支援</string>
     <string name="settings_sucompat_summary">允許透過 /system/bin/su 獲取 Root 權限，僅對新行程生效。</string>
     <string name="settings_kernel_umount">核心處理解除掛載模組</string>

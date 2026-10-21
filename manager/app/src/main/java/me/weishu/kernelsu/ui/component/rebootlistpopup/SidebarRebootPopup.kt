@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -46,6 +47,10 @@ import androidx.compose.ui.unit.sp
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.KsuIsValid
 import me.weishu.kernelsu.ui.component.bottombar.SidebarPaneShape
+import me.weishu.kernelsu.ui.screen.home.HomeMetricCardWallpaperBackground
+import me.weishu.kernelsu.ui.screen.home.HomeMetricCardWallpaperTarget
+import me.weishu.kernelsu.ui.screen.home.rememberHomeMetricCardWallpaperBitmap
+import me.weishu.kernelsu.ui.screen.home.rememberHomeMetricCardWallpaperState
 
 private fun RebootListOption.sidebarLabelRes(): Int = when (reason) {
     "soft_reboot" -> R.string.sidebar_reboot_soft
@@ -75,68 +80,95 @@ internal fun SidebarRebootPopup() {
                 Icon(Icons.Rounded.PowerSettingsNew, stringResource(R.string.reboot), Modifier.size(26.dp))
             }
             DropdownMenuPopup(expanded = expanded, onDismissRequest = { expanded = false }) {
+                val wallpaperState = rememberHomeMetricCardWallpaperState(
+                    target = HomeMetricCardWallpaperTarget.RebootMenu,
+                    onWallpaperSelected = {},
+                )
+                val wallpaperBitmap = rememberHomeMetricCardWallpaperBitmap(
+                    uriString = wallpaperState.uriString,
+                    crop = wallpaperState.crop,
+                )
+                val hasWallpaper = wallpaperBitmap != null || !wallpaperState.videoUriString.isNullOrBlank()
+                val tileColor = if (hasWallpaper) {
+                    Color.Black.copy(alpha = 0.56f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                }
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.surfaceContainer,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    contentColor = if (hasWallpaper) Color.White else MaterialTheme.colorScheme.onSurface,
                 ) {
-                    Column(
-                        modifier = Modifier.width(menuWidth)
-                            .heightIn(max = (screen.screenHeightDp - 40).coerceAtLeast(120).dp)
-                            .verticalScroll(rememberScrollState()).padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(
-                            stringResource(R.string.sidebar_reboot_title),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
+                    Box {
+                        HomeMetricCardWallpaperBackground(
+                            bitmap = wallpaperBitmap,
+                            videoUriString = wallpaperState.videoUriString,
+                            videoCrop = wallpaperState.crop,
+                            visualSettings = wallpaperState.visualSettings,
                         )
-                        options.chunked(columns).forEach { row ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                row.forEach { option ->
-                                    val label = stringResource(option.sidebarLabelRes())
-                                    Column(
-                                        modifier = Modifier.weight(1f)
-                                            .aspectRatio(1f)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                            .clickable(role = Role.Button) {
-                                                expanded = false
-                                                onReboot(option.reason)
+                        Column(
+                            modifier = Modifier.width(menuWidth)
+                                .heightIn(max = (screen.screenHeightDp - 40).coerceAtLeast(120).dp)
+                                .verticalScroll(rememberScrollState()).padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(
+                                stringResource(R.string.sidebar_reboot_title),
+                                modifier = Modifier
+                                    .background(
+                                        color = if (hasWallpaper) tileColor else Color.Transparent,
+                                        shape = RoundedCornerShape(8.dp),
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            options.chunked(columns).forEach { row ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    row.forEach { option ->
+                                        val label = stringResource(option.sidebarLabelRes())
+                                        Column(
+                                            modifier = Modifier.weight(1f)
+                                                .aspectRatio(1f)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(tileColor)
+                                                .clickable(role = Role.Button) {
+                                                    expanded = false
+                                                    onReboot(option.reason)
+                                                }
+                                                .semantics(mergeDescendants = true) { contentDescription = label }
+                                                .padding(horizontal = 2.dp, vertical = 4.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                                        ) {
+                                            Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+                                                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(30.dp))
+                                                Text(
+                                                    when (option.reason) {
+                                                        "soft_reboot" -> "S"
+                                                        "userspace" -> "U"
+                                                        "recovery" -> "R"
+                                                        "bootloader" -> "B"
+                                                        "download" -> "D"
+                                                        "edl" -> "E"
+                                                        else -> ""
+                                                    },
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                )
                                             }
-                                            .semantics(mergeDescendants = true) { contentDescription = label }
-                                            .padding(horizontal = 2.dp, vertical = 4.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                                    ) {
-                                        Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
-                                            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(30.dp))
                                             Text(
-                                                when (option.reason) {
-                                                    "soft_reboot" -> "S"
-                                                    "userspace" -> "U"
-                                                    "recovery" -> "R"
-                                                    "bootloader" -> "B"
-                                                    "download" -> "D"
-                                                    "edl" -> "E"
-                                                    else -> ""
-                                                },
+                                                label,
                                                 fontSize = 11.sp,
-                                                fontWeight = FontWeight.Black,
+                                                lineHeight = 14.sp,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
                                             )
                                         }
-                                        Text(
-                                            label,
-                                            fontSize = 11.sp,
-                                            lineHeight = 14.sp,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
                                     }
+                                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                                 }
-                                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                             }
                         }
                     }

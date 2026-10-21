@@ -26,7 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.runtime.Composable
@@ -70,7 +70,7 @@ fun SuperUserPagerSkrootpro(
         onAddClick = actions.onOpenAppTools,
         actionIcon = Icons.Rounded.Apps,
         actionContentDescription = stringResource(R.string.superuser_app_tools_title),
-        tertiaryActionIcon = Icons.Rounded.Refresh,
+        tertiaryActionIcon = Icons.Outlined.Refresh,
         onTertiaryActionClick = actions.onRefresh,
         tertiaryActionContentDescription = stringResource(R.string.refresh_refresh),
         bottomInnerPadding = bottomInnerPadding,

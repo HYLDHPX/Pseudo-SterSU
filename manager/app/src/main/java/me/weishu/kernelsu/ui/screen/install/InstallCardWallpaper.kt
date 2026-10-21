@@ -22,6 +22,9 @@ import kotlinx.coroutines.isActive
 
 private const val INSTALL_CARD_WALLPAPER_MAX_SIDE = 1200
 
+internal fun installCardWallpaperOverlayColor(darkTheme: Boolean): Color =
+    if (darkTheme) Color.Black.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.42f)
+
 @Composable
 internal fun BoxScope.InstallCardWallpaperBackground(slot: ThemeStoreImageSlot) {
     InstallCardWallpaperBackground(state = rememberThemeStoreImageState(slot))
@@ -45,11 +48,7 @@ internal fun BoxScope.InstallCardWallpaperBackground(state: ThemeStoreImageState
         crop = active.crop,
     )
     val overlayColor = remember(darkTheme) {
-        if (darkTheme) {
-            Color.Black.copy(alpha = 0.10f)
-        } else {
-            Color.White.copy(alpha = 0.42f)
-        }
+        installCardWallpaperOverlayColor(darkTheme)
     }
 
     Box(modifier = Modifier.matchParentSize()) {

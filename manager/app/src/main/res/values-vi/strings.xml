@@ -202,8 +202,6 @@
     <string name="jailbreak_mode">Chế độ Jailbreak</string>
     <string name="home_jailbreak">Jailbreak</string>
     <string name="jailbreak_timeout">Jailbreak thất bại, vui lòng kiểm tra nhật ký</string>
-    <string name="settings_enable_predictive_back">Cử chỉ quay lại dự đoán</string>
-    <string name="settings_enable_predictive_back_summary">Kích hoạt tính năng hỗ trợ cử chỉ quay lại dự đoán.</string>
     <string name="home_pr_build_warning">Đây là bản dựng gỡ lỗi cho yêu cầu kéo (PR). KHÔNG sử dụng nó trong môi trường sản xuất!</string>
     <string name="home_pr_kernel_warning">Kernel này được xây dựng với việc hỗ trợ chữ ký yêu cầu kéo (PR signature). Đây không phải là kernel dành cho môi trường sản xuất!</string>
     <string name="jailbreak_flash_warning">Bạn đang ở ** Chế độ Jailbreak**. Việc flash một phân vùng trên thiết bị có **bootloader bị khóa** sẽ làm hỏng AVB (Android Verified Boot) và có thể khiến thiết bị **không khởi động được**.\n\nHãy đảm bảo rằng bootloader của bạn đã được mở khoá trước khi tiếp tục!</string>

@@ -127,15 +127,17 @@ fun SettingPagerMaterial(
                     stringResource(it.labelRes)
                 } + uiState.installedInterfaceStyles.map { it.style.name }
                 SegmentedColumn(
-                    content = listOf(
-                        {
-                            MaterialSettingsLink(
-                                title = stringResource(R.string.sidebar_widget_settings_title),
-                                summary = stringResource(R.string.sidebar_design_entry_summary),
-                                icon = Icons.Rounded.Dashboard,
-                                onClick = actions.onOpenSidebarDesign,
-                            )
-                        },
+                    content = listOfNotNull<@Composable () -> Unit>(
+                        if (uiState.isSidebarDesignEntryVisible) {
+                            {
+                                MaterialSettingsLink(
+                                    title = stringResource(R.string.sidebar_widget_settings_title),
+                                    summary = stringResource(R.string.sidebar_design_entry_summary),
+                                    icon = Icons.Rounded.Dashboard,
+                                    onClick = actions.onOpenSidebarDesign,
+                                )
+                            }
+                        } else null,
                         {
                             SegmentedDropdownItem(
                                 icon = Icons.Rounded.Dashboard,

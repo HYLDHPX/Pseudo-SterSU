@@ -10,12 +10,11 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -102,9 +101,9 @@ internal fun SidebarMaterialOptions(
     val role = roles.firstOrNull { it.name == roleName } ?: PaletteRole.Background
     val savedColor = role.color(saved)
     var hex by rememberSaveable(material, editingDark, role, savedColor) { mutableStateOf(formatSidebarRgb(savedColor)) }
-    var pendingColor by remember(material, editingDark, role, savedColor) { mutableStateOf(savedColor) }
+    var pendingColor by rememberSaveable(material, editingDark, role, savedColor) { mutableStateOf(savedColor) }
     var showRgb by rememberSaveable { mutableStateOf(false) }
-    var colorsExpanded by rememberSaveable { mutableStateOf(false) }
+    var confirmReset by rememberSaveable { mutableStateOf(false) }
     val previewPalette = role.update(saved, pendingColor)
     val contrast = sidebarMinimumContrast(sidebarColors(previewPalette), material != SidebarMaterial.Flat)
 
@@ -114,16 +113,15 @@ internal fun SidebarMaterialOptions(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SidebarMaterial.entries.forEach { option ->
-                FilterChip(
-                    selected = material == option,
-                    onClick = { onUpdate(config.copy(material = option, glassEnabled = option != SidebarMaterial.Flat)) },
-                    label = { Text(stringResource(option.labelRes())) },
-                    modifier = Modifier.heightIn(min = 48.dp),
-                )
-            }
-        }
+        SidebarDesignChoice(
+            title = stringResource(R.string.sidebar_material_title),
+            options = SidebarMaterial.entries.map { stringResource(it.labelRes()) },
+            selectedIndex = SidebarMaterial.entries.indexOf(material),
+            onSelected = {
+                val option = SidebarMaterial.entries[it]
+                onUpdate(config.copy(material = option, glassEnabled = option != SidebarMaterial.Flat))
+            },
+        )
         Text(
             stringResource(when (material) {
                 SidebarMaterial.LiquidGlass -> R.string.sidebar_material_liquid_summary
@@ -145,47 +143,26 @@ internal fun SidebarMaterialOptions(
         Text(stringResource(R.string.sidebar_background_opacity_help),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         HorizontalDivider()
-        Text(stringResource(R.string.sidebar_palette_mode), style = MaterialTheme.typography.titleSmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(false, true).forEach { dark ->
-                FilterChip(
-                    selected = editingDark == dark,
-                    onClick = { onEditingDarkChange(dark) },
-                    label = { Text(stringResource(if (dark) R.string.sidebar_palette_dark else R.string.sidebar_palette_light)) },
-                    modifier = Modifier.heightIn(min = 48.dp),
-                )
-            }
-        }
+        SidebarDesignChoice(
+            title = stringResource(R.string.sidebar_palette_mode),
+            options = listOf(stringResource(R.string.sidebar_palette_light), stringResource(R.string.sidebar_palette_dark)),
+            selectedIndex = if (editingDark) 1 else 0,
+            onSelected = { onEditingDarkChange(it == 1) },
+        )
         Text(stringResource(R.string.sidebar_palette_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedButton(onClick = { colorsExpanded = !colorsExpanded }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text(stringResource(if (colorsExpanded) R.string.sidebar_palette_editor_hide else R.string.sidebar_palette_editor_show), modifier = Modifier.weight(1f))
-            listOf(saved.background, saved.backgroundEnd, saved.selection, saved.content).forEach { color ->
-                Box(Modifier.padding(start = 4.dp).size(16.dp).background(Color(color.toInt()), CircleShape).border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape))
-            }
-        }
-        if (colorsExpanded) {
         HorizontalDivider()
-        Text(stringResource(R.string.sidebar_palette_colors_title), style = MaterialTheme.typography.titleSmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            roles.forEach { item ->
-                FilterChip(
-                    selected = item == role,
-                    onClick = { roleName = item.name },
-                    leadingIcon = {
-                        Box(Modifier.size(16.dp).background(Color(item.color(saved).toInt()), RoundedCornerShape(4.dp)))
-                    },
-                    label = { Text(stringResource(item.label)) },
-                    modifier = Modifier.heightIn(min = 48.dp),
-                )
-            }
-        }
+        SidebarDesignChoice(
+            title = stringResource(R.string.sidebar_palette_colors_title),
+            options = roles.map { stringResource(it.label) },
+            selectedIndex = roles.indexOf(role),
+            onSelected = { roleName = roles[it].name },
+        )
         OutlinedTextField(
             value = hex,
             onValueChange = { next ->
                 hex = next.take(7)
                 parseSidebarRgb(hex)?.let { color ->
                     pendingColor = color
-                    applyColor(color)
                 }
             },
             label = { Text(stringResource(role.label)) },
@@ -200,6 +177,11 @@ internal fun SidebarMaterialOptions(
             leadingIcon = { Box(Modifier.size(24.dp).background(Color(pendingColor.toInt()), RoundedCornerShape(6.dp))) },
             modifier = Modifier.fillMaxWidth(),
         )
+        OutlinedButton(
+            onClick = { parseSidebarRgb(hex)?.let(::applyColor) },
+            enabled = parseSidebarRgb(hex)?.let { it != savedColor } == true,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        ) { Text(stringResource(R.string.sidebar_home_cards_apply_color)) }
         Text(stringResource(R.string.sidebar_palette_presets), style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             colorPresets.forEach { color ->
@@ -266,11 +248,20 @@ internal fun SidebarMaterialOptions(
             }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.sidebar_palette_improve_text)) }
         }
         OutlinedButton(
-            onClick = { onUpdate(config.copy(palettes = config.palettes.reset(material, editingDark))) },
-            modifier = Modifier.heightIn(min = 48.dp),
+            onClick = { confirmReset = true },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         ) { Text(stringResource(R.string.sidebar_palette_reset)) }
-        }
     }
+    if (confirmReset) AlertDialog(
+        onDismissRequest = { confirmReset = false },
+        title = { Text(stringResource(R.string.sidebar_palette_reset)) },
+        text = { Text(stringResource(R.string.sidebar_editor_reset_palette_confirm)) },
+        confirmButton = { TextButton(onClick = {
+            onUpdate(config.copy(palettes = config.palettes.reset(material, editingDark)))
+            confirmReset = false
+        }) { Text(stringResource(android.R.string.ok)) } },
+        dismissButton = { TextButton(onClick = { confirmReset = false }) { Text(stringResource(android.R.string.cancel)) } },
+    )
 }
 
 @Composable

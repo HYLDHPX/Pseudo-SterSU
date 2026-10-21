@@ -35,7 +35,10 @@ import kotlin.math.roundToInt
 
 /** Keep editor controls opaque so a low foreground opacity can always be recovered. */
 @Composable
-internal fun UiPassthroughOptions(target: CustomPageBackgroundTarget?) {
+internal fun UiPassthroughOptions(
+    target: CustomPageBackgroundTarget?,
+    showHeader: Boolean = true,
+) {
     val context = LocalContext.current
     val scope = rememberUiPassthroughScope(target)
     val value = scope.settings
@@ -44,11 +47,13 @@ internal fun UiPassthroughOptions(target: CustomPageBackgroundTarget?) {
     fun update(next: UiPassthroughSettings) = writeUiPassthroughScope(context, target, next)
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.ui_passthrough_title), modifier = Modifier.weight(1f))
-            Text(stringResource(if (expanded) R.string.ui_passthrough_collapse else R.string.ui_passthrough_expand))
+        if (showHeader) {
+            TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.ui_passthrough_title), modifier = Modifier.weight(1f))
+                Text(stringResource(if (expanded) R.string.ui_passthrough_collapse else R.string.ui_passthrough_expand))
+            }
         }
-        if (expanded) {
+        if (!showHeader || expanded) {
             Text(stringResource(R.string.ui_passthrough_help), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (target != null) {

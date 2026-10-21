@@ -4,13 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Extension
@@ -18,22 +22,23 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material3.AlertDialog
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.CustomNavigationIconImage
@@ -54,29 +59,32 @@ fun SettingsNavigationIconPreviewDialog(
     if (!show) return
 
     val title = stringResource(slot.previewTitleRes)
-    var style by remember { mutableStateOf(NavigationPreviewStyle.Standard) }
+    var style by rememberSaveable { mutableStateOf(NavigationPreviewStyle.Standard) }
 
     OverlayDialog(
         show = true,
         title = title,
         onDismissRequest = onDismissRequest,
         content = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                modifier = Modifier.heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.72f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
                 NavigationIconPreviewFrame(
                     selectedSlot = slot,
                     icons = icons,
                     style = style,
                 )
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     NavigationPreviewStyle.entries.forEach { option ->
-                        FilterChip(
-                            modifier = Modifier.weight(1f),
+                        AppearanceEditorChoice(
+                            label = stringResource(option.labelRes),
                             selected = style == option,
                             onClick = { style = option },
-                            label = { Text(stringResource(option.labelRes)) },
                         )
                     }
                 }
@@ -106,6 +114,8 @@ private fun NavigationIconPreviewFrame(
     icons: CustomNavigationIconSet,
     style: NavigationPreviewStyle,
 ) {
+    val selectedColor = if (style == NavigationPreviewStyle.Pixel) Color.White else MaterialTheme.colorScheme.primary
+    val contentColor = if (style == NavigationPreviewStyle.Pixel) Color(0xFFE7E1ED) else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -132,7 +142,7 @@ private fun NavigationIconPreviewFrame(
                         modifier = Modifier
                             .size(38.dp)
                             .background(
-                                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                                if (selected) selectedColor.copy(alpha = 0.16f)
                                 else Color.Transparent,
                                 if (style == NavigationPreviewStyle.Pixel) RoundedCornerShape(4.dp) else CircleShape,
                             ),
@@ -148,17 +158,17 @@ private fun NavigationIconPreviewFrame(
                                 imageVector = itemSlot.fallbackIcon,
                                 contentDescription = label,
                                 modifier = Modifier.size(24.dp),
-                                tint = if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = if (selected) selectedColor else contentColor,
                             )
                         }
                     }
                     Text(
                         text = label,
-                        color = if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (selected) selectedColor else contentColor,
                         style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
                     )
                 }
             }

@@ -22,7 +22,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DeveloperMode
 import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.WarningAmber
@@ -167,7 +167,7 @@ fun GraphicsRendererScreen() {
                 },
                 actions = {
                     IconButton(onClick = { refresh(replaceDraft = !draftDirty) }, enabled = !busy) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.graphics_renderer_refresh))
+                        Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.graphics_renderer_refresh))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

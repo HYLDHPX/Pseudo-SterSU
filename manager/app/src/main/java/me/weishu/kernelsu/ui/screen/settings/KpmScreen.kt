@@ -46,7 +46,7 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
@@ -362,7 +362,7 @@ private fun KpmStyledScreen(
     val style = LocalInterfaceStyle.current
     val backDescription = stringResource(R.string.close)
     val kpmDescription = stringResource(if (refreshAction) R.string.kpm_refresh else R.string.kpm_manage)
-    val actionIcon = if (refreshAction) Icons.Rounded.Refresh else Icons.Rounded.Bolt
+    val actionIcon = if (refreshAction) Icons.Outlined.Refresh else Icons.Rounded.Bolt
     val excludeDescription = stringResource(R.string.kpm_exclude_apps)
     val backIcon = Icons.AutoMirrored.Rounded.ArrowBack
 
@@ -729,7 +729,7 @@ private fun NativeKpmScreen(
                     )
                     if (onRetryWebUi != null) {
                         OutlinedButton(onClick = onRetryWebUi, enabled = !busy) {
-                            Icon(Icons.Rounded.Refresh, contentDescription = null)
+                            Icon(Icons.Outlined.Refresh, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.kpm_webui_retry))
                         }
@@ -1382,7 +1382,7 @@ private fun KpmExcludeDialog(
                     loadError.isNotBlank() -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(loadError, color = MaterialTheme.colorScheme.error)
                         OutlinedButton(onClick = onRetry, enabled = !busy) {
-                            Icon(Icons.Rounded.Refresh, contentDescription = null)
+                            Icon(Icons.Outlined.Refresh, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.kpm_refresh))
                         }

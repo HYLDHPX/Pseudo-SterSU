@@ -55,7 +55,7 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FindReplace
 import androidx.compose.material.icons.rounded.FolderOpen
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shield
@@ -1425,7 +1425,7 @@ private fun AssistantContextPanel(
                     }
                 }
                 IconButton(onClick = onReloadConfig, enabled = !state.aiGenerating) {
-                    Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.ai_module_studio_reload_api))
+                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.ai_module_studio_reload_api))
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -1565,7 +1565,7 @@ private fun AssistantResponsePane(
                         Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.ai_chat_copy))
                     }
                     IconButton(onClick = onRetry) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.ai_chat_retry))
+                        Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.ai_chat_retry))
                     }
                     Button(onClick = onApplyCode, enabled = state.aiTargetPath != null) {
                         Icon(Icons.Rounded.Save, contentDescription = null, modifier = Modifier.size(18.dp))

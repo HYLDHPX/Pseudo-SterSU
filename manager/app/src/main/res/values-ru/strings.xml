@@ -334,8 +334,6 @@
     <string name="manager_force_update_title">Требуется обновление</string>
     <string name="manager_force_update_message">Эта версия больше не поддерживается. Чтобы продолжить, обновите SterSU Manager %1$s (%2$d).</string>
     <string name="manager_update_changelog">%1$s\n\n%2$s</string>
-    <string name="settings_enable_predictive_back">Предсказующий жест назад</string>
-    <string name="settings_enable_predictive_back_summary">Включите интеллектуальную поддержку жестов назад.</string>
     <string name="settings_module_check_update_summary">Автоматически проверять установленные модули на наличие доступных обновлений.</string>
     <string name="settings_version_mismatch_warning">Предупреждение о несоответствии версий</string>
     <string name="settings_version_mismatch_warning_summary">Показывать предупреждение, если версии драйвера Manager и SterSU не совпадают.</string>
@@ -695,7 +693,6 @@
     <string name="settings_monet">Включить Моне</string>
     <string name="settings_monet_surface_opacity">Прозрачность поверхностей Monet</string>
     <string name="settings_monet_surface_opacity_summary">Настройте прозрачность карточек и контейнеров без снижения контраста текста.</string>
-    <string name="settings_predictive_back_apply_failed">Не удалось применить предиктивный возврат. Предыдущее состояние сохранено.</string>
     <string name="theme_store_monet_title">Цвета Monet</string>
     <string name="theme_store_monet_summary">Настройте основной цвет, стиль палитры, спецификацию и прозрачность поверхностей.</string>
     <string name="theme_store_monet_status">Включено · поверхность %1$d%%</string>

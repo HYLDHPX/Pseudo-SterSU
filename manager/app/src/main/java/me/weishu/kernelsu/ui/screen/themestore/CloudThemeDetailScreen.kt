@@ -34,7 +34,7 @@ import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Update
 import me.weishu.kernelsu.ui.component.store.StoreAlertDialog as AlertDialog
@@ -829,7 +829,7 @@ private fun CloudThemeDetailMissing(
         }
         Spacer(modifier = Modifier.height(14.dp))
         OutlinedButton(onClick = onRetry) {
-            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.size(6.dp))
             Text(stringResource(R.string.cloud_theme_retry))
         }

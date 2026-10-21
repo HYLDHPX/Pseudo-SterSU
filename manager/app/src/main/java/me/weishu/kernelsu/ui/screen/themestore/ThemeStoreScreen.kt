@@ -55,7 +55,7 @@ import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material.icons.rounded.Extension
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.FilledTonalButton
@@ -1282,7 +1282,7 @@ private fun InterfaceStyleStoreContent(
             stringResource(R.string.store_redesign_style_intro),
             action = {
                 IconButton(onClick = { loadCatalog(true) }, enabled = !catalogLoading && busyId == null) {
-                    Icon(Icons.Rounded.Refresh, stringResource(R.string.interface_style_catalog_refresh))
+                    Icon(Icons.Outlined.Refresh, stringResource(R.string.interface_style_catalog_refresh))
                 }
             },
         )

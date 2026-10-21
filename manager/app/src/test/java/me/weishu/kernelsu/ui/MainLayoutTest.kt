@@ -189,14 +189,6 @@ class MainLayoutTest {
     }
 
     @Test
-    fun swipeEdgeOverrideCannotBypassSidebarOrKpmSafety() {
-        assertTrue(shouldAllowSwipeEdgePopOverride(false, false, false))
-        assertFalse(shouldAllowSwipeEdgePopOverride(true, false, false))
-        assertFalse(shouldAllowSwipeEdgePopOverride(false, true, false))
-        assertFalse(shouldAllowSwipeEdgePopOverride(false, false, true))
-    }
-
-    @Test
     fun settingsDetailsKeepSidebarButStoreFlowDoesNot() {
         assertTrue(shouldShowSettingsSidebar(Route.SettingsCategory("appearance"), settingsAncestor = true))
         assertTrue(shouldShowSettingsSidebar(Route.SidebarWidgetSettings, settingsAncestor = false))
@@ -395,5 +387,29 @@ class MainLayoutTest {
         }
         assertEquals(CustomPageBackgroundTarget.Templates, customPageBackgroundTarget(Route.AppProfileTemplate))
         assertEquals(CustomPageBackgroundTarget.About, customPageBackgroundTarget(Route.About))
+    }
+
+    @Test
+    fun appearanceEditorsOpenedFromTheStoreFollowStoreBackgroundAndPassthrough() {
+        listOf(Route.Backgrounds, Route.HomeCardWallpapers, Route.InstallCardWallpapers,
+            Route.NavigationIcons).forEach { route ->
+            assertEquals(CustomPageBackgroundTarget.Store, customPageBackgroundTarget(route, storeAncestor = true))
+        }
+    }
+
+    @Test
+    fun appearanceEditorsOpenedFromSettingsDoNotFollowTheHiddenPagerPage() {
+        listOf(Route.Backgrounds, Route.HomeCardWallpapers, Route.InstallCardWallpapers,
+            Route.NavigationIcons).forEach { route ->
+            assertEquals(CustomPageBackgroundTarget.Settings, customPageBackgroundTarget(route))
+        }
+    }
+
+    @Test
+    fun storeAncestryDoesNotOverrideOtherPagesExplicitBackgroundScopes() {
+        assertEquals(CustomPageBackgroundTarget.Install, customPageBackgroundTarget(Route.Install, storeAncestor = true))
+        assertEquals(CustomPageBackgroundTarget.About, customPageBackgroundTarget(Route.About, storeAncestor = true))
+        assertEquals(CustomPageBackgroundTarget.Kpm, customPageBackgroundTarget(Route.Kpm, storeAncestor = true))
+        assertNull(customPageBackgroundTarget(Route.Main, storeAncestor = true))
     }
 }

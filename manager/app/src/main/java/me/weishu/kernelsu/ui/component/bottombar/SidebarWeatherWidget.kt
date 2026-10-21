@@ -21,7 +21,7 @@ import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Grain
 import androidx.compose.material.icons.rounded.NightsStay
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Thermostat
 import androidx.compose.material.icons.rounded.Thunderstorm
 import androidx.compose.material.icons.rounded.WbSunny
@@ -223,7 +223,7 @@ internal fun SidebarWeatherWidget(config: SidebarWidgetConfig, compact: Boolean)
                     }
                 },
             ) {
-                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Text(stringResource(R.string.sidebar_weather_refresh), modifier = Modifier.padding(start = 6.dp))
             }
         },

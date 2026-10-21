@@ -17,9 +17,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.rememberCustomWallpaperPreviewBitmap
@@ -29,6 +31,7 @@ import me.weishu.kernelsu.ui.util.MediaVisualSettings
 import me.weishu.kernelsu.ui.util.sanitizeCustomWallpaperOpacity
 import me.weishu.kernelsu.ui.util.UiPassthroughSettings
 import me.weishu.kernelsu.ui.theme.UiPassthroughTheme
+import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as PreviewText
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
@@ -133,7 +136,7 @@ private fun WallpaperPreviewFrame(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = overlayAlpha))
+                    .background((if (isInDarkTheme()) Color.Black else Color.White).copy(alpha = overlayAlpha))
             )
             BackgroundPreviewUi(passthroughSettings)
         }
@@ -155,6 +158,8 @@ internal fun BackgroundPreviewUi(settings: UiPassthroughSettings) {
             PreviewText(
                 text = stringResource(R.string.settings_wallpaper_preview_hint),
                 color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
             Box(
                 Modifier.fillMaxWidth().padding(horizontal = 18.dp)
@@ -165,6 +170,8 @@ internal fun BackgroundPreviewUi(settings: UiPassthroughSettings) {
                 PreviewText(
                     text = stringResource(R.string.settings_wallpaper_preview_ui_sample),
                     color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

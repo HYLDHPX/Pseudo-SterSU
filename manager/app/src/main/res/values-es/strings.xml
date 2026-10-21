@@ -267,8 +267,6 @@
     <string name="manager_force_update_title">Actualización requerida</string>
     <string name="manager_force_update_message">Esta versión ya no es compatible. Actualice a SterSU Manager %1$s (%2$d) para continuar.</string>
     <string name="manager_update_changelog">%1$s\n\n%2$s</string>
-    <string name="settings_enable_predictive_back">Gesto predictivo hacia atrás</string>
-    <string name="settings_enable_predictive_back_summary">Habilite el soporte predictivo de gestos hacia atrás.</string>
     <string name="settings_module_check_update">Buscar actualizaciones del módulo</string>
     <string name="settings_module_check_update_summary">Verifica automáticamente los módulos instalados para ver si hay actualizaciones disponibles.</string>
     <string name="settings_version_mismatch_warning">Advertencia de discrepancia de versión</string>
@@ -654,7 +652,6 @@
     <string name="settings_monet">Habilitar Monet</string>
     <string name="settings_monet_surface_opacity">Opacidad de superficies Monet</string>
     <string name="settings_monet_surface_opacity_summary">Ajusta la transparencia de tarjetas y contenedores sin reducir el contraste del texto.</string>
-    <string name="settings_predictive_back_apply_failed">No se pudo aplicar el gesto atrás predictivo. Se conservó el ajuste anterior.</string>
     <string name="theme_store_monet_title">Colores Monet</string>
     <string name="theme_store_monet_summary">Configura el color base, la paleta, la especificación y la opacidad de las superficies.</string>
     <string name="theme_store_monet_status">Activo · superficie %1$d%%</string>

@@ -325,10 +325,6 @@ class SettingsRepositoryImpl : SettingsRepository {
         get() = prefs.getString(themeKey("theme_preset"), "") ?: ""
         set(value) = prefs.edit { putString(themeKey("theme_preset"), value) }
 
-    override var enablePredictiveBack: Boolean
-        get() = prefs.getBoolean("enable_predictive_back", false)
-        set(value) = prefs.edit { putBoolean("enable_predictive_back", value) }
-
     override var enableSwipeDismiss: Boolean
         get() = prefs.getBoolean("enable_swipe_dismiss", true)
         set(value) = prefs.edit { putBoolean("enable_swipe_dismiss", value) }

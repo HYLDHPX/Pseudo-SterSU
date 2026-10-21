@@ -14,7 +14,6 @@ data class ColorPaletteUiState(
     val currentColorMode: ColorMode,
     val currentPaletteStyle: PaletteStyle,
     val currentColorSpec: ColorSpec.SpecVersion,
-    val predictiveBackUpdatePending: Boolean = false,
 )
 
 @Immutable
@@ -34,7 +33,6 @@ data class ColorPaletteScreenActions(
     val onSetAutoHideNavigationBar: (Boolean) -> Unit,
     val onSetScrollHideNavigationBar: (Boolean) -> Unit,
     val onSetModuleTopBarAutoHideEnabled: (Boolean) -> Unit,
-    val onSetEnablePredictiveBack: (Boolean) -> Unit,
     val onSetPageScale: (Float) -> Unit,
     val onSetFontScale: (Float) -> Unit,
     val onSetBlurIntensity: (Float) -> Unit,

@@ -2,31 +2,15 @@ package me.weishu.kernelsu.ui.screen.navigationicon
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.displayCutout
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Memory
@@ -37,24 +21,23 @@ import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Visibility
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
@@ -63,420 +46,195 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.LocalUiMode
 import me.weishu.kernelsu.ui.UiMode
 import me.weishu.kernelsu.ui.component.CustomNavigationIconImage
-import me.weishu.kernelsu.ui.component.liquid.globalLiquidGlassSurface
-import me.weishu.kernelsu.ui.component.liquid.liquidGlassMiuixCardColors
-import me.weishu.kernelsu.ui.component.material.SegmentedColumn
-import me.weishu.kernelsu.ui.component.material.SegmentedListItem
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
+import me.weishu.kernelsu.ui.screen.settings.AppearanceEditorAction
+import me.weishu.kernelsu.ui.screen.settings.AppearanceEditorHeading
+import me.weishu.kernelsu.ui.screen.settings.AppearanceEditorMediaActions
+import me.weishu.kernelsu.ui.screen.settings.AppearanceEditorPage
+import me.weishu.kernelsu.ui.screen.settings.AppearanceEditorTabs
+import me.weishu.kernelsu.ui.screen.settings.AppearanceEditorTargetPicker
+import me.weishu.kernelsu.ui.screen.settings.AppearanceEditorWorkspace
+import me.weishu.kernelsu.ui.screen.settings.MediaFileInfoSummary
 import me.weishu.kernelsu.ui.screen.settings.SettingsNavigationIconPreviewDialog
 import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
-import me.weishu.kernelsu.ui.theme.LocalEnableBlur
-import me.weishu.kernelsu.ui.theme.immersivePageColor
-import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
-import me.weishu.kernelsu.ui.theme.isInDarkTheme
-import me.weishu.kernelsu.ui.theme.skrootproTopBarColors
-import me.weishu.kernelsu.ui.util.BlurredBar
-import me.weishu.kernelsu.ui.util.CustomNavigationIconMask
+import me.weishu.kernelsu.ui.screen.settings.rememberMediaFileInfo
 import me.weishu.kernelsu.ui.util.CustomNavigationIconSet
 import me.weishu.kernelsu.ui.util.CustomNavigationIconSlot
 import me.weishu.kernelsu.ui.util.CustomNavigationIconState
 import me.weishu.kernelsu.ui.util.DEFAULT_CUSTOM_NAVIGATION_ICON_CROP
 import me.weishu.kernelsu.ui.util.persistCustomImageReference
-import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
 import me.weishu.kernelsu.ui.util.takePersistableImageReadPermission
 import me.weishu.kernelsu.ui.viewmodel.SettingsViewModel
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.theme.ColorSchemeMode
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import top.yukonga.miuix.kmp.theme.ThemeController
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import androidx.compose.material3.IconButton as MaterialIconButton
-import androidx.compose.material3.Scaffold as MaterialScaffold
-import androidx.compose.material3.TopAppBar as MaterialTopAppBar
-import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as MiuixIcon
-import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
-import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
-import me.weishu.kernelsu.ui.component.passthrough.MiuixText as MiuixText
-import top.yukonga.miuix.kmp.basic.TextButton as MiuixTextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 
 @Composable
 fun NavigationIconScreen() {
     val context = LocalContext.current
     val navigator = LocalNavigator.current
     val viewModel = viewModel<SettingsViewModel>()
-    val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
-    val pickTarget = rememberSaveable { mutableStateOf<String?>(null) }
-    val cropTarget = rememberSaveable { mutableStateOf<String?>(null) }
-    val previewTarget = rememberSaveable { mutableStateOf<String?>(null) }
-    val adjustTarget = rememberSaveable { mutableStateOf<String?>(null) }
-    val imageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        val slot = pickTarget.value?.let(::navigationIconSlotFromId)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var selectedId by rememberSaveable { mutableStateOf(CustomNavigationIconSlot.Home.id) }
+    var pickTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var cropTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var previewTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    val slot = navigationIconSlotFromId(selectedId) ?: CustomNavigationIconSlot.Home
+    val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val pickedSlot = pickTarget?.let(::navigationIconSlotFromId)
             ?: return@rememberLauncherForActivityResult
-        pickTarget.value = null
+        pickTarget = null
         uri ?: return@rememberLauncherForActivityResult
-        val uriString = persistCustomImageReference(context, uri, slot.uriKey)
+        val uriString = persistCustomImageReference(context, uri, pickedSlot.uriKey)
             ?: uri.toString().also { takePersistableImageReadPermission(context, uri) }
-        viewModel.setCustomNavigationIcon(slot, uriString)
-        cropTarget.value = slot.id
+        viewModel.setCustomNavigationIcon(pickedSlot, uriString)
+        selectedId = pickedSlot.id
+        cropTarget = pickedSlot.id
     }
 
     LifecycleResumeEffect(Unit) {
         viewModel.refresh()
-        onPauseOrDispose { }
+        onPauseOrDispose {}
     }
 
     val onBack = dropUnlessResumed { navigator.pop() }
     val actions = NavigationIconActions(
-        onPick = { slot ->
-            pickTarget.value = slot.id
+        onPick = {
+            pickTarget = it.id
             imageLauncher.launch(arrayOf("image/*"))
         },
-        onCrop = { slot ->
-            cropTarget.value = slot.id
-        },
-        onPreview = { slot ->
-            previewTarget.value = slot.id
-        },
-        onAdjust = { slot ->
-            adjustTarget.value = slot.id
-        },
-        onClear = { slot ->
-            viewModel.clearCustomNavigationIcon(slot)
-            if (cropTarget.value == slot.id) {
-                cropTarget.value = null
-            }
-            if (previewTarget.value == slot.id) {
-                previewTarget.value = null
-            }
-        },
-        onToggleCircle = { slot ->
-            val state = uiState.customNavigationIcons[slot]
-            val mask = if (state.mask == CustomNavigationIconMask.Circle) {
-                CustomNavigationIconMask.Original
-            } else {
-                CustomNavigationIconMask.Circle
-            }
-            viewModel.setCustomNavigationIconPresentation(slot, state.copy(mask = mask))
+        onCrop = { cropTarget = it.id },
+        onPreview = { previewTarget = it.id },
+        onClear = {
+            viewModel.clearCustomNavigationIcon(it)
+            if (cropTarget == it.id) cropTarget = null
+            if (previewTarget == it.id) previewTarget = null
         },
     )
 
-    val content: @Composable () -> Unit = {
-        NavigationIconScreenMiuix(
-            icons = uiState.customNavigationIcons,
-            actions = actions,
-            onBack = onBack,
-        )
+    AppearanceEditorPage(stringResource(R.string.settings_navigation_icons), onBack) { modifier ->
+        key(slot.id) {
+            NavigationIconEditor(
+                slot = slot,
+                icons = uiState.customNavigationIcons,
+                actions = actions,
+                modifier = modifier,
+                onSelect = { selectedId = it.id },
+                onValueChange = { viewModel.setCustomNavigationIconPresentation(slot, it) },
+            )
+        }
 
-        val cropSlot = cropTarget.value?.let(::navigationIconSlotFromId)
-        if (cropSlot != null) {
-            val iconState = uiState.customNavigationIcons[cropSlot]
-            val cropTitle = stringResource(cropSlot.cropTitleRes)
-            val emptyText = stringResource(R.string.settings_navigation_icon_not_selected)
+        cropTarget?.let(::navigationIconSlotFromId)?.let { cropSlot ->
+            val state = uiState.customNavigationIcons[cropSlot]
             SettingsWallpaperCropDialog(
-                show = iconState.hasSelected,
-                uriString = iconState.uriString,
-                crop = iconState.crop,
+                show = state.hasSelected,
+                uriString = state.uriString,
+                crop = state.crop,
                 onCropChange = {
                     viewModel.setCustomNavigationIconCrop(cropSlot, it)
-                    previewTarget.value = cropSlot.id
+                    previewTarget = cropSlot.id
                 },
-                onDismissRequest = {
-                    cropTarget.value = null
-                },
-                title = cropTitle,
-                emptyText = emptyText,
+                onDismissRequest = { cropTarget = null },
+                title = stringResource(cropSlot.cropTitleRes),
+                emptyText = stringResource(R.string.settings_navigation_icon_not_selected),
                 editorAspectRatio = 1f,
                 cropAspectRatio = 1f,
                 defaultCrop = DEFAULT_CUSTOM_NAVIGATION_ICON_CROP,
             )
         }
-
-        val previewSlot = previewTarget.value?.let(::navigationIconSlotFromId)
-        if (previewSlot != null) {
+        previewTarget?.let(::navigationIconSlotFromId)?.let { previewSlot ->
             SettingsNavigationIconPreviewDialog(
-                show = uiState.customNavigationIcons[previewSlot].hasSelected,
+                show = true,
                 slot = previewSlot,
                 icons = uiState.customNavigationIcons,
-                onDismissRequest = {
-                    previewTarget.value = null
-                },
+                onDismissRequest = { previewTarget = null },
             )
-        }
-
-        val adjustSlot = adjustTarget.value?.let(::navigationIconSlotFromId)
-        if (adjustSlot != null) {
-            NavigationIconAdjustmentDialog(
-                show = true,
-                slot = adjustSlot,
-                state = uiState.customNavigationIcons[adjustSlot],
-                onValueChange = { viewModel.setCustomNavigationIconPresentation(adjustSlot, it) },
-                onDismissRequest = { adjustTarget.value = null },
-            )
-        }
-    }
-    if (LocalUiMode.current == UiMode.Material) {
-        val dark = isInDarkTheme()
-        val accent = MaterialTheme.colorScheme.primary
-        val controller = remember(dark, accent) {
-            ThemeController(
-                if (dark) ColorSchemeMode.Dark else ColorSchemeMode.Light,
-                keyColor = accent,
-                isDark = dark,
-            )
-        }
-        MiuixTheme(controller = controller) { content() }
-    } else {
-        content()
-    }
-}
-
-@Composable
-private fun NavigationIconSummary(
-    selected: Boolean,
-    cropText: String,
-    previewText: String,
-    clearText: String,
-    onCrop: () -> Unit,
-    onPreview: () -> Unit,
-    onClear: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            stringResource(
-                if (selected) {
-                    R.string.settings_navigation_icon_selected_summary
-                } else {
-                    R.string.settings_navigation_icon_summary
-                }
-            )
-        )
-        if (selected) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TextButton(onClick = onCrop) {
-                    Text(cropText)
-                }
-                TextButton(onClick = onPreview) {
-                    Text(previewText)
-                }
-                TextButton(onClick = onClear) {
-                    Text(clearText)
-                }
-            }
         }
     }
 }
 
 @Composable
-private fun NavigationIconScreenMiuix(
+private fun NavigationIconEditor(
+    slot: CustomNavigationIconSlot,
     icons: CustomNavigationIconSet,
     actions: NavigationIconActions,
-    onBack: () -> Unit,
+    modifier: Modifier,
+    onSelect: (CustomNavigationIconSlot) -> Unit,
+    onValueChange: (CustomNavigationIconState) -> Unit,
 ) {
-    val scrollBehavior = MiuixScrollBehavior()
-    val enableBlur = LocalEnableBlur.current
-    val backdrop = rememberBlurBackdrop(enableBlur)
-    val blurActive = backdrop != null
-    val barColor = immersiveTopBarColor(
-        if (blurActive) Color.Transparent else colorScheme.surface,
-    )
-    val topBarColors = skrootproTopBarColors(barColor, colorScheme.onSurface)
-
-    MiuixScaffold(
-        containerColor = immersivePageColor(
-            if (LocalUiMode.current == UiMode.Material && isInDarkTheme()) {
-                colorScheme.surface
-            } else {
-                Color.Transparent
-            },
-        ),
-        topBar = {
-            BlurredBar(backdrop) {
-                MiuixTopAppBar(
-                    color = topBarColors.container,
-                    titleColor = topBarColors.content,
-                    title = stringResource(R.string.settings_navigation_icons),
-                    scrollBehavior = scrollBehavior,
-                    navigationIcon = {
-                        MiuixIconButton(onClick = onBack) {
-                            MiuixIcon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                                tint = topBarColors.content,
-                                contentDescription = stringResource(R.string.back),
-                            )
-                        }
-                    },
-                )
-            }
-        },
-        popupHost = { },
-        contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal),
-    ) { innerPadding ->
-        Box(modifier = if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .scrollEndHaptic()
-                    .overScrollVertical()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .padding(horizontal = 12.dp),
-                contentPadding = innerPadding,
-                overscrollEffect = null,
-            ) {
-                item {
-                    NavigationIconMiuixSectionTitle(
-                        text = stringResource(R.string.settings_navigation_icons),
-                        topPadding = 12.dp,
-                    )
-                    MiuixText(
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
-                        text = stringResource(R.string.settings_navigation_icons_restart_hint),
-                        color = colorScheme.onBackground,
-                        fontSize = 13.sp,
-                    )
-                    Card(
-                        modifier = Modifier
-                            .padding(top = 6.dp, bottom = 18.dp)
-                            .fillMaxWidth()
-                            .navigationIconLiquidGlassSurface(),
-                        colors = liquidGlassMiuixCardColors(),
-                    ) {
-                        CustomNavigationIconSlot.entries.forEach { slot ->
-                            NavigationIconMiuixPreference(
-                                slot = slot,
-                                state = icons[slot],
-                                actions = actions,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun NavigationIconMiuixPreference(
-    slot: CustomNavigationIconSlot,
-    state: CustomNavigationIconState,
-    actions: NavigationIconActions,
-) {
+    val state = icons[slot]
     val title = stringResource(slot.titleRes)
-    ArrowPreference(
-        title = title,
-        summary = stringResource(
-            if (state.hasSelected) {
-                R.string.settings_navigation_icon_selected_summary
-            } else {
-                R.string.settings_navigation_icon_summary
-            }
-        ),
-        startAction = {
-            CustomNavigationIconImage(
-                state = state,
-                contentDescription = title,
-                modifier = Modifier
-                    .padding(end = 6.dp)
-                    .size(30.dp),
-            ) {
-                MiuixIcon(
-                    imageVector = slot.miuixFallbackIcon,
-                    modifier = Modifier
-                        .padding(end = 6.dp)
-                        .size(24.dp),
-                    contentDescription = title,
-                    tint = colorScheme.onBackground
-                )
-            }
+    var section by rememberSaveable { mutableStateOf(0) }
+    AppearanceEditorWorkspace(
+        modifier = modifier,
+        selector = {
+            AppearanceEditorTargetPicker(
+                titleRes = R.string.appearance_editor_choose_navigation,
+                labels = CustomNavigationIconSlot.entries.map { stringResource(it.labelRes) },
+                selectedIndex = CustomNavigationIconSlot.entries.indexOf(slot),
+                onSelect = { onSelect(CustomNavigationIconSlot.entries[it]) },
+            )
         },
-        onClick = { actions.onPick(slot) },
-        holdDownState = state.hasSelected || state.labelOverride != null,
-        bottomAction = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+        preview = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                AppearanceEditorHeading(title, stringResource(R.string.appearance_editor_navigation_intro))
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(16.dp)),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
-                    MiuixTextButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.settings_navigation_icon_adjust_action),
-                        onClick = { actions.onAdjust(slot) },
-                    )
-                    if (state.hasSelected) {
-                        MiuixTextButton(
-                            modifier = Modifier.weight(1f),
-                            text = stringResource(
-                                if (state.mask == CustomNavigationIconMask.Circle) {
-                                    R.string.settings_navigation_icon_restore_shape
-                                } else {
-                                    R.string.settings_navigation_icon_make_circle
-                                }
-                            ),
-                            onClick = { actions.onToggleCircle(slot) },
-                        )
+                    Box(Modifier.fillMaxWidth().height(112.dp), contentAlignment = Alignment.Center) {
+                        key(slot.id, state.uriString, state.crop) {
+                            CustomNavigationIconImage(
+                                state = state,
+                                contentDescription = state.displayLabel(stringResource(slot.labelRes)),
+                                modifier = Modifier.size(32.dp),
+                            ) {
+                                Icon(
+                                    imageVector = if (LocalUiMode.current == UiMode.Material) slot.materialFallbackIcon
+                                        else slot.miuixFallbackIcon,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(32.dp),
+                                )
+                            }
+                        }
                     }
+                    Text(state.displayLabel(stringResource(slot.labelRes)),
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Box(Modifier.height(20.dp))
                 }
-                if (state.hasSelected) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        MiuixTextButton(
-                            modifier = Modifier.weight(1f),
-                            text = stringResource(R.string.settings_navigation_icon_crop_action),
-                            onClick = { actions.onCrop(slot) },
-                        )
-                        MiuixTextButton(
-                            modifier = Modifier.weight(1f),
-                            text = stringResource(R.string.settings_navigation_icon_preview_action),
-                            onClick = { actions.onPreview(slot) },
-                        )
-                        MiuixTextButton(
-                            modifier = Modifier.weight(1f),
-                            text = stringResource(R.string.settings_navigation_icon_clear_action),
-                            onClick = { actions.onClear(slot) },
-                        )
-                    }
+                Text(stringResource(if (state.hasSelected) R.string.settings_navigation_icon_selected_summary
+                    else R.string.appearance_editor_default_icon),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                MediaFileInfoSummary(rememberMediaFileInfo(state.uriString))
+                AppearanceEditorMediaActions(
+                    title = title,
+                    hasMedia = state.hasSelected,
+                    onPickImage = { actions.onPick(slot) },
+                    onCrop = { actions.onCrop(slot) },
+                    onPreview = { actions.onPreview(slot) },
+                    onClear = { actions.onClear(slot) },
+                    clearSummaryRes = R.string.appearance_editor_clear_icon_summary,
+                )
+                if (!state.hasSelected) {
+                    AppearanceEditorAction(stringResource(R.string.settings_navigation_icon_preview_action),
+                        Icons.Rounded.Visibility, { actions.onPreview(slot) })
                 }
+                Text(stringResource(R.string.settings_navigation_icons_restart_hint),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
-    )
-}
-
-@Composable
-private fun NavigationIconMiuixSectionTitle(
-    text: String,
-    topPadding: Dp = 18.dp,
-) {
-    MiuixText(
-        modifier = Modifier.padding(start = 16.dp, top = topPadding, bottom = 2.dp),
-        text = text,
-        color = colorScheme.primary,
-        fontSize = 13.sp,
-    )
-}
-
-@Composable
-private fun Modifier.navigationIconLiquidGlassSurface(): Modifier {
-    return globalLiquidGlassSurface(
-        shape = RoundedCornerShape(18.dp),
-        surfaceAlpha = 0.58f,
-        blurRadius = 10.dp,
-        refractionHeight = 14.dp,
-        refractionAmount = 9.dp,
-        strokeAlpha = 0.66f,
+        controls = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                AppearanceEditorTabs(
+                    listOf(stringResource(R.string.appearance_editor_icon_layout), stringResource(R.string.appearance_editor_icon_appearance)),
+                    section, { section = it },
+                )
+                NavigationIconAdjustmentControls(state, section, onValueChange)
+                Text(stringResource(R.string.appearance_editor_save_hint),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
     )
 }
 
@@ -498,15 +256,12 @@ private val CustomNavigationIconSlot.miuixFallbackIcon: ImageVector
         CustomNavigationIconSlot.Settings -> Icons.Rounded.Settings
     }
 
-private fun navigationIconSlotFromId(id: String): CustomNavigationIconSlot? {
-    return CustomNavigationIconSlot.entries.firstOrNull { it.id == id }
-}
+private fun navigationIconSlotFromId(id: String): CustomNavigationIconSlot? =
+    CustomNavigationIconSlot.entries.firstOrNull { it.id == id }
 
 private data class NavigationIconActions(
     val onPick: (CustomNavigationIconSlot) -> Unit,
     val onCrop: (CustomNavigationIconSlot) -> Unit,
     val onPreview: (CustomNavigationIconSlot) -> Unit,
-    val onAdjust: (CustomNavigationIconSlot) -> Unit,
     val onClear: (CustomNavigationIconSlot) -> Unit,
-    val onToggleCircle: (CustomNavigationIconSlot) -> Unit,
 )

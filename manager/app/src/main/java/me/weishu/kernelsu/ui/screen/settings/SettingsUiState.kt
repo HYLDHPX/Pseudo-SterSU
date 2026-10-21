@@ -66,7 +66,6 @@ data class SettingsUiState(
     val colorSpec: String = ColorSpec.SpecVersion.Default.name,
     val monetSurfaceOpacity: Float = ThemeAppearanceDefaults.MONET_SURFACE_OPACITY,
     val themePreset: String = ThemePreset.CLEAN_TOOL.value,
-    val enablePredictiveBack: Boolean = false,
     val enableBlur: Boolean = true,
     val enableFloatingBottomBar: Boolean = false,
     val enableFloatingBottomBarBlur: Boolean = false,

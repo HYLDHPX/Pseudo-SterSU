@@ -28,6 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -61,16 +63,19 @@ internal fun SidebarWeatherOptions(config: SidebarWidgetConfig, onUpdate: (Sideb
     val scope = rememberCoroutineScope()
     val currentConfig by rememberUpdatedState(config)
     val currentOnUpdate by rememberUpdatedState(onUpdate)
-    var mode by remember(config.weatherApi) {
+    var mode by rememberSaveable(config.weatherApi) {
         mutableStateOf(config.weatherApi.source.takeIf { config.weatherApi.canFetch() })
     }
     var showXiaomiDisclosure by remember { mutableStateOf(false) }
     var showOpenMeteoDisclosure by remember { mutableStateOf(false) }
-    var draft by remember(config.weatherApi) { mutableStateOf(config.weatherApi) }
+    var draft by rememberSaveable(config.weatherApi, stateSaver = Saver(
+        save = { it: SidebarWeatherConfig -> it.toJson().toString() },
+        restore = { SidebarWeatherConfig.fromJson(it) },
+    )) { mutableStateOf(config.weatherApi) }
     var busy by remember { mutableStateOf(false) }
     var failure by remember { mutableStateOf<SidebarWeatherException?>(null) }
     var tested by remember { mutableStateOf<SidebarWeatherReading?>(null) }
-    var showAuth by remember { mutableStateOf(config.weatherApi.headerName.isNotEmpty()) }
+    var showAuth by rememberSaveable { mutableStateOf(config.weatherApi.headerName.isNotEmpty()) }
     var revealSecret by remember { mutableStateOf(false) }
 
     fun edit(value: SidebarWeatherConfig) {
@@ -80,33 +85,19 @@ internal fun SidebarWeatherOptions(config: SidebarWidgetConfig, onUpdate: (Sideb
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = mode == null, enabled = !busy,
-                onClick = {
-                    mode = null
-                    failure = null
-                    tested = null
-                    onUpdate(config.copy(weatherApi = config.weatherApi.copy(enabled = false)))
-                },
-                label = { Text(stringResource(R.string.sidebar_weather_manual)) },
-            )
-            FilterChip(
-                selected = mode == SidebarWeatherSource.CustomApi, enabled = !busy,
-                onClick = { mode = SidebarWeatherSource.CustomApi },
-                label = { Text(stringResource(R.string.sidebar_weather_custom_api)) },
-            )
-            FilterChip(
-                selected = mode == SidebarWeatherSource.Xiaomi, enabled = !busy,
-                onClick = { mode = SidebarWeatherSource.Xiaomi },
-                label = { Text(stringResource(R.string.sidebar_weather_xiaomi)) },
-            )
-            FilterChip(
-                selected = mode == SidebarWeatherSource.OpenMeteo, enabled = !busy,
-                onClick = { mode = SidebarWeatherSource.OpenMeteo },
-                label = { Text(stringResource(R.string.sidebar_weather_open_meteo)) },
-            )
-        }
+        val sources = listOf(null, SidebarWeatherSource.CustomApi, SidebarWeatherSource.Xiaomi, SidebarWeatherSource.OpenMeteo)
+        SidebarDesignChoice(
+            title = stringResource(R.string.sidebar_editor_weather_title),
+            options = listOf(R.string.sidebar_weather_manual, R.string.sidebar_weather_custom_api,
+                R.string.sidebar_weather_xiaomi, R.string.sidebar_weather_open_meteo).map { stringResource(it) },
+            selectedIndex = sources.indexOf(mode), enabled = !busy,
+            onSelected = { index ->
+                mode = sources[index]
+                failure = null
+                tested = null
+                if (mode == null) onUpdate(config.copy(weatherApi = config.weatherApi.copy(enabled = false)))
+            },
+        )
         if (mode == null) {
             Text(
                 stringResource(R.string.sidebar_widget_weather_privacy_summary),
@@ -131,16 +122,7 @@ internal fun SidebarWeatherOptions(config: SidebarWidgetConfig, onUpdate: (Sideb
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(stringResource(R.string.sidebar_weather_interval), style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SidebarWeatherConfig.REFRESH_INTERVALS.forEach { minutes ->
-                    FilterChip(
-                        selected = draft.refreshMinutes == minutes, enabled = !busy,
-                        onClick = { edit(draft.copy(refreshMinutes = minutes)) },
-                        label = { Text(stringResource(R.string.sidebar_weather_minutes, minutes)) },
-                    )
-                }
-            }
+            SidebarWeatherRefreshChoice(draft.refreshMinutes, !busy) { edit(draft.copy(refreshMinutes = it)) }
             val xiaomiEnabled = config.weatherApi.source == SidebarWeatherSource.Xiaomi && config.weatherApi.canFetch()
             Text(
                 stringResource(if (xiaomiEnabled) R.string.sidebar_weather_xiaomi_enabled else R.string.sidebar_weather_xiaomi_disabled),
@@ -213,16 +195,7 @@ internal fun SidebarWeatherOptions(config: SidebarWidgetConfig, onUpdate: (Sideb
                     )
                 }
             }
-            Text(stringResource(R.string.sidebar_weather_interval), style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SidebarWeatherConfig.REFRESH_INTERVALS.forEach { minutes ->
-                    FilterChip(
-                        selected = draft.refreshMinutes == minutes, enabled = !busy,
-                        onClick = { edit(draft.copy(refreshMinutes = minutes)) },
-                        label = { Text(stringResource(R.string.sidebar_weather_minutes, minutes)) },
-                    )
-                }
-            }
+            SidebarWeatherRefreshChoice(draft.refreshMinutes, !busy) { edit(draft.copy(refreshMinutes = it)) }
             val openMeteoEnabled = config.weatherApi.source == SidebarWeatherSource.OpenMeteo && config.weatherApi.canFetch()
             Text(
                 stringResource(if (openMeteoEnabled) R.string.sidebar_weather_open_meteo_enabled else R.string.sidebar_weather_open_meteo_disabled),
@@ -358,16 +331,7 @@ internal fun SidebarWeatherOptions(config: SidebarWidgetConfig, onUpdate: (Sideb
                     )
                 }
             }
-            Text(stringResource(R.string.sidebar_weather_interval), style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SidebarWeatherConfig.REFRESH_INTERVALS.forEach { minutes ->
-                    FilterChip(
-                        selected = draft.refreshMinutes == minutes, enabled = !busy,
-                        onClick = { edit(draft.copy(refreshMinutes = minutes)) },
-                        label = { Text(stringResource(R.string.sidebar_weather_minutes, minutes)) },
-                    )
-                }
-            }
+            SidebarWeatherRefreshChoice(draft.refreshMinutes, !busy) { edit(draft.copy(refreshMinutes = it)) }
             Text(
                 stringResource(if (config.weatherApi.source == SidebarWeatherSource.CustomApi && config.weatherApi.enabled) R.string.sidebar_weather_saved_hint else R.string.sidebar_weather_unsaved_hint),
                 style = MaterialTheme.typography.bodySmall,
@@ -419,4 +383,16 @@ internal fun SidebarWeatherOptions(config: SidebarWidgetConfig, onUpdate: (Sideb
             )
         }
     }
+}
+
+@Composable
+private fun SidebarWeatherRefreshChoice(minutes: Int, enabled: Boolean, onSelected: (Int) -> Unit) {
+    val intervals = SidebarWeatherConfig.REFRESH_INTERVALS
+    SidebarDesignChoice(
+        title = stringResource(R.string.sidebar_weather_interval),
+        options = intervals.map { stringResource(R.string.sidebar_weather_minutes, it) },
+        selectedIndex = intervals.indexOf(minutes),
+        enabled = enabled,
+        onSelected = { onSelected(intervals[it]) },
+    )
 }

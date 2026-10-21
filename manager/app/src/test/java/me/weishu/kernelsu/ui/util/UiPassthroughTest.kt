@@ -10,6 +10,8 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import java.lang.reflect.Proxy
+import top.yukonga.miuix.kmp.theme.darkColorScheme as darkMiuixColorScheme
+import top.yukonga.miuix.kmp.theme.lightColorScheme as lightMiuixColorScheme
 
 class UiPassthroughTest {
     @Test
@@ -39,6 +41,47 @@ class UiPassthroughTest {
         listOf(lightColorScheme(), darkColorScheme()).forEach { colors ->
             assertSame(colors, colors.withUiPassthrough(UiPassthroughSettings(surfaceOpacity = 0f)))
         }
+    }
+
+    @Test
+    fun disabledMiuixPassthroughKeepsTheCurrentDayNightPalette() {
+        listOf(lightMiuixColorScheme(), darkMiuixColorScheme()).forEach { colors ->
+            assertSame(colors, colors.withUiPassthrough(UiPassthroughSettings(surfaceOpacity = 0f)))
+        }
+    }
+
+    @Test
+    fun miuixSurfacesFollowOpacityWithoutFadingTextOrChangingThePalette() {
+        listOf(lightMiuixColorScheme(), darkMiuixColorScheme()).forEach { base ->
+            listOf(0f, 0.35f, 1f).forEach { opacity ->
+                val colors = base.withUiPassthrough(UiPassthroughSettings(enabled = true, surfaceOpacity = opacity))
+                assertEquals(0f, colors.background.alpha, 0f)
+                listOf(base.surface to colors.surface, base.surfaceVariant to colors.surfaceVariant,
+                    base.surfaceContainer to colors.surfaceContainer,
+                    base.surfaceContainerHigh to colors.surfaceContainerHigh,
+                    base.surfaceContainerHighest to colors.surfaceContainerHighest).forEach { (before, after) ->
+                    assertEquals(before.alpha * opacity, after.alpha, 0.005f)
+                    assertEquals(before.red, after.red, 0.005f)
+                    assertEquals(before.green, after.green, 0.005f)
+                    assertEquals(before.blue, after.blue, 0.005f)
+                }
+                assertEquals(base.onSurface, colors.onSurface)
+                assertEquals(base.onBackground, colors.onBackground)
+                assertEquals(base.primary, colors.primary)
+                assertEquals(base.onPrimary, colors.onPrimary)
+                assertEquals(base.error, colors.error)
+            }
+        }
+    }
+
+    @Test
+    fun miuixBridgeNormalizesInvalidOpacityWithoutMutatingTheBasePalette() {
+        val base = darkMiuixColorScheme()
+        val surface = base.surface
+        val colors = base.withUiPassthrough(UiPassthroughSettings(enabled = true, surfaceOpacity = Float.NaN))
+        assertEquals(surface.alpha * 0.65f, colors.surface.alpha, 0.005f)
+        assertEquals(surface, base.surface)
+        assertEquals(base.onSurface, colors.onSurface)
     }
 
     @Test

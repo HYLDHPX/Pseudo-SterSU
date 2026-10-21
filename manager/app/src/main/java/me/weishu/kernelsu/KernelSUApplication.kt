@@ -2,8 +2,6 @@ package me.weishu.kernelsu
 
 import android.app.Application
 import android.content.Context
-import android.content.pm.ApplicationInfo
-import android.os.Build
 import android.os.UserManager
 import android.system.Os
 import android.util.Log
@@ -11,7 +9,6 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import okhttp3.Cache
 import okhttp3.OkHttpClient
-import org.lsposed.hiddenapibypass.HiddenApiBypass
 import me.weishu.kernelsu.ui.util.AppLanguageManager
 import me.weishu.kernelsu.ui.util.ManagerPlugin
 import me.weishu.kernelsu.ui.util.ManagerPluginRegistry
@@ -28,21 +25,6 @@ class KernelSUApplication : Application(), ViewModelStoreOwner {
 
     companion object {
         private const val TAG = "KernelSUApplication"
-
-        fun setEnableOnBackInvokedCallback(appInfo: ApplicationInfo, enable: Boolean): Boolean {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
-            return runCatching {
-                HiddenApiBypass.addHiddenApiExemptions(
-                    "Landroid/content/pm/ApplicationInfo;->setEnableOnBackInvokedCallback"
-                )
-                val applicationInfoClass = ApplicationInfo::class.java
-                val method = applicationInfoClass.getDeclaredMethod("setEnableOnBackInvokedCallback", Boolean::class.javaPrimitiveType)
-                method.isAccessible = true
-                method.invoke(appInfo, enable)
-            }.onFailure { error ->
-                Log.w(TAG, "update predictive back callback failed", error)
-            }.isSuccess
-        }
     }
 
     lateinit var okhttpClient: OkHttpClient
@@ -71,13 +53,6 @@ class KernelSUApplication : Application(), ViewModelStoreOwner {
         reconcileLauncherIcon(this)
         retireLegacyWebManager()
         StealthModeStore.reconcileFromRootAsync(this)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            val prefs = this.getSharedPreferences("settings", MODE_PRIVATE)
-            val enable = prefs.getBoolean("enable_predictive_back", false)
-            setEnableOnBackInvokedCallback(applicationInfo, enable)
-        }
-
     }
 
     override val viewModelStore: ViewModelStore

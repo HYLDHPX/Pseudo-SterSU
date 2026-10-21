@@ -329,8 +329,6 @@
     <string name="manager_force_update_title">更新が必要です</string>
     <string name="manager_force_update_message">このバージョンはサポートされなくなりました。続行するには、SterSU Manager %1$s (%2$d) に更新してください。</string>
     <string name="manager_update_changelog">%1$s\n\n%2$s</string>
-    <string name="settings_enable_predictive_back">予測バックジェスチャー</string>
-    <string name="settings_enable_predictive_back_summary">予測バック ジェスチャのサポートを有効にします。</string>
     <string name="settings_module_check_update_summary">インストールされているモジュールで利用可能なアップデートがないか自動的にチェックします。</string>
     <string name="settings_version_mismatch_warning">バージョンの不一致の警告</string>
     <string name="settings_version_mismatch_warning_summary">Manager と SterSU ドライバーのバージョンが一致しない場合に警告を表示します。</string>
@@ -690,7 +688,6 @@
     <string name="settings_monet">モネを有効にする</string>
     <string name="settings_monet_surface_opacity">Monet サーフェスの透明度</string>
     <string name="settings_monet_surface_opacity_summary">文字や状態表示のコントラストを保ったまま、カードとコンテナの透明度を調整します。</string>
-    <string name="settings_predictive_back_apply_failed">予測戻るを適用できませんでした。以前の設定を保持しました。</string>
     <string name="theme_store_monet_title">Monet カラー</string>
     <string name="theme_store_monet_summary">基準色、パレット、カラー仕様、サーフェスの透明度を設定します。</string>
     <string name="theme_store_monet_status">オン · サーフェス %1$d%%</string>

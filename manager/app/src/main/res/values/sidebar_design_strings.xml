@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sidebar_editor_appearance_summary">Choose a material, then adjust colors, transparency and dividers.</string>
+    <string name="sidebar_editor_widget_summary">Choose a clock, weather or alarm widget for the middle of the sidebar.</string>
+    <string name="sidebar_editor_weather_title">Weather source</string>
+    <string name="sidebar_editor_weather_summary">Configure manual weather or connect a weather service. Network access requires consent.</string>
+    <string name="sidebar_editor_navigation_summary">Set the sidebar side, labels, button position, order and custom icons.</string>
+    <string name="sidebar_editor_home_summary">Choose the home layout and customize each card separately for light and dark modes.</string>
+    <string name="sidebar_editor_preview">Preview sidebar</string>
+    <string name="sidebar_editor_preview_note">Uses the same sidebar layout and custom navigation icons. Glass reflections depend on the actual page background.</string>
+    <string name="sidebar_editor_reset_palette_confirm">Reset colors for the current material and selected light or dark mode? Other palettes will not change.</string>
+    <string name="sidebar_editor_save_help">Most changes save automatically. Apply typed colors and save weather settings using their buttons.</string>
+</resources>

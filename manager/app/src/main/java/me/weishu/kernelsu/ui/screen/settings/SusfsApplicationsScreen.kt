@@ -32,7 +32,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
@@ -187,7 +187,7 @@ fun SusfsApplicationsScreen(lkmMode: Boolean = false) {
                 },
                 actions = {
                     IconButton(onClick = model::refresh, enabled = !state.busy) {
-                        Icon(Icons.Rounded.Refresh, stringResource(R.string.susfs_applications_refresh))
+                        Icon(Icons.Outlined.Refresh, stringResource(R.string.susfs_applications_refresh))
                     }
                     Box {
                         IconButton(onClick = { menu = true }) {

@@ -3,65 +3,40 @@ package me.weishu.kernelsu.ui.screen.settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
 import me.weishu.kernelsu.ui.component.passthrough.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.ListAlt
-import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Crop
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Visibility
-import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
-import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -75,6 +50,8 @@ import me.weishu.kernelsu.ui.component.rememberCustomVideoFrameBitmap
 import me.weishu.kernelsu.ui.component.MediaVisualLayer
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.screen.install.InstallCardWallpaperBackground
+import me.weishu.kernelsu.ui.screen.install.installCardWallpaperOverlayColor
+import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.util.DEFAULT_CUSTOM_WALLPAPER_CROP
 import me.weishu.kernelsu.ui.util.MediaVariantSettings
 import me.weishu.kernelsu.ui.util.ThemeStoreImageSlot
@@ -97,17 +74,12 @@ import me.weishu.kernelsu.ui.util.takePersistableVideoBackgroundReadPermission
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
-import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as MiuixIcon
-import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
-import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
 import top.yukonga.miuix.kmp.basic.TextButton as MiuixTextButton
-import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 
 private data class InstallCardWallpaperSpec(
     val slot: ThemeStoreImageSlot,
     @StringRes val titleRes: Int,
     @StringRes val summaryRes: Int,
-    val icon: ImageVector,
     val previewAspectRatio: Float,
 )
 
@@ -116,21 +88,18 @@ private val installCardWallpaperSpecs = listOf(
         slot = ThemeStoreImageSlot.InstallImage,
         titleRes = R.string.install_card_wallpaper_image_title,
         summaryRes = R.string.install_card_wallpaper_image_summary,
-        icon = Icons.Rounded.AutoFixHigh,
         previewAspectRatio = 1.62f,
     ),
     InstallCardWallpaperSpec(
         slot = ThemeStoreImageSlot.InstallMethods,
         titleRes = R.string.install_card_wallpaper_methods_title,
         summaryRes = R.string.install_card_wallpaper_methods_summary,
-        icon = Icons.AutoMirrored.Rounded.ListAlt,
         previewAspectRatio = 1.48f,
     ),
     InstallCardWallpaperSpec(
         slot = ThemeStoreImageSlot.InstallOptions,
         titleRes = R.string.install_card_wallpaper_options_title,
         summaryRes = R.string.install_card_wallpaper_options_summary,
-        icon = Icons.Rounded.Tune,
         previewAspectRatio = 1.36f,
     ),
 )
@@ -139,323 +108,177 @@ private val installCardWallpaperSpecs = listOf(
 fun InstallCardWallpaperScreen() {
     val navigator = LocalNavigator.current
     val onBack = dropUnlessResumed { navigator.pop() }
-
-    MiuixScaffold(
-        containerColor = Color.Transparent,
-        popupHost = { },
-        contentWindowInsets = WindowInsets.systemBars
-            .add(WindowInsets.displayCutout)
-            .only(WindowInsetsSides.Horizontal),
-        topBar = {
-            MiuixTopAppBar(
-                title = stringResource(R.string.install_card_wallpapers),
-                color = Color.Transparent,
-                titleColor = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface,
-                navigationIcon = {
-                    MiuixIconButton(onClick = onBack) {
-                        MiuixIcon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onBackground,
-                            contentDescription = stringResource(R.string.back),
-                        )
-                    }
-                },
+    AppearanceEditorPage(stringResource(R.string.install_card_wallpapers), onBack) { modifier ->
+        var selectedId by rememberSaveable { mutableStateOf(ThemeStoreImageSlot.InstallImage.id) }
+        val spec = installCardWallpaperSpecs.firstOrNull { it.slot.id == selectedId }
+            ?: installCardWallpaperSpecs.first()
+        val selector: @Composable () -> Unit = {
+            AppearanceEditorTargetPicker(
+                titleRes = R.string.appearance_editor_choose_card,
+                labels = installCardWallpaperSpecs.map { stringResource(it.titleRes) },
+                selectedIndex = installCardWallpaperSpecs.indexOf(spec),
+                onSelect = { selectedId = installCardWallpaperSpecs[it].slot.id },
             )
-        },
-    ) { innerPadding ->
-        InstallCardWallpaperContent(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-        )
+        }
+        androidx.compose.runtime.key(spec.slot.id) {
+            InstallCardWallpaperEditor(spec, modifier, selector)
+        }
     }
 }
 
-@Composable
-private fun InstallCardWallpaperContent(modifier: Modifier) {
-    var cropTarget by rememberSaveable { mutableStateOf<String?>(null) }
-    var previewTarget by rememberSaveable { mutableStateOf<String?>(null) }
-    var showPagePreview by rememberSaveable { mutableStateOf(false) }
-
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.install_card_wallpapers_summary),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        FilledTonalButton(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = { showPagePreview = true },
-        ) {
-            Icon(Icons.Rounded.Visibility, contentDescription = null)
-            Text(
-                text = stringResource(R.string.install_card_wallpaper_screen_preview),
-                modifier = Modifier.padding(start = 8.dp),
-            )
-        }
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val columns = if (maxWidth >= 720.dp) 2 else 1
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                installCardWallpaperSpecs.chunked(columns).forEach { specs ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        specs.forEach { spec ->
-                            InstallCardWallpaperItem(
-                                spec = spec,
-                                showCrop = cropTarget == spec.slot.id,
-                                onShowCropChange = { show -> cropTarget = spec.slot.id.takeIf { show } },
-                                showPreview = previewTarget == spec.slot.id,
-                                onShowPreviewChange = { show -> previewTarget = spec.slot.id.takeIf { show } },
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        repeat(columns - specs.size) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(modifier = Modifier.size(12.dp))
-    }
-    InstallCardWallpaperScreenPreviewDialog(
-        show = showPagePreview,
-        onDismissRequest = { showPagePreview = false },
+internal fun installCardWallpaperEditingState(
+    stored: ThemeStoreImageState,
+    night: Boolean,
+    aspectRatio: Float,
+): ThemeStoreImageState = if (night) {
+    stored.copy(
+        uriString = stored.nightUriString,
+        videoUriString = stored.nightVideoUriString,
+        crop = stored.nightResponsiveCrops.forAspectRatio(aspectRatio),
+        visualSettings = stored.nightVisualSettings,
+        responsiveCrops = stored.nightResponsiveCrops,
+        nightUriString = null,
+        nightVideoUriString = null,
+        variantSettings = MediaVariantSettings(),
+    )
+} else {
+    stored.copy(
+        crop = stored.responsiveCrops.forAspectRatio(aspectRatio),
+        nightUriString = null,
+        nightVideoUriString = null,
+        variantSettings = MediaVariantSettings(),
     )
 }
 
 @Composable
-private fun InstallCardWallpaperItem(
+private fun InstallCardWallpaperEditor(
     spec: InstallCardWallpaperSpec,
-    showCrop: Boolean,
-    onShowCropChange: (Boolean) -> Unit,
-    showPreview: Boolean,
-    onShowPreviewChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
+    selector: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val storedState = rememberThemeStoreImageState(spec.slot)
-    var editNight by rememberSaveable(spec.slot.id) { mutableStateOf(false) }
-    var showAdjustments by rememberSaveable(spec.slot.id) { mutableStateOf(false) }
+    var editNight by rememberSaveable { mutableStateOf(false) }
+    var pendingNight by rememberSaveable { mutableStateOf(false) }
+    var showCrop by rememberSaveable { mutableStateOf(false) }
+    var showPreview by rememberSaveable { mutableStateOf(false) }
+    var showPagePreview by rememberSaveable { mutableStateOf(false) }
+    var section by rememberSaveable { mutableStateOf(0) }
     val state = remember(storedState, editNight, spec.previewAspectRatio) {
-        if (editNight) {
-            storedState.copy(
-                uriString = storedState.nightUriString,
-                videoUriString = storedState.nightVideoUriString,
-                crop = storedState.nightResponsiveCrops.forAspectRatio(spec.previewAspectRatio),
-                visualSettings = storedState.nightVisualSettings,
-                responsiveCrops = storedState.nightResponsiveCrops,
-                nightUriString = null,
-                nightVideoUriString = null,
-                variantSettings = MediaVariantSettings(),
-            )
-        } else {
-            storedState.copy(
-                crop = storedState.responsiveCrops.forAspectRatio(spec.previewAspectRatio),
-                nightUriString = null,
-                nightVideoUriString = null,
-                variantSettings = MediaVariantSettings(),
-            )
-        }
+        installCardWallpaperEditingState(storedState, editNight, spec.previewAspectRatio)
     }
-    val imageBitmap = rememberCustomImageBitmap(
-        uriString = state.uriString,
-        crop = state.crop,
-    )
-    val videoFrameBitmap = rememberCustomVideoFrameBitmap(state.videoUriString)
+    val imageBitmap = androidx.compose.runtime.key(editNight, state.uriString, state.crop) {
+        rememberCustomImageBitmap(state.uriString, crop = state.crop)
+    }
+    val videoFrameBitmap = androidx.compose.runtime.key(editNight, state.videoUriString) {
+        rememberCustomVideoFrameBitmap(state.videoUriString)
+    }
     val title = stringResource(spec.titleRes)
-    val mediaInfo = rememberMediaFileInfo(state.uriString ?: state.videoUriString)
 
-    fun saveResponsiveCrops(uriString: String) {
+    fun saveResponsiveCrops(uriString: String, night: Boolean) {
         scope.launch {
             val info = inspectMediaFile(context, uriString) ?: return@launch
             val width = info.width ?: return@launch
             val height = info.height ?: return@launch
-            setThemeStoreImageSlotResponsiveCrops(
-                context,
-                spec.slot,
-                generateResponsiveCrops(width, height),
-                night = editNight,
-            )
+            val current = me.weishu.kernelsu.ui.util.readThemeStoreImageState(context, spec.slot)
+            val currentUri = if (night) current.nightUriString ?: current.nightVideoUriString
+                else current.uriString ?: current.videoUriString
+            if (currentUri != uriString) return@launch
+            setThemeStoreImageSlotResponsiveCrops(context, spec.slot, generateResponsiveCrops(width, height), night = night)
         }
     }
 
-    val imageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
+    val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
-        val storageKey = if (editNight) spec.slot.nightUriKey else spec.slot.uriKey
+        val night = pendingNight
+        val storageKey = if (night) spec.slot.nightUriKey else spec.slot.uriKey
         val storedUri = persistCustomImageReference(context, uri, storageKey)
             ?: uri.toString().also { takePersistableImageReadPermission(context, uri) }
-        if (editNight) {
-            setThemeStoreImageSlotNightMedia(context, spec.slot, storedUri, video = false)
-        } else {
-            setThemeStoreImageSlot(context, spec.slot, storedUri)
-        }
-        saveResponsiveCrops(storedUri)
-        onShowCropChange(true)
+        if (night) setThemeStoreImageSlotNightMedia(context, spec.slot, storedUri, video = false)
+        else setThemeStoreImageSlot(context, spec.slot, storedUri)
+        saveResponsiveCrops(storedUri, night)
+        editNight = night
+        showCrop = true
     }
-    val videoLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
+    val videoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
+        val night = pendingNight
         takePersistableVideoBackgroundReadPermission(context, uri)
-        if (editNight) {
-            setThemeStoreImageSlotNightMedia(context, spec.slot, uri.toString(), video = true)
-        } else {
-            setThemeStoreImageSlotVideo(context, spec.slot, uri.toString())
-        }
-        saveResponsiveCrops(uri.toString())
-        onShowCropChange(true)
+        if (night) setThemeStoreImageSlotNightMedia(context, spec.slot, uri.toString(), video = true)
+        else setThemeStoreImageSlotVideo(context, spec.slot, uri.toString())
+        saveResponsiveCrops(uri.toString(), night)
+        editNight = night
+        showCrop = true
     }
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.78f),
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = spec.icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(21.dp),
-                    )
+    AppearanceEditorWorkspace(
+        modifier = modifier,
+        selector = selector,
+        preview = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                AppearanceEditorHeading(title, stringResource(spec.summaryRes))
+                AppearanceEditorVariantPicker(editNight) {
+                    editNight = it
+                    showCrop = false
+                    showPreview = false
                 }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(installCardWallpaperStatusRes(state)),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(Modifier.widthIn(max = 360.dp).fillMaxWidth()) {
+                        InstallCardWallpaperFrame(spec, state, imageBitmap, videoFrameBitmap)
+                    }
                 }
-                if (state.hasSelected) {
-                    InstallCardWallpaperMenu(
-                        onCrop = { onShowCropChange(true) },
-                        onPreview = { onShowPreviewChange(true) },
+                Text(stringResource(installCardWallpaperStatusRes(state)),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                MediaFileInfoSummary(rememberMediaFileInfo(state.uriString ?: state.videoUriString))
+                androidx.compose.runtime.key(editNight) {
+                    AppearanceEditorMediaActions(
+                        title = title,
+                        hasMedia = state.hasSelected,
+                        onPickImage = { pendingNight = editNight; imageLauncher.launch(arrayOf("image/*")) },
+                        onPickVideo = { pendingNight = editNight; videoLauncher.launch(arrayOf("video/*")) },
+                        onCrop = { showCrop = true },
+                        onPreview = { showPreview = true },
                         onClear = {
-                            if (editNight) {
-                                setThemeStoreImageSlotNightMedia(context, spec.slot, null, video = false)
-                            } else {
-                                setThemeStoreImageSlot(context, spec.slot, null)
-                            }
+                            if (editNight) setThemeStoreImageSlotNightMedia(context, spec.slot, null, video = false)
+                            else setThemeStoreImageSlot(context, spec.slot, null)
                         },
                     )
                 }
+                AppearanceEditorAction(stringResource(R.string.install_card_wallpaper_screen_preview),
+                    Icons.Rounded.Visibility, { showPagePreview = true })
             }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FilterChip(
-                    selected = !editNight,
-                    onClick = { editNight = false },
-                    label = { Text(stringResource(R.string.media_variant_day)) },
+        },
+        controls = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                AppearanceEditorTabs(
+                    listOf(stringResource(R.string.background_editor_effects), stringResource(R.string.appearance_editor_rotation)),
+                    section, { section = it },
                 )
-                FilterChip(
-                    selected = editNight,
-                    onClick = { editNight = true },
-                    label = { Text(stringResource(R.string.media_variant_night)) },
-                )
-            }
-
-            InstallCardWallpaperFrame(
-                spec = spec,
-                state = state,
-                imageBitmap = imageBitmap,
-                videoFrameBitmap = videoFrameBitmap,
-            )
-            MediaFileInfoSummary(mediaInfo)
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FilledTonalButton(
-                    onClick = { imageLauncher.launch(arrayOf("image/*")) },
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(Icons.Rounded.Wallpaper, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text(
-                        text = stringResource(R.string.home_card_wallpaper_pick_image),
-                        modifier = Modifier.padding(start = 7.dp),
-                        maxLines = 1,
-                    )
-                }
-                FilledTonalButton(
-                    onClick = { videoLauncher.launch(arrayOf("video/*")) },
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(Icons.Rounded.Videocam, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text(
-                        text = stringResource(R.string.home_card_wallpaper_pick_video),
-                        modifier = Modifier.padding(start = 7.dp),
-                        maxLines = 1,
-                    )
-                }
-            }
-            if (state.hasSelected) {
-                FilledTonalButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { showAdjustments = !showAdjustments },
-                ) {
-                    Text(
-                        stringResource(
-                            if (showAdjustments) R.string.media_editor_hide_adjustments
-                            else R.string.media_editor_show_adjustments
+                if (section == 0) {
+                    if (state.hasSelected) {
+                        MediaVisualControls(
+                            value = state.visualSettings,
+                            onValueChange = { setThemeStoreImageSlotVisualSettings(context, spec.slot, it, night = editNight) },
+                            showContrast = true,
+                            showMotion = true,
                         )
+                    } else {
+                        Text(stringResource(R.string.background_editor_choose_hint),
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    MediaVariantControls(
+                        value = storedState.variantSettings,
+                        onValueChange = { setThemeStoreImageSlotVariantSettings(context, spec.slot, it) },
                     )
                 }
-                AnimatedVisibility(visible = showAdjustments) {
-                    MediaVisualControls(
-                        value = state.visualSettings,
-                        onValueChange = {
-                            setThemeStoreImageSlotVisualSettings(context, spec.slot, it, night = editNight)
-                        },
-                        showContrast = true,
-                        showMotion = true,
-                    )
-                }
+                Text(stringResource(R.string.appearance_editor_save_hint),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            MediaVariantControls(
-                value = storedState.variantSettings,
-                onValueChange = { setThemeStoreImageSlotVariantSettings(context, spec.slot, it) },
-            )
-        }
-    }
+        },
+    )
 
     SettingsWallpaperCropDialog(
         show = showCrop && state.hasSelected,
@@ -463,45 +286,29 @@ private fun InstallCardWallpaperItem(
         crop = state.crop,
         onCropChange = { crop ->
             val safeCrop = sanitizeCustomWallpaperCrop(crop)
-            if (editNight) {
-                setThemeStoreImageSlotNightCrop(context, spec.slot, safeCrop)
-            } else {
-                setThemeStoreImageSlotCrop(context, spec.slot, safeCrop)
-            }
+            if (editNight) setThemeStoreImageSlotNightCrop(context, spec.slot, safeCrop)
+            else setThemeStoreImageSlotCrop(context, spec.slot, safeCrop)
             setThemeStoreImageSlotResponsiveCrops(
-                context = context,
-                slot = spec.slot,
-                crops = state.responsiveCrops.withCropForAspectRatio(spec.previewAspectRatio, safeCrop),
+                context, spec.slot,
+                state.responsiveCrops.withCropForAspectRatio(spec.previewAspectRatio, safeCrop),
                 night = editNight,
             )
-            onShowPreviewChange(true)
+            showPreview = true
         },
-        onDismissRequest = { onShowCropChange(false) },
+        onDismissRequest = { showCrop = false },
         title = stringResource(R.string.install_card_wallpaper_crop_title, title),
         editorAspectRatio = spec.previewAspectRatio,
         cropAspectRatio = spec.previewAspectRatio,
         defaultCrop = DEFAULT_CUSTOM_WALLPAPER_CROP,
         previewBitmap = videoFrameBitmap.takeIf { state.hasVideoSelected },
         transform = state.visualSettings.transform,
-        onTransformChange = { transform ->
-            setThemeStoreImageSlotVisualSettings(
-                context,
-                spec.slot,
-                state.visualSettings.copy(transform = transform),
-                night = editNight,
-            )
+        onTransformChange = {
+            setThemeStoreImageSlotVisualSettings(context, spec.slot, state.visualSettings.copy(transform = it), night = editNight)
         },
-        onGenerateResponsiveCrops = {
-            setThemeStoreImageSlotResponsiveCrops(context, spec.slot, it, night = editNight)
-        },
+        onGenerateResponsiveCrops = { setThemeStoreImageSlotResponsiveCrops(context, spec.slot, it, night = editNight) },
     )
-    InstallCardWallpaperPreviewDialog(
-        show = showPreview && state.hasSelected,
-        title = title,
-        spec = spec,
-        state = state,
-        onDismissRequest = { onShowPreviewChange(false) },
-    )
+    InstallCardWallpaperPreviewDialog(showPreview && state.hasSelected, title, spec, state, { showPreview = false })
+    InstallCardWallpaperScreenPreviewDialog(showPagePreview, { showPagePreview = false })
 }
 
 @Composable
@@ -541,7 +348,8 @@ private fun InstallCardWallpaperFrame(
             )
         }
         if (frameBitmap != null) {
-            InstallCardWallpaperSample(spec, Color.White)
+            Box(Modifier.matchParentSize().background(installCardWallpaperOverlayColor(isInDarkTheme())))
+            InstallCardWallpaperSample(spec, MaterialTheme.colorScheme.onSurface)
             InstallCardWallpaperSafeArea()
         }
     }
@@ -603,51 +411,6 @@ private fun InstallCardWallpaperSample(
     }
 }
 
-@Composable
-private fun InstallCardWallpaperMenu(
-    onCrop: () -> Unit,
-    onPreview: () -> Unit,
-    onClear: () -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }) {
-            Icon(
-                imageVector = Icons.Rounded.MoreVert,
-                contentDescription = stringResource(R.string.ai_chat_more_options),
-            )
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.home_card_wallpaper_crop_action)) },
-                leadingIcon = { Icon(Icons.Rounded.Crop, contentDescription = null) },
-                onClick = {
-                    expanded = false
-                    onCrop()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.home_card_wallpaper_preview_action)) },
-                leadingIcon = { Icon(Icons.Rounded.Visibility, contentDescription = null) },
-                onClick = {
-                    expanded = false
-                    onPreview()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.home_card_wallpaper_clear_action)) },
-                leadingIcon = { Icon(Icons.Rounded.Close, contentDescription = null) },
-                onClick = {
-                    expanded = false
-                    onClear()
-                },
-            )
-        }
-    }
-}
 
 @Composable
 private fun InstallCardWallpaperPreviewDialog(

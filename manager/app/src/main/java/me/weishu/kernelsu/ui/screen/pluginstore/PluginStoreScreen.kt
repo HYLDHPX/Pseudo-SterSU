@@ -27,7 +27,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Extension
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Security
 import me.weishu.kernelsu.ui.component.store.StoreAlertDialog as AlertDialog
 import androidx.compose.material3.Button
@@ -270,7 +270,7 @@ fun PluginStoreScreen() {
         actions = {
             if (detailsId == null) IconButton(
                 onClick = { refresh(true) }, enabled = busyId == null && !refreshing,
-            ) { Icon(Icons.Rounded.Refresh, stringResource(R.string.plugin_store_refresh)) }
+            ) { Icon(Icons.Outlined.Refresh, stringResource(R.string.plugin_store_refresh)) }
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
@@ -562,7 +562,7 @@ private fun PluginStoreErrorState(message: String, onRetry: () -> Unit) {
         Icon(Icons.Rounded.Security, contentDescription = null, tint = MaterialTheme.colorScheme.error)
         Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         OutlinedButton(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
-            Icon(Icons.Rounded.Refresh, contentDescription = null)
+            Icon(Icons.Outlined.Refresh, contentDescription = null)
             Spacer(Modifier.width(6.dp))
             Text(stringResource(R.string.plugin_store_retry))
         }

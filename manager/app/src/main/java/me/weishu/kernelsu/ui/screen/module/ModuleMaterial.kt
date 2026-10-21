@@ -162,6 +162,7 @@ fun ModulePagerMaterial(
 ) {
     val snackBarHost = remember { SnackbarHostState() }
     val haptic = LocalHapticFeedback.current
+    val sidebar = LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
 
     val context = LocalContext.current
     val resource = LocalResources.current
@@ -363,6 +364,7 @@ fun ModulePagerMaterial(
                     }
                 },
                 scrollBehavior = scrollBehavior,
+                useWallpaperSurface = sidebar,
             )
         },
         floatingActionButton = {

@@ -19,7 +19,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Memory
@@ -240,7 +240,7 @@ fun LkmSusfsScreen() {
                 },
                 actions = {
                     IconButton(onClick = { refresh++ }, enabled = !busy && !loading) {
-                        Icon(Icons.Rounded.Refresh, stringResource(R.string.susfs_path_refresh))
+                        Icon(Icons.Outlined.Refresh, stringResource(R.string.susfs_path_refresh))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

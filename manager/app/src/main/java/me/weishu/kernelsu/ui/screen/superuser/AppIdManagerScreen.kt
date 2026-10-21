@@ -32,7 +32,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Fingerprint
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Search
@@ -196,7 +196,7 @@ fun AppIdManagerScreen() {
                 enabled = !state.loadingApps && !state.busy,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Refresh,
+                    imageVector = Icons.Outlined.Refresh,
                     contentDescription = stringResource(R.string.app_id_manager_refresh),
                 )
             }

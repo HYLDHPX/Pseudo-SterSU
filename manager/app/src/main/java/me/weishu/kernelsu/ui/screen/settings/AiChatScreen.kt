@@ -60,6 +60,7 @@ import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.StopCircle
@@ -583,7 +584,7 @@ private fun AiApiConfigCard(
                                         CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                                     } else {
                                         Icon(
-                                            Icons.Rounded.Refresh,
+                                            Icons.Outlined.Refresh,
                                             contentDescription = stringResource(R.string.ai_chat_load_models),
                                         )
                                     }
@@ -952,7 +953,7 @@ private fun AiMessageBubble(
                         }
                         IconButton(enabled = !sending, onClick = onRetry) {
                             Icon(
-                                Icons.Rounded.Refresh,
+                                Icons.Outlined.Refresh,
                                 contentDescription = stringResource(R.string.ai_chat_retry),
                                 modifier = Modifier.size(18.dp),
                             )

@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
@@ -43,7 +43,7 @@ internal fun SusfsKernelSlotPicker(
                 fontWeight = FontWeight.SemiBold,
             )
             IconButton(onClick = onRefresh, enabled = queryEnabled && !state.loading) {
-                Icon(Icons.Rounded.Refresh, stringResource(R.string.susfs_slots_refresh))
+                Icon(Icons.Outlined.Refresh, stringResource(R.string.susfs_slots_refresh))
             }
         }
         Text(stringResource(R.string.susfs_slots_summary), style = MaterialTheme.typography.bodySmall)

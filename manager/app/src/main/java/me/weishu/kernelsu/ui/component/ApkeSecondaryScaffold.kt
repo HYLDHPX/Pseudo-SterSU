@@ -31,7 +31,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -466,7 +466,7 @@ fun ApkeErrorState(
             ) {
                 if (onRetry != null) {
                     Button(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = null)
+                        Icon(Icons.Outlined.Refresh, contentDescription = null)
                         Spacer(Modifier.size(8.dp))
                         Text(stringResource(R.string.retry))
                     }

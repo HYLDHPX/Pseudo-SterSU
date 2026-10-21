@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sidebar_editor_appearance_summary">选择材质，调整配色、背景透明度与分隔线。</string>
+    <string name="sidebar_editor_widget_summary">为侧栏中部选择时钟、天气或闹钟组件。</string>
+    <string name="sidebar_editor_weather_title">天气来源</string>
+    <string name="sidebar_editor_weather_summary">设置手动天气或连接天气接口；联网服务须先同意使用声明。</string>
+    <string name="sidebar_editor_navigation_summary">调整侧栏方向、文字显示、按钮位置、顺序与自定义图标。</string>
+    <string name="sidebar_editor_home_summary">选择主页布局，分别设置日间、夜间的卡片外观。</string>
+    <string name="sidebar_editor_preview">预览侧栏</string>
+    <string name="sidebar_editor_preview_note">使用实际侧栏布局和自定义导航图标。玻璃反射效果以实际页面背景为准。</string>
+    <string name="sidebar_editor_reset_palette_confirm">恢复当前材质、当前明暗模式的默认配色？其它配色不会改变。</string>
+    <string name="sidebar_editor_save_help">大部分调整自动保存；手动输入的颜色需点击应用，天气配置需点击保存或启用。</string>
+</resources>
