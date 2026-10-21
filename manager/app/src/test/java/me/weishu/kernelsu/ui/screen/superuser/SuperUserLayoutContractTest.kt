@@ -11,63 +11,73 @@ class SuperUserLayoutContractTest {
     private val sidebar = source("ui/screen/superuser/SuperUserMaterial.kt")
 
     @Test
-    fun bothHeadersMoveSortingIntoTheOverflowMenu() {
+    fun bothHeadersUseTheSameOverflowMenuAndKeepTheirActions() {
         for (screen in listOf(miuix, sidebar)) {
-            assertTrue(screen.contains("R.string.superuser_sort_menu"))
-            assertTrue(screen.contains("superUserSortLabel(uiState.sortOption)"))
-            assertTrue(screen.contains("actions.onOpenSulog()"))
-            assertTrue(screen.contains("actions.onOpenAppTools()"))
-            assertTrue(screen.contains("actions.onToggleShowSystemApps()"))
-            assertTrue(screen.contains("actions.onToggleShowOnlyPrimaryUserApps()"))
+            assertTrue(screen.contains("SuperUserOverflowMenu("))
         }
-        val miuixActions = miuix.substringAfter("actions = {").substringBefore("scrollBehavior = scrollBehavior")
-        val materialActions = sidebar.substringAfter("actions = {").substringBefore("scrollBehavior = scrollBehavior")
-        assertFalse(miuixActions.contains("TextButton("))
-        assertFalse(materialActions.contains("TextButton("))
-        assertFalse(materialActions.contains("Icons.AutoMirrored.Filled.Sort"))
-        assertTrue(miuixActions.contains("showTopPopup.value = false\n                                                    showSortPopup.value = true"))
-        assertTrue(materialActions.contains("onClick = { showSortMenu = true }"))
-        assertFalse(miuix.contains("navigationIcon = {"))
-        assertFalse(miuix.contains("IconButton(onClick = actions.onOpenAppTools)"))
-        assertTrue(sidebar.contains("navigationIcon = if (sidebar) null else"))
+        val menu = source("ui/screen/superuser/SuperUserOverflowMenu.kt")
+        for (action in listOf(
+            "R.string.superuser_sort_menu", "superUserSortLabel(uiState.sortOption)",
+            "actions.onOpenSulog()", "actions.onOpenAppTools()",
+            "actions.onToggleShowSystemApps()", "actions.onToggleShowOnlyPrimaryUserApps()",
+        )) assertTrue(action, menu.contains(action))
+        assertFalse(miuix.contains("OverlayListPopup("))
+        assertFalse(sidebar.contains("DropdownMenuGroup("))
+        assertTrue(sidebar.contains("showTools = sidebar"))
+        assertTrue(miuix.contains("showTools = true"))
     }
 
     @Test
-    fun materialMenuHasOneThemedSurfaceInsteadOfOverlappingGroups() {
-        val actions = sidebar.substringAfter("actions = {").substringBefore("scrollBehavior = scrollBehavior")
-        assertTrue(Regex("\\bDropdownMenu\\(").findAll(actions).count() == 1)
-        assertFalse(actions.contains("DropdownMenuPopup("))
-        assertFalse(actions.contains("DropdownMenuGroup("))
-        assertTrue(actions.contains("shape = RoundedCornerShape(16.dp)"))
-        assertTrue(actions.contains("containerColor = colorScheme.surfaceContainerHigh.copy(alpha = 1f)"))
-        assertTrue(actions.contains("tonalElevation = 0.dp"))
-        assertTrue(actions.contains("shadowElevation = 4.dp"))
+    fun bothPagesShareOneFrostedSurfaceInsteadOfOverlappingGroups() {
+        val surface = source("ui/component/overflow/FrostedOverflowMenu.kt")
+        val module = source("ui/screen/module/ModuleOverflowMenu.kt")
+        val menu = source("ui/screen/superuser/SuperUserOverflowMenu.kt")
+        assertTrue(module.contains("FrostedOverflowMenu("))
+        assertTrue(menu.contains("FrostedOverflowMenu("))
+        assertTrue(Regex("\\bDropdownMenuPopup\\(").findAll(surface).count() == 1)
+        assertFalse(surface.contains("DropdownMenuGroup("))
+        assertTrue(surface.contains("RoundedCornerShape(16.dp)"))
+        assertTrue(surface.contains("color = Color.Transparent"))
+        assertTrue(surface.contains("tonalElevation = 0.dp"))
+        assertTrue(surface.contains("shadowElevation = 4.dp"))
     }
 
     @Test
-    fun materialSortingReplacesMenuContentAndCanReturnWithoutOpeningAnotherPopup() {
-        val actions = sidebar.substringAfter("actions = {").substringBefore("scrollBehavior = scrollBehavior")
-        assertTrue(actions.contains("if (showSortMenu) {"))
-        assertTrue(actions.contains("Icons.AutoMirrored.Filled.ArrowBack"))
-        assertTrue(actions.contains("onClick = { showSortMenu = false }"))
-        assertFalse(actions.contains("expanded = showSortMenu"))
-        val dismiss = actions.substringAfter("onDismissRequest = {").substringBefore("},")
-        assertTrue(dismiss.contains("showDropdown = false"))
-        assertFalse(dismiss.contains("showSortMenu = false"))
-        assertTrue(actions.contains("LaunchedEffect(showDropdown, showSortMenu)"))
-        assertTrue(actions.contains("if (showDropdown) menuScrollState.scrollTo(0)"))
-        assertTrue(actions.contains("scrollState = menuScrollState"))
+    fun sortingChangesTheSamePopupContentAndResetsWhenDismissed() {
+        val menu = source("ui/screen/superuser/SuperUserOverflowMenu.kt")
+        assertTrue(menu.contains("if (showSortMenu) {"))
+        assertTrue(menu.contains("Icons.AutoMirrored.Filled.ArrowBack"))
+        assertTrue(menu.contains("onClick = { showSortMenu = false }"))
+        assertFalse(menu.contains("expanded = showSortMenu"))
+        assertTrue(menu.contains("LaunchedEffect(expanded, showSortMenu)"))
+        assertTrue(menu.contains("if (expanded) menuScrollState.scrollTo(0) else showSortMenu = false"))
+        assertTrue(menu.contains("OverflowMenuTarget.Superuser, menuScrollState"))
     }
 
     @Test
-    fun materialMenuKeepsCheckableStatesAndFitsSmallWindows() {
-        assertTrue(sidebar.contains("(currentAppWindowSize().widthDp - 32f).coerceIn(0f, 280f).dp"))
-        assertTrue(sidebar.contains("modifier = Modifier.width(menuWidth)"))
+    fun checkableStatesAndSmallWindowBoundsArePreserved() {
+        val menu = source("ui/screen/superuser/SuperUserOverflowMenu.kt")
+        val surface = source("ui/component/overflow/FrostedOverflowMenu.kt")
+        assertTrue(surface.contains("overflowMenuWidth(window.widthDp, window.fontScale).dp"))
+        assertTrue(surface.contains("heightIn(max = overflowMenuMaxHeight(window.heightDp).dp)"))
+        assertTrue(surface.contains("verticalScroll(scrollState)"))
         for (state in listOf("reversed", "uiState.showSystemApps", "uiState.showOnlyPrimaryUserApps")) {
-            assertTrue(sidebar.contains("toggleableState = ToggleableState($state)"))
+            assertTrue(menu.contains(", $state)"))
         }
-        assertTrue(sidebar.contains("selected = sortType == type"))
-        assertTrue(sidebar.contains("maxLines = 2, overflow = TextOverflow.Ellipsis"))
+        assertTrue(menu.contains("toggleableState = ToggleableState(checked)"))
+        assertTrue(menu.contains("selected = sortType == type"))
+        assertTrue(menu.contains("maxLines = 2, overflow = TextOverflow.Ellipsis"))
+    }
+
+    @Test
+    fun overflowRowsUseCompactTypographyWithoutShrinkingTouchTargets() {
+        val surface = source("ui/component/overflow/FrostedOverflowMenu.kt")
+        assertTrue(surface.contains("ProvideTextStyle(MaterialTheme.typography.bodyMedium)"))
+        assertTrue(surface.contains(".heightIn(min = 48.dp)"))
+        assertTrue(surface.contains("PaddingValues(horizontal = 12.dp, vertical = 4.dp)"))
+        assertTrue(surface.contains(".clip(RoundedCornerShape(10.dp))"))
+        assertTrue(source("ui/screen/module/ModuleOverflowMenu.kt").contains("CompactOverflowMenuItem("))
+        assertTrue(source("ui/screen/superuser/SuperUserOverflowMenu.kt").contains("CompactOverflowMenuItem("))
     }
 
     @Test

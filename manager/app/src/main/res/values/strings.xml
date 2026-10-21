@@ -3524,4 +3524,9 @@
     <string name="appearance_editor_icon_layout">Name &amp; layout</string>
     <string name="appearance_editor_icon_appearance">Shape &amp; color</string>
     <string name="appearance_editor_icon_name_hint">Leave blank to use the default name.</string>
+    <string name="overflow_menu_wallpaper">Menu wallpaper</string>
+    <string name="overflow_menu_wallpaper_summary">Applies only to this page\'s top-right menu. Choose an image up to 32 MB. Frosting and light/dark overlays keep text readable. Clear it to restore the default glass background.</string>
+    <string name="overflow_menu_wallpaper_pick">Choose from gallery</string>
+    <string name="overflow_menu_wallpaper_clear">Restore default glass</string>
+    <string name="overflow_menu_wallpaper_error">Could not save the wallpaper. Choose a valid image under 32 MB and check available storage.</string>
 </resources>

@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -154,20 +155,38 @@ fun SidebarWidgetRail(
     val navigator = LocalNavigator.current
     val moduleInstallAction = mainPagerState.moduleInstallAction
     val activeDestination = selectedDestination ?: mainPagerState.destinationForPage()
+    val isModulePage = shouldShowSidebarModuleInstall(
+        activeDestination, navigator.backStack.lastOrNull() as? Route,
+    )
     val showModuleInstall = moduleInstallAction != null && mainPagerState.fullFeatured &&
-        !mainPagerState.stealthModeEnabled && shouldShowSidebarModuleInstall(
-            activeDestination, navigator.backStack.lastOrNull() as? Route,
-        )
+        !mainPagerState.stealthModeEnabled && isModulePage
     val orderedDestinations = remember(config.navigationOrder, destinations) {
         orderSidebarDestinations(config.navigationOrder, destinations)
     }
     SidebarRailLayout(
         config = config,
-        navigationCount = orderedDestinations.size + if (showModuleInstall) 1 else 0,
+        navigationCount = orderedDestinations.size,
         tablet = tablet,
         modifier = modifier,
         onAvatarClick = { navigator.push(Route.SidebarWidgetSettings) },
-        footer = { SidebarRebootPopup() },
+        footer = {
+            if (isModulePage) {
+                if (showModuleInstall) {
+                    IconButton(
+                        onClick = { mainPagerState.moduleInstallAction?.invoke() },
+                        modifier = Modifier.size(52.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Add,
+                            contentDescription = stringResource(R.string.module_install),
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
+                }
+            } else {
+                SidebarRebootPopup()
+            }
+        },
         windowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
             (if (config.side == SidebarSide.Left) WindowInsetsSides.Left else WindowInsetsSides.Right) +
                 WindowInsetsSides.Vertical
@@ -205,17 +224,6 @@ fun SidebarWidgetRail(
                         tint = contentColor,
                     )
                 }
-            }
-        }
-        if (showModuleInstall) {
-            SidebarRailItem(
-                selected = false,
-                label = stringResource(R.string.module_install),
-                iconOnly = config.iconOnlyNavigation,
-                role = Role.Button,
-                onClick = { mainPagerState.moduleInstallAction?.invoke() },
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(28.dp))
             }
         }
     }

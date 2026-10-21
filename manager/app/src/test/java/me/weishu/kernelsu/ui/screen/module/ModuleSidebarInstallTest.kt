@@ -47,23 +47,39 @@ class ModuleSidebarInstallTest {
         assertTrue(page.contains("if (mainPagerState.moduleInstallAction === action) mainPagerState.moduleInstallAction = null"))
         assertTrue(page.contains("ScriptRepository.peekOneshot(uris.first())"))
         val picker = source("screen/module/ModuleZipPicker.kt")
-        assertTrue(picker.contains("ActivityResultContracts.OpenMultipleDocuments()"))
-        assertTrue(picker.contains("0 -> Unit"))
+        assertTrue(picker.contains("ActivityResultContracts.GetMultipleContents()"))
+        assertTrue(picker.contains("0 -> pickerOpen = false"))
         assertTrue(picker.contains("confirmDialog.showConfirm"))
     }
 
     @Test
-    fun sidebarActionKeepsSharedStylingAccessibilityAndHeightBudget() {
+    fun moduleInstallationReplacesRebootInTheFixedFooter() {
         val rail = source("component/bottombar/SidebarWidgetRail.kt")
-        assertTrue(rail.contains("navigationCount = orderedDestinations.size + if (showModuleInstall) 1 else 0"))
-        val button = rail.substringAfter("if (showModuleInstall) {").substringBefore("internal fun shouldShowSidebarModuleInstall")
-        assertTrue(button.contains("SidebarRailItem("))
-        assertTrue(button.contains("label = stringResource(R.string.module_install)"))
-        assertTrue(button.contains("iconOnly = config.iconOnlyNavigation"))
-        assertTrue(button.contains("role = Role.Button"))
-        assertTrue(button.contains("onClick = { mainPagerState.moduleInstallAction?.invoke() }"))
+        assertTrue(rail.contains("navigationCount = orderedDestinations.size,"))
+        assertFalse(rail.contains("navigationCount = orderedDestinations.size +"))
+        val footer = rail.substringAfter("footer = {").substringBefore("windowInsets =")
+        assertTrue(footer.contains("if (isModulePage) {"))
+        assertTrue(footer.contains("if (showModuleInstall) {"))
+        assertTrue(footer.contains("IconButton("))
+        assertTrue(footer.contains("contentDescription = stringResource(R.string.module_install)"))
+        assertTrue(footer.contains("modifier = Modifier.size(52.dp)"))
+        assertTrue(footer.contains("onClick = { mainPagerState.moduleInstallAction?.invoke() }"))
+        assertTrue(footer.substringAfter("} else {").contains("SidebarRebootPopup()"))
+        val navigation = rail.substringAfter("orderedDestinations.forEach").substringBefore("internal fun shouldShowSidebarModuleInstall")
+        assertFalse(navigation.contains("moduleInstallAction"))
         assertTrue(rail.contains("!mainPagerState.stealthModeEnabled"))
-        assertFalse(button.contains(".alpha("))
+        assertFalse(footer.contains(".alpha("))
+    }
+
+    @Test
+    fun unavailableInstallationDoesNotBringRebootBackOnTheModulePage() {
+        val rail = source("component/bottombar/SidebarWidgetRail.kt")
+        val modulePageCheck = rail.substringAfter("val isModulePage =").substringBefore("val showModuleInstall =")
+        assertTrue(modulePageCheck.contains("shouldShowSidebarModuleInstall("))
+        assertFalse(modulePageCheck.contains("moduleInstallAction"))
+        val footer = rail.substringAfter("footer = {").substringBefore("windowInsets =")
+        assertTrue(footer.indexOf("if (isModulePage)") < footer.indexOf("if (showModuleInstall)"))
+        assertFalse(footer.substringBefore("} else {").contains("SidebarRebootPopup()"))
     }
 
     private fun source(path: String): String =

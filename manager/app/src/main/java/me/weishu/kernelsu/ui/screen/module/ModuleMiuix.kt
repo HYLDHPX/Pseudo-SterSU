@@ -340,40 +340,16 @@ fun ModulePagerMiuix(
                                     Icon(
                                         imageVector = MiuixIcons.MoreCircle,
                                         tint = topBarColors.content,
-                                        contentDescription = null
+                                        contentDescription = stringResource(R.string.settings)
                                     )
                                 }
-                                OverlayListPopup(
-                                    show = showTopPopup.value,
-                                    popupPositionProvider = ListPopupDefaults.MenuPositionProvider,
-                                    alignment = PopupPositionProvider.Align.TopEnd,
+                                ModuleOverflowMenu(
+                                    expanded = showTopPopup.value,
                                     onDismissRequest = {
                                         showTopPopup.value = false
                                     },
-                                    content = {
-                                        ListPopupColumn {
-                                            DropdownImpl(
-                                                text = stringResource(R.string.module_sort_action_first),
-                                                optionSize = 2,
-                                                isSelected = uiState.sortActionFirst,
-                                                onSelectedIndexChange = {
-                                                    actions.onToggleSortActionFirst()
-                                                    showTopPopup.value = false
-                                                },
-                                                index = 0
-                                            )
-                                            DropdownImpl(
-                                                text = stringResource(R.string.module_sort_enabled_first),
-                                                optionSize = 2,
-                                                isSelected = uiState.sortEnabledFirst,
-                                                onSelectedIndexChange = {
-                                                    actions.onToggleSortEnabledFirst()
-                                                    showTopPopup.value = false
-                                                },
-                                                index = 1
-                                            )
-                                        }
-                                    }
+                                    uiState = uiState,
+                                    actions = actions,
                                 )
                             }
                             RebootListPopupMiuix(

@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,16 +29,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -70,11 +64,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.toggleableState
-import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -97,10 +87,8 @@ import me.weishu.kernelsu.ui.component.material.SegmentedItem
 import me.weishu.kernelsu.ui.component.material.SegmentedListItem
 import me.weishu.kernelsu.ui.component.statustag.StatusTag
 import me.weishu.kernelsu.ui.util.ownerNameForUid
-import me.weishu.kernelsu.ui.util.currentAppWindowSize
 import me.weishu.kernelsu.ui.theme.immersiveSurfaceColor
 import me.weishu.kernelsu.ui.theme.SidebarUiTokens
-import me.weishu.kernelsu.ui.viewmodel.DEFAULT_SUPERUSER_SORT_OPTION
 
 @Composable
 fun SuperUserPagerMaterial(
@@ -133,7 +121,6 @@ fun SuperUserPagerMaterial(
 
     val haptic = LocalHapticFeedback.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val menuWidth = (currentAppWindowSize().widthDp - 32f).coerceIn(0f, 280f).dp
 
     ExpressiveScaffold(
         contentMaxWidth = if (sidebar) 760.dp else SidebarUiTokens.ContentMaxWidth,
@@ -171,157 +158,21 @@ fun SuperUserPagerMaterial(
                     }
                 },
                 actions = {
-                    var showSortMenu by remember { mutableStateOf(false) }
                     var showDropdown by remember { mutableStateOf(false) }
-                    val menuScrollState = rememberScrollState()
-                    LaunchedEffect(showDropdown, showSortMenu) {
-                        if (showDropdown) menuScrollState.scrollTo(0)
-                    }
-
                     Box {
-                        IconButton(onClick = {
-                            showSortMenu = false
-                            showDropdown = true
-                        }) {
+                        IconButton(onClick = { showDropdown = true }) {
                             Icon(
                                 imageVector = Icons.Filled.MoreVert,
-                                contentDescription = stringResource(id = R.string.settings)
+                                contentDescription = stringResource(R.string.settings),
                             )
                         }
-
-                        DropdownMenu(
+                        SuperUserOverflowMenu(
                             expanded = showDropdown,
-                            onDismissRequest = {
-                                showDropdown = false
-                            },
-                            modifier = Modifier.width(menuWidth),
-                            scrollState = menuScrollState,
-                            shape = RoundedCornerShape(16.dp),
-                            containerColor = colorScheme.surfaceContainerHigh.copy(alpha = 1f),
-                            tonalElevation = 0.dp,
-                            shadowElevation = 4.dp,
-                        ) {
-                            if (showSortMenu) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.menu_sort), fontWeight = FontWeight.SemiBold) },
-                                    leadingIcon = {
-                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(20.dp))
-                                    },
-                                    onClick = { showSortMenu = false },
-                                )
-                                HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
-                                val sortEntries = listOf(
-                                    2 to R.string.sort_by_install_time,
-                                    0 to R.string.sort_by_name,
-                                    1 to R.string.sort_by_package_name,
-                                    3 to R.string.sort_by_update_time,
-                                )
-                                val sortType = uiState.sortOption / 2
-                                val reversed = uiState.sortOption % 2 != 0
-                                sortEntries.forEach { (type, resId) ->
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(resId), maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                                        modifier = Modifier.semantics { selected = sortType == type },
-                                        trailingIcon = {
-                                            if (sortType == type) {
-                                                Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp))
-                                            }
-                                        },
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                                            actions.onUpdateSortOption(
-                                                if (type == 2) DEFAULT_SUPERUSER_SORT_OPTION
-                                                else type * 2 + if (reversed) 1 else 0,
-                                            )
-                                            showDropdown = false
-                                        },
-                                    )
-                                }
-                                HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.sort_reverse), maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                                    modifier = Modifier.semantics {
-                                        role = Role.Checkbox
-                                        toggleableState = ToggleableState(reversed)
-                                    },
-                                    trailingIcon = {
-                                        if (reversed) {
-                                            Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp))
-                                        }
-                                    },
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                                        actions.onUpdateSortOption(sortType * 2 + if (reversed) 0 else 1)
-                                        showDropdown = false
-                                    },
-                                )
-                            } else {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(R.string.superuser_sort_menu, stringResource(superUserSortLabel(uiState.sortOption))),
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    },
-                                    onClick = { showSortMenu = true },
-                                )
-                                HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.show_system_apps), maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                                    modifier = Modifier.semantics {
-                                        role = Role.Checkbox
-                                        toggleableState = ToggleableState(uiState.showSystemApps)
-                                    },
-                                    trailingIcon = {
-                                        if (uiState.showSystemApps) {
-                                            Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp))
-                                        }
-                                    },
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                                        actions.onToggleShowSystemApps()
-                                        showDropdown = false
-                                    },
-                                )
-                                if (uiState.userIds.size > 1) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.show_only_primary_user_apps), maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                                        modifier = Modifier.semantics {
-                                            role = Role.Checkbox
-                                            toggleableState = ToggleableState(uiState.showOnlyPrimaryUserApps)
-                                        },
-                                        trailingIcon = {
-                                            if (uiState.showOnlyPrimaryUserApps) {
-                                                Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp))
-                                            }
-                                        },
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                                            actions.onToggleShowOnlyPrimaryUserApps()
-                                            showDropdown = false
-                                        },
-                                    )
-                                }
-                                if (sidebar) {
-                                    HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.settings_sulog), maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                                        onClick = {
-                                            showDropdown = false
-                                            actions.onOpenSulog()
-                                        },
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.superuser_app_tools_title), maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                                        onClick = {
-                                            showDropdown = false
-                                            actions.onOpenAppTools()
-                                        },
-                                    )
-                                }
-                            }
-                        }
+                            onDismissRequest = { showDropdown = false },
+                            uiState = uiState,
+                            actions = actions,
+                            showTools = sidebar,
+                        )
                     }
                 },
                 scrollBehavior = scrollBehavior,

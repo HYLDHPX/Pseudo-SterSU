@@ -34,8 +34,10 @@ class ModuleSidebarHeaderTest {
         assertTrue(screen.contains("actions.onSearchTextChange(it)"))
         assertTrue(screen.contains("onClearClick = actions.onClearSearch"))
         assertTrue(screen.contains("onClick = { actions.onOpenRepo() }"))
-        assertTrue(screen.contains("actions.onToggleSortActionFirst()"))
-        assertTrue(screen.contains("actions.onToggleSortEnabledFirst()"))
+        val menu = File("src/main/java/me/weishu/kernelsu/ui/screen/module/ModuleOverflowMenu.kt").readText()
+        assertTrue(screen.contains("ModuleOverflowMenu("))
+        assertTrue(menu.contains("actions.onToggleSortActionFirst"))
+        assertTrue(menu.contains("actions.onToggleSortEnabledFirst"))
         assertTrue(screen.contains("if (showInstallFab)"))
     }
 }

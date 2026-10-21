@@ -31,6 +31,7 @@ import me.weishu.kernelsu.data.script.ScriptRepository
 import me.weishu.kernelsu.ui.LocalUiMode
 import me.weishu.kernelsu.ui.UiMode
 import me.weishu.kernelsu.ui.component.SearchStatus
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuBackdrop
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.screen.flash.FlashIt
@@ -45,6 +46,14 @@ import me.weishu.kernelsu.ui.webui.WebUIActivity
 fun ModulePager(
     bottomInnerPadding: Dp,
     isCurrentPage: Boolean = true,
+) {
+    OverflowMenuBackdrop { ModulePagerContent(bottomInnerPadding, isCurrentPage) }
+}
+
+@Composable
+private fun ModulePagerContent(
+    bottomInnerPadding: Dp,
+    isCurrentPage: Boolean,
 ) {
     val navigator = LocalNavigator.current
     val context = LocalContext.current

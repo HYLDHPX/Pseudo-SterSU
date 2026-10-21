@@ -58,7 +58,6 @@ import androidx.compose.ui.unit.sp
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.data.model.AppInfo
 import me.weishu.kernelsu.ui.component.AppIconImage
-import me.weishu.kernelsu.ui.component.ListPopupDefaults
 import me.weishu.kernelsu.ui.component.ScrollToTopOnChange
 import me.weishu.kernelsu.ui.component.SearchStatus
 import me.weishu.kernelsu.ui.component.liquid.globalLiquidGlassSurface
@@ -76,17 +75,12 @@ import me.weishu.kernelsu.ui.theme.skrootproTopBarColors
 import me.weishu.kernelsu.ui.util.BlurredBar
 import me.weishu.kernelsu.ui.util.ownerNameForUid
 import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
-import me.weishu.kernelsu.ui.viewmodel.DEFAULT_SUPERUSER_SORT_OPTION
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.DropdownImpl
-import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import me.weishu.kernelsu.ui.component.passthrough.MiuixText as Text
@@ -96,7 +90,6 @@ import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.MoreCircle
-import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -145,125 +138,13 @@ fun SuperUserPagerMiuix(
                         title = stringResource(R.string.superuser),
                         actions = {
                             Box {
-                                val showSortPopup = remember { mutableStateOf(false) }
-                                OverlayListPopup(
-                                    show = showSortPopup.value,
-                                    popupPositionProvider = ListPopupDefaults.MenuPositionProvider,
-                                    alignment = PopupPositionProvider.Align.TopEnd,
-                                    onDismissRequest = { showSortPopup.value = false },
-                                    content = {
-                                        ListPopupColumn {
-                                            val sortResIds = listOf(
-                                                2 to R.string.sort_by_install_time,
-                                                0 to R.string.sort_by_name,
-                                                1 to R.string.sort_by_package_name,
-                                                3 to R.string.sort_by_update_time,
-                                            )
-                                            val currentSortType = uiState.sortOption / 2
-                                            val isReverse = uiState.sortOption % 2 != 0
-                                            val sortGroupSize = sortResIds.size + 1
-
-                                            sortResIds.forEachIndexed { index, (type, resId) ->
-                                                DropdownImpl(
-                                                    text = stringResource(resId),
-                                                    optionSize = sortGroupSize,
-                                                    isSelected = currentSortType == type,
-                                                    index = index,
-                                                    onSelectedIndexChange = {
-                                                        val newOption = if (type == 2) DEFAULT_SUPERUSER_SORT_OPTION
-                                                        else type * 2 + (if (isReverse) 1 else 0)
-                                                        actions.onUpdateSortOption(newOption)
-                                                        showSortPopup.value = false
-                                                    }
-                                                )
-                                            }
-
-                                            HorizontalDivider(
-                                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-                                                thickness = 1.5.dp,
-                                            )
-
-                                            DropdownImpl(
-                                                text = stringResource(R.string.sort_reverse),
-                                                optionSize = sortGroupSize,
-                                                isSelected = isReverse,
-                                                index = sortResIds.size,
-                                                onSelectedIndexChange = {
-                                                    val newOption = currentSortType * 2 + (if (!isReverse) 1 else 0)
-                                                    actions.onUpdateSortOption(newOption)
-                                                    showSortPopup.value = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                )
-
                                 val showTopPopup = remember { mutableStateOf(false) }
-                                OverlayListPopup(
-                                    show = showTopPopup.value,
-                                    popupPositionProvider = ListPopupDefaults.MenuPositionProvider,
-                                    alignment = PopupPositionProvider.Align.TopEnd,
-                                    onDismissRequest = {
-                                        showTopPopup.value = false
-                                    },
-                                    content = {
-                                        val isMultiUser = uiState.userIds.size > 1
-                                        val size = if (isMultiUser) 5 else 4
-                                        ListPopupColumn {
-                                            DropdownImpl(
-                                                text = stringResource(R.string.superuser_sort_menu, stringResource(superUserSortLabel(uiState.sortOption))),
-                                                isSelected = false,
-                                                optionSize = size,
-                                                index = 0,
-                                                onSelectedIndexChange = {
-                                                    showTopPopup.value = false
-                                                    showSortPopup.value = true
-                                                },
-                                            )
-                                            DropdownImpl(
-                                                text = stringResource(R.string.settings_sulog),
-                                                isSelected = false,
-                                                optionSize = size,
-                                                index = 1,
-                                                onSelectedIndexChange = {
-                                                    showTopPopup.value = false
-                                                    actions.onOpenSulog()
-                                                },
-                                            )
-                                            DropdownImpl(
-                                                text = stringResource(R.string.superuser_app_tools_title),
-                                                isSelected = false,
-                                                optionSize = size,
-                                                index = 2,
-                                                onSelectedIndexChange = {
-                                                    showTopPopup.value = false
-                                                    actions.onOpenAppTools()
-                                                },
-                                            )
-                                            DropdownImpl(
-                                                text = stringResource(R.string.show_system_apps),
-                                                isSelected = uiState.showSystemApps,
-                                                optionSize = size,
-                                                onSelectedIndexChange = {
-                                                    actions.onToggleShowSystemApps()
-                                                    showTopPopup.value = false
-                                                },
-                                                index = 3
-                                            )
-                                            if (isMultiUser) {
-                                                DropdownImpl(
-                                                    text = stringResource(R.string.show_only_primary_user_apps),
-                                                    isSelected = uiState.showOnlyPrimaryUserApps,
-                                                    optionSize = size,
-                                                    onSelectedIndexChange = {
-                                                        actions.onToggleShowOnlyPrimaryUserApps()
-                                                        showTopPopup.value = false
-                                                    },
-                                                    index = 4
-                                                )
-                                            }
-                                        }
-                                    }
+                                SuperUserOverflowMenu(
+                                    expanded = showTopPopup.value,
+                                    onDismissRequest = { showTopPopup.value = false },
+                                    uiState = uiState,
+                                    actions = actions,
+                                    showTools = true,
                                 )
                                 IconButton(
                                     onClick = {

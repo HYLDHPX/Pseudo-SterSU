@@ -12,6 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuBackdrop
 import me.weishu.kernelsu.ui.navigation3.Navigator
 import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.viewmodel.SuperUserViewModel
@@ -22,6 +23,18 @@ fun SuperUserPager(
     bottomInnerPadding: Dp,
     isCurrentPage: Boolean = true,
     onOpenSecondary: () -> Unit = {},
+) {
+    OverflowMenuBackdrop {
+        SuperUserPagerContent(navigator, bottomInnerPadding, isCurrentPage, onOpenSecondary)
+    }
+}
+
+@Composable
+private fun SuperUserPagerContent(
+    navigator: Navigator,
+    bottomInnerPadding: Dp,
+    isCurrentPage: Boolean,
+    onOpenSecondary: () -> Unit,
 ) {
     val viewModel = viewModel<SuperUserViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

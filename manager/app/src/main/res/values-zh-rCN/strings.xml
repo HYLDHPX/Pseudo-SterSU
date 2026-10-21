@@ -3477,4 +3477,9 @@
     <string name="appearance_editor_icon_layout">名称与布局</string>
     <string name="appearance_editor_icon_appearance">形状与颜色</string>
     <string name="appearance_editor_icon_name_hint">留空时使用默认名称。</string>
+    <string name="overflow_menu_wallpaper">菜单壁纸</string>
+    <string name="overflow_menu_wallpaper_summary">仅用于当前页面的右上角菜单，两处菜单可独立设置。支持 32 MB 以内的图片，自动叠加磨砂与日夜遮罩，保持文字清晰。清除后恢复默认磨砂玻璃。</string>
+    <string name="overflow_menu_wallpaper_pick">从图库选择</string>
+    <string name="overflow_menu_wallpaper_clear">恢复默认磨砂玻璃</string>
+    <string name="overflow_menu_wallpaper_error">壁纸保存失败，请选择 32 MB 以内的有效图片，并检查存储空间。</string>
 </resources>

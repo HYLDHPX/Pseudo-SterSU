@@ -55,7 +55,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Code
@@ -67,15 +66,11 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CheckableDropdownMenuItem
-import androidx.compose.material3.DropdownMenuGroup
-import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -316,52 +311,20 @@ fun ModulePagerMaterial(
                 },
                 actions = {
                     var showDropdown by remember { mutableStateOf(false) }
-                    IconButton(
-                        onClick = { showDropdown = true }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = stringResource(id = R.string.settings)
-                        )
-                        DropdownMenuPopup(
-                            expanded = showDropdown,
-                            onDismissRequest = { showDropdown = false }
-                        ) {
-                            DropdownMenuGroup(shapes = MenuDefaults.groupShapes()) {
-                                CheckableDropdownMenuItem(
-                                    text = { Text(stringResource(R.string.module_sort_action_first)) },
-                                    checked = uiState.sortActionFirst,
-                                    checkedLeadingIcon = {
-                                        Icon(
-                                            Icons.Filled.Check,
-                                            modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onCheckedChange = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                                        actions.onToggleSortActionFirst()
-                                    },
-                                    shapes = MenuDefaults.itemShape(index = 0, count = 2),
-                                )
-                                CheckableDropdownMenuItem(
-                                    text = { Text(stringResource(R.string.module_sort_enabled_first)) },
-                                    checked = uiState.sortEnabledFirst,
-                                    checkedLeadingIcon = {
-                                        Icon(
-                                            Icons.Filled.Check,
-                                            modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onCheckedChange = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                                        actions.onToggleSortEnabledFirst()
-                                    },
-                                    shapes = MenuDefaults.itemShape(index = 1, count = 2),
-                                )
-                            }
+                    Box {
+                        IconButton(onClick = { showDropdown = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = stringResource(id = R.string.settings),
+                            )
                         }
+                        ModuleOverflowMenu(
+                            expanded = showDropdown,
+                            onDismissRequest = { showDropdown = false },
+                            uiState = uiState,
+                            actions = actions,
+                            onToggleFeedback = { haptic.performHapticFeedback(HapticFeedbackType.VirtualKey) },
+                        )
                     }
                 },
                 scrollBehavior = scrollBehavior,

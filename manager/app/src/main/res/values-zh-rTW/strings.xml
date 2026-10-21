@@ -699,4 +699,9 @@
     <string name="stealth_recovery_confirm_code">再次輸入密令</string>
     <string name="stealth_recovery_code_mismatch">兩次輸入的密令不一致。</string>
     <string name="stealth_recovery_web_only_ack">我了解此密令可能只能透過本機恢復網頁使用。</string>
+    <string name="overflow_menu_wallpaper">選單桌布</string>
+    <string name="overflow_menu_wallpaper_summary">僅套用於目前頁面右上角的選單，兩處選單可獨立設定。支援 32 MB 以內的圖片，自動疊加磨砂與日夜遮罩，保持文字清晰。清除後恢復預設磨砂玻璃。</string>
+    <string name="overflow_menu_wallpaper_pick">從圖庫選擇</string>
+    <string name="overflow_menu_wallpaper_clear">恢復預設磨砂玻璃</string>
+    <string name="overflow_menu_wallpaper_error">桌布儲存失敗，請選擇 32 MB 以內的有效圖片，並檢查儲存空間。</string>
 </resources>
