@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.LauncherEntry" parent="android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+</resources>

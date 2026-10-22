@@ -1,0 +1,5 @@
+<resources>
+    <string name="restore_icon">Restore SterSU icon</string>
+    <string name="manager_unavailable">Cannot open SterSU. Make sure the main app is still installed and enabled. This entry does not contain root functionality.</string>
+    <string name="app_settings">App settings</string>
+</resources>

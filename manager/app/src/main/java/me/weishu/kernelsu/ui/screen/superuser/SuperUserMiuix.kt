@@ -78,7 +78,8 @@ import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as Icon
-import top.yukonga.miuix.kmp.basic.IconButton
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuAnchor
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuTarget
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PullToRefresh
@@ -137,27 +138,24 @@ fun SuperUserPagerMiuix(
                         titleColor = topBarColors.content,
                         title = stringResource(R.string.superuser),
                         actions = {
-                            Box {
-                                val showTopPopup = remember { mutableStateOf(false) }
-                                SuperUserOverflowMenu(
-                                    expanded = showTopPopup.value,
-                                    onDismissRequest = { showTopPopup.value = false },
-                                    uiState = uiState,
-                                    actions = actions,
-                                    showTools = true,
-                                )
-                                IconButton(
-                                    onClick = {
-                                        showTopPopup.value = true
-                                    },
-                                    holdDownState = showTopPopup.value
-                                ) {
+                            OverflowMenuAnchor(
+                                target = OverflowMenuTarget.Superuser,
+                                icon = {
                                     Icon(
                                         imageVector = MiuixIcons.MoreCircle,
                                         tint = topBarColors.content,
-                                        contentDescription = stringResource(R.string.settings)
+                                        contentDescription = null,
                                     )
-                                }
+                                },
+                            ) { expanded, dismiss, wallpaper ->
+                                SuperUserOverflowMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = dismiss,
+                                    uiState = uiState,
+                                    actions = actions,
+                                    showTools = true,
+                                    wallpaper = wallpaper,
+                                )
                             }
                         },
                         scrollBehavior = scrollBehavior,

@@ -134,7 +134,7 @@ private fun DeltaStatusCard(
                 )
                 Text(
                     text = if (state.isKernelActive) {
-                        "${stringResource(state.rootRuntimeState.labelRes)} · v${state.ksuVersionLabel}"
+                        "${state.lkmStatusLabel(state.rootRuntimeState.labelRes)} · v${state.ksuVersionLabel}"
                     } else {
                         stringResource(R.string.home_not_installed)
                     },

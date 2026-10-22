@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,6 +39,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.rememberCustomImageBitmap
+import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
+import me.weishu.kernelsu.ui.util.CustomWallpaperCrop
 import me.weishu.kernelsu.ui.util.FULL_CUSTOM_WALLPAPER_CROP
 import me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight
 import me.weishu.kernelsu.ui.util.loadCustomImageBitmap
@@ -46,9 +50,11 @@ import me.weishu.kernelsu.ui.util.releaseCustomImageReference
 internal data class OverflowMenuWallpaperState(
     val uriString: String?,
     val bitmap: ImageBitmap?,
+    val crop: CustomWallpaperCrop,
     val busy: Boolean,
     val onPick: () -> Unit,
     val onClear: () -> Unit,
+    val onCropChange: (CustomWallpaperCrop) -> Unit,
 )
 
 @Composable
@@ -56,71 +62,91 @@ internal fun rememberOverflowMenuWallpaper(target: OverflowMenuTarget): Overflow
     val context = LocalContext.current.applicationContext
     val preferences = remember(context) { context.getSharedPreferences("overflow_menu_appearance", Context.MODE_PRIVATE) }
     var uriString by remember(preferences, target) { mutableStateOf(preferences.getString(target.wallpaperKey, null)) }
+    var crop by remember(preferences, target) { mutableStateOf(decodeOverflowMenuCrop(preferences.getString(target.cropKey, null))) }
     var busy by remember(target) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     DisposableEffect(preferences, target) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-            if (key == target.wallpaperKey) uriString = prefs.getString(target.wallpaperKey, null)
+            if (key == null || key == target.wallpaperKey || key == target.cropKey) {
+                uriString = prefs.getString(target.wallpaperKey, null)
+                crop = decodeOverflowMenuCrop(prefs.getString(target.cropKey, null))
+            }
         }
         preferences.registerOnSharedPreferenceChangeListener(listener)
         uriString = preferences.getString(target.wallpaperKey, null)
+        crop = decodeOverflowMenuCrop(preferences.getString(target.cropKey, null))
         onDispose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+    fun update(operation: () -> Boolean) {
+        if (busy) return
+        busy = true
+        scope.launch {
+            try {
+                val saved = withContext(Dispatchers.IO) { runCatching(operation).getOrDefault(false) }
+                if (!saved) Toast.makeText(context, R.string.overflow_menu_wallpaper_error, Toast.LENGTH_LONG).show()
+            } finally {
+                busy = false
+            }
+        }
     }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null && !busy) {
-            busy = true
-            scope.launch {
-                try {
-                    val saved = withContext(Dispatchers.IO) {
-                        // Own a local copy: gallery permissions and deleted source photos cannot break it.
-                        val newReference = persistCustomImageReference(context, uri, target.wallpaperKey, maxBytes = 32L * 1024 * 1024)
-                            ?: return@withContext false
-                        val validation = loadCustomImageBitmap(context, newReference, maxSide = 64)
-                        if (validation == null) {
-                            releaseCustomImageReference(context, newReference)
-                            return@withContext false
-                        }
-                        validation.recycle()
-                        val previous = preferences.getString(target.wallpaperKey, null)
-                        if (preferences.edit().putString(target.wallpaperKey, newReference).commit()) {
-                            releaseCustomImageReference(context, previous)
-                            true
-                        } else {
-                            // A failed commit still updates SharedPreferences in memory.
-                            if (preferences.edit().putString(target.wallpaperKey, previous).commit()) {
-                                releaseCustomImageReference(context, newReference)
-                            }
-                            false
-                        }
+            update {
+                // Own a local copy: gallery permissions and deleted source photos cannot break it.
+                val newReference = persistCustomImageReference(context, uri, target.wallpaperKey, maxBytes = 32L * 1024 * 1024)
+                    ?: return@update false
+                val validation = loadCustomImageBitmap(context, newReference, maxSide = 64)
+                if (validation == null) {
+                    releaseCustomImageReference(context, newReference)
+                    return@update false
+                }
+                validation.recycle()
+                val previous = preferences.getString(target.wallpaperKey, null)
+                val previousCrop = preferences.getString(target.cropKey, null)
+                if (preferences.edit().putString(target.wallpaperKey, newReference)
+                        .putString(target.cropKey, encodeOverflowMenuCrop(FULL_CUSTOM_WALLPAPER_CROP)).commit()) {
+                    if (previous != newReference) releaseCustomImageReference(context, previous)
+                    true
+                } else {
+                    // A failed commit still updates SharedPreferences in memory.
+                    if (preferences.edit().putString(target.wallpaperKey, previous)
+                            .putString(target.cropKey, previousCrop).commit()) {
+                        releaseCustomImageReference(context, newReference)
                     }
-                    if (!saved) Toast.makeText(context, R.string.overflow_menu_wallpaper_error, Toast.LENGTH_LONG).show()
-                } finally {
-                    busy = false
+                    false
                 }
             }
         }
     }
     return OverflowMenuWallpaperState(
         uriString = uriString,
-        bitmap = rememberCustomImageBitmap(uriString, maxSide = 800, crop = FULL_CUSTOM_WALLPAPER_CROP),
+        bitmap = rememberCustomImageBitmap(uriString, maxSide = 800, crop = crop),
+        crop = crop,
         busy = busy,
-        onPick = { if (!busy) picker.launch(arrayOf("image/*")) },
-        onClear = {
+        onPick = {
             if (!busy) {
-                busy = true
-                scope.launch {
-                    try {
-                        val cleared = withContext(Dispatchers.IO) {
-                            val previous = preferences.getString(target.wallpaperKey, null)
-                            preferences.edit().remove(target.wallpaperKey).commit().also { saved ->
-                                if (saved) releaseCustomImageReference(context, previous)
-                                else preferences.edit().putString(target.wallpaperKey, previous).commit()
-                            }
-                        }
-                        if (!cleared) Toast.makeText(context, R.string.overflow_menu_wallpaper_error, Toast.LENGTH_LONG).show()
-                    } finally {
-                        busy = false
-                    }
+                runCatching { picker.launch(arrayOf("image/*")) }.onFailure {
+                    Toast.makeText(context, R.string.overflow_menu_wallpaper_error, Toast.LENGTH_LONG).show()
+                }
+            }
+        },
+        onClear = {
+            update {
+                val previous = preferences.getString(target.wallpaperKey, null)
+                val previousCrop = preferences.getString(target.cropKey, null)
+                preferences.edit().remove(target.wallpaperKey).remove(target.cropKey).commit().also { saved ->
+                    if (saved) releaseCustomImageReference(context, previous)
+                    else preferences.edit().putString(target.wallpaperKey, previous)
+                        .putString(target.cropKey, previousCrop).commit()
+                }
+            }
+        },
+        onCropChange = { value ->
+            update {
+                if (preferences.getString(target.wallpaperKey, null) == null) return@update false
+                val previousCrop = preferences.getString(target.cropKey, null)
+                preferences.edit().putString(target.cropKey, encodeOverflowMenuCrop(value)).commit().also { saved ->
+                    if (!saved) preferences.edit().putString(target.cropKey, previousCrop).commit()
                 }
             }
         },
@@ -129,6 +155,20 @@ internal fun rememberOverflowMenuWallpaper(target: OverflowMenuTarget): Overflow
 
 @Composable
 internal fun OverflowMenuWallpaperDialog(state: OverflowMenuWallpaperState, onDismissRequest: () -> Unit) {
+    var editingCrop by remember(state.uriString) { mutableStateOf(false) }
+    if (editingCrop && state.uriString != null) {
+        SettingsWallpaperCropDialog(
+            show = true,
+            uriString = state.uriString,
+            crop = state.crop,
+            onCropChange = state.onCropChange,
+            onDismissRequest = { editingCrop = false },
+            editorAspectRatio = 1f,
+            defaultCrop = FULL_CUSTOM_WALLPAPER_CROP,
+            allowTransforms = false,
+        )
+        return
+    }
     AlertDialog(
         onDismissRequest = { if (!state.busy) onDismissRequest() },
         title = { Text(stringResource(R.string.overflow_menu_wallpaper)) },
@@ -137,7 +177,10 @@ internal fun OverflowMenuWallpaperDialog(state: OverflowMenuWallpaperState, onDi
                 Modifier.heightIn(max = adaptiveDialogContentMaxHeight()).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(stringResource(R.string.overflow_menu_wallpaper_summary))
+                Text(
+                    stringResource(R.string.overflow_menu_wallpaper_summary),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
                 state.bitmap?.let {
                     Image(
                         bitmap = it,
@@ -147,11 +190,24 @@ internal fun OverflowMenuWallpaperDialog(state: OverflowMenuWallpaperState, onDi
                     )
                 }
                 if (state.busy) CircularProgressIndicator()
-                TextButton(onClick = state.onPick, enabled = !state.busy) {
-                    Text(stringResource(R.string.overflow_menu_wallpaper_pick))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = state.onPick, enabled = !state.busy, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.overflow_menu_wallpaper_pick))
+                    }
+                    if (state.uriString != null) {
+                        TextButton(
+                            onClick = { editingCrop = true },
+                            enabled = !state.busy && state.bitmap != null,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(R.string.overflow_menu_wallpaper_crop))
+                        }
+                    }
                 }
-                TextButton(onClick = state.onClear, enabled = !state.busy && state.uriString != null) {
-                    Text(stringResource(R.string.overflow_menu_wallpaper_clear))
+                if (state.uriString != null) {
+                    TextButton(onClick = state.onClear, enabled = !state.busy) {
+                        Text(stringResource(R.string.overflow_menu_wallpaper_clear))
+                    }
                 }
             }
         },

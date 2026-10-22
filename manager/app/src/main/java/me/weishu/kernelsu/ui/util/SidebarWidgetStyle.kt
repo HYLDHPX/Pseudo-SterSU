@@ -184,29 +184,35 @@ fun writeSidebarWidgetConfig(context: Context, config: SidebarWidgetConfig) {
     val value = config.normalized()
     writeSidebarWeatherConfig(context, value.weatherApi)
     sidebarWidgetPreferences(context).edit(commit = true) {
-        putString(SIDEBAR_WIDGET_TYPE_KEY, value.widgetType.value)
-        putString(SIDEBAR_CLOCK_STYLE_KEY, value.clockStyle.value)
-        putBoolean(SIDEBAR_CLOCK_WEATHER_ENABLED_KEY, value.clockWeatherEnabled)
-        putString(SIDEBAR_WEATHER_LABEL_KEY, value.weatherLabel)
-        putString(SIDEBAR_WEATHER_TEMPERATURE_KEY, value.weatherTemperature)
-        if (value.imageUriString == null) {
-            remove(SIDEBAR_IMAGE_URI_KEY)
-        } else {
-            putString(SIDEBAR_IMAGE_URI_KEY, value.imageUriString)
-        }
-        putString(SIDEBAR_IMAGE_SHAPE_KEY, value.imageShape.value)
-        putString(SIDEBAR_NAVIGATION_POSITION_KEY, value.navigationPosition.value)
-        putString(SIDEBAR_NAVIGATION_ORDER_KEY, value.navigationOrder.joinToString(","))
-        putBoolean(SIDEBAR_ICON_ONLY_NAVIGATION_KEY, value.iconOnlyNavigation)
-        putBoolean(SIDEBAR_SHOW_DIVIDERS_KEY, value.showDividers)
-        putFloat(SIDEBAR_BACKGROUND_OPACITY_KEY, value.backgroundOpacity)
-        putString(SIDEBAR_SIDE_KEY, value.side.value)
-        putBoolean(SIDEBAR_GLASS_ENABLED_KEY, value.material != SidebarMaterial.Flat)
-        putString(SIDEBAR_MATERIAL_KEY, value.material.value)
-        putString(SIDEBAR_PALETTES_KEY, encodeSidebarPalettes(value.palettes))
-        putString(SIDEBAR_HOME_LAYOUT_KEY, value.homeLayout.value)
-        putString(SIDEBAR_HOME_CARDS_KEY, encodeSidebarHomeCards(value.homeCards))
+        putSidebarWidgetAppearance(value)
     }
+}
+
+/** Shared by the settings editor and atomic theme imports; never writes weather credentials. */
+internal fun SharedPreferences.Editor.putSidebarWidgetAppearance(config: SidebarWidgetConfig) {
+    val value = config.normalized()
+    putString(SIDEBAR_WIDGET_TYPE_KEY, value.widgetType.value)
+    putString(SIDEBAR_CLOCK_STYLE_KEY, value.clockStyle.value)
+    putBoolean(SIDEBAR_CLOCK_WEATHER_ENABLED_KEY, value.clockWeatherEnabled)
+    putString(SIDEBAR_WEATHER_LABEL_KEY, value.weatherLabel)
+    putString(SIDEBAR_WEATHER_TEMPERATURE_KEY, value.weatherTemperature)
+    if (value.imageUriString == null) {
+        remove(SIDEBAR_IMAGE_URI_KEY)
+    } else {
+        putString(SIDEBAR_IMAGE_URI_KEY, value.imageUriString)
+    }
+    putString(SIDEBAR_IMAGE_SHAPE_KEY, value.imageShape.value)
+    putString(SIDEBAR_NAVIGATION_POSITION_KEY, value.navigationPosition.value)
+    putString(SIDEBAR_NAVIGATION_ORDER_KEY, value.navigationOrder.joinToString(","))
+    putBoolean(SIDEBAR_ICON_ONLY_NAVIGATION_KEY, value.iconOnlyNavigation)
+    putBoolean(SIDEBAR_SHOW_DIVIDERS_KEY, value.showDividers)
+    putFloat(SIDEBAR_BACKGROUND_OPACITY_KEY, value.backgroundOpacity)
+    putString(SIDEBAR_SIDE_KEY, value.side.value)
+    putBoolean(SIDEBAR_GLASS_ENABLED_KEY, value.material != SidebarMaterial.Flat)
+    putString(SIDEBAR_MATERIAL_KEY, value.material.value)
+    putString(SIDEBAR_PALETTES_KEY, encodeSidebarPalettes(value.palettes))
+    putString(SIDEBAR_HOME_LAYOUT_KEY, value.homeLayout.value)
+    putString(SIDEBAR_HOME_CARDS_KEY, encodeSidebarHomeCards(value.homeCards))
 }
 
 @Composable

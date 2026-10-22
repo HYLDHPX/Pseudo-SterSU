@@ -23,6 +23,51 @@ class ThemeStorePackageTest {
     val temporaryFolder = TemporaryFolder()
 
     @Test
+    fun fullAppearanceRoundTripIncludesBlurFloatingBarsAndScale() {
+        val appearance = ThemeStoreAppearanceState(
+            themeMode = ColorMode.DARK.value, miuixMonet = false, keyColor = 0,
+            colorStyle = "TonalSpot", colorSpec = ColorSpec.SpecVersion.Default.name, monetSurfaceOpacity = 1f,
+            enableBlur = true, enableFloatingBottomBar = true, enableFloatingBottomBarBlur = true,
+            pageScale = 1.1f, fontScale = 1.2f, blurIntensity = 1.5f,
+        )
+        validateThemeStoreConfig(currentThemeConfig().put("appearance", appearance.toJson()))
+        assertEquals(appearance, ThemeStoreAppearanceState.fromJson(JSONObject(appearance.toJson().toString()), appearance))
+    }
+
+    @Test
+    fun themeAppearanceRejectsInvalidScaleAndBooleanValues() {
+        listOf("pageScale" to 1.2, "fontScale" to 0.5, "blurIntensity" to 5, "enableBlur" to "true").forEach { (key, value) ->
+            assertThrows(IllegalArgumentException::class.java) {
+                validateThemeStoreConfig(currentThemeConfig().put("appearance", JSONObject().put(key, value)))
+            }
+        }
+    }
+
+    @Test
+    fun sidebarAssetsMustExistAndStayInsideTheArchive() {
+        val sidebar = sidebarThemeToJson(SidebarWidgetConfig(imageUriString = "content://avatar")) { _, _ ->
+            JSONObject().put("asset", JSONObject().put("path", "assets/avatar.png"))
+        }
+        val config = currentThemeConfig().put("sidebar", sidebar)
+        val assets = temporaryFolder.newFolder("sidebar-assets")
+        assertThrows(IllegalArgumentException::class.java) { validateEmbeddedThemeStoreAssets(config, assets) }
+        assets.resolve("avatar.png").writeBytes(byteArrayOf(1, 2, 3))
+        validateEmbeddedThemeStoreAssets(config, assets)
+        sidebar.getJSONObject("images").getJSONObject("avatar").getJSONObject("asset")
+            .put("path", "assets/../private.png")
+        assertThrows(IllegalArgumentException::class.java) { validateEmbeddedThemeStoreAssets(config, assets) }
+    }
+
+    @Test
+    fun archiveCanCarryAllSidebarCardImagesInAdditionToExistingMedia() {
+        val entries = (0 until 100).map { "assets/image_$it.png" to byteArrayOf(1) }.toTypedArray()
+        val archive = createArchive("theme.json" to "{}".toByteArray(), *entries)
+        val folder = temporaryFolder.newFolder("expanded-sidebar-archive")
+        val assets = folder.resolve("assets").apply { mkdirs() }
+        assertEquals(100L, extractThemeStoreArchive(ByteArrayInputStream(archive), folder, assets).assetsBytes)
+    }
+
+    @Test
     fun extractThemeStoreArchive_extractsValidatedMetadataAndAssets() {
         val archive = createArchive(
             "theme.json" to "{\"schema\":\"test\"}".toByteArray(),

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="restore_manager_icon"
+        android:icon="@drawable/entry_icon"
+        android:shortcutShortLabel="@string/restore_icon">
+        <intent
+            android:action="io.github.fixz.stersu.RESTORE_ICON"
+            android:targetPackage="io.github.fixz.stersu.launcher"
+            android:targetClass="me.weishu.kernelsu.launcher.LauncherActivity" />
+    </shortcut>
+</shortcuts>

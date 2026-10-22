@@ -46,8 +46,8 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 private const val THEME_STORE_SCHEMA = "io.github.fixz.apkesu.theme"
-internal const val THEME_STORE_VERSION = 6
-private const val MAX_THEME_STORE_ENTRY_COUNT = 80
+internal const val THEME_STORE_VERSION = 7
+private const val MAX_THEME_STORE_ENTRY_COUNT = 160
 private const val MAX_THEME_STORE_JSON_BYTES = 256L * 1024L
 private const val MAX_THEME_STORE_ASSET_BYTES = 500L * 1024L * 1024L
 private const val MAX_THEME_STORE_ASSETS_BYTES = 512L * 1024L * 1024L
@@ -325,6 +325,12 @@ data class ThemeStoreAppearanceState(
     val colorSpec: String,
     val monetSurfaceOpacity: Float,
     val pixelStyle: String = PixelStyle.DEFAULT_VALUE,
+    val enableBlur: Boolean? = null,
+    val enableFloatingBottomBar: Boolean? = null,
+    val enableFloatingBottomBarBlur: Boolean? = null,
+    val pageScale: Float? = null,
+    val fontScale: Float? = null,
+    val blurIntensity: Float? = null,
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("themeMode", themeMode)
@@ -334,6 +340,12 @@ data class ThemeStoreAppearanceState(
         .put("colorSpec", colorSpec)
         .put("monetSurfaceOpacity", sanitizeMonetSurfaceOpacity(monetSurfaceOpacity))
         .put("pixelStyle", PixelStyle.fromValue(pixelStyle).value)
+        .put("enableBlur", enableBlur)
+        .put("enableFloatingBottomBar", enableFloatingBottomBar)
+        .put("enableFloatingBottomBarBlur", enableFloatingBottomBarBlur)
+        .put("pageScale", pageScale)
+        .put("fontScale", fontScale)
+        .put("blurIntensity", blurIntensity)
 
     companion object {
         fun fromJson(json: JSONObject, fallback: ThemeStoreAppearanceState): ThemeStoreAppearanceState {
@@ -363,6 +375,12 @@ data class ThemeStoreAppearanceState(
                     ).toFloat()
                 ),
                 pixelStyle = PixelStyle.fromValue(json.optString("pixelStyle", fallback.pixelStyle)).value,
+                enableBlur = if (json.has("enableBlur")) json.getBoolean("enableBlur") else fallback.enableBlur,
+                enableFloatingBottomBar = if (json.has("enableFloatingBottomBar")) json.getBoolean("enableFloatingBottomBar") else fallback.enableFloatingBottomBar,
+                enableFloatingBottomBarBlur = if (json.has("enableFloatingBottomBarBlur")) json.getBoolean("enableFloatingBottomBarBlur") else fallback.enableFloatingBottomBarBlur,
+                pageScale = if (json.has("pageScale")) json.getDouble("pageScale").toFloat() else fallback.pageScale,
+                fontScale = if (json.has("fontScale")) json.getDouble("fontScale").toFloat() else fallback.fontScale,
+                blurIntensity = if (json.has("blurIntensity")) json.getDouble("blurIntensity").toFloat() else fallback.blurIntensity,
             )
         }
     }
@@ -950,6 +968,22 @@ fun exportThemeStorePackage(context: Context, destination: Uri): ThemeStorePacka
                 config.put("sidebarSurface", JSONObject()
                     .put("showDividers", prefs.getBoolean(SIDEBAR_SHOW_DIVIDERS_KEY, true))
                     .put("backgroundOpacity", sanitizeUiOpacity(prefs.getFloat(SIDEBAR_BACKGROUND_OPACITY_KEY, 1f), 1f)))
+                config.put("sidebar", sidebarThemeToJson(readSidebarWidgetConfig(appContext)) { id, uri ->
+                    JSONObject().put("asset", requireNotNull(zip.writeUriAsset(
+                        context = appContext,
+                        uriString = uri,
+                        assetId = "sidebar_${id.replace('.', '_')}",
+                        warnings = warnings,
+                        budget = assetBudget,
+                    )) { "Unable to embed sidebar image: $id" }.toJson())
+                })
+                config.put("interfaceStyle", exportThemeStoreInterfaceSelection(appContext, prefs) { id, bytes ->
+                    val path = "assets/$id"
+                    zip.putNextEntry(ZipEntry(path))
+                    bytes.inputStream().use { it.copyThemeStoreAssetTo(zip, assetBudget) }
+                    zip.closeEntry()
+                    JSONObject().put("path", path)
+                })
 
                 val wallpaperState = ThemeStoreWallpaperState(
                     uriString = prefs.getString(CUSTOM_WALLPAPER_URI_KEY, null),
@@ -1423,6 +1457,8 @@ fun importThemeStorePackage(
         mkdirs()
     }
     var stagingDir: File? = null
+    var newlyInstalledInterfaceStyle: String? = null
+    var themePreferencesCommitted = false
     return runCatching {
         try {
             val tempAssetsDir = File(tempDir, "assets").apply { mkdirs() }
@@ -1432,6 +1468,9 @@ fun importThemeStorePackage(
             validateThemeStoreConfig(config)
             validateEmbeddedThemeStoreAssets(config, tempAssetsDir)
             val packageVersion = config.getInt("version")
+            val pendingInterfaceStyle = config.optJSONObject("interfaceStyle")?.let {
+                readThemeStoreInterfaceSelection(it, tempAssetsDir)
+            }
             val supportsMediaPolicies = packageVersion >= 5
             val previousSummary = readThemeStoreSummary(appContext)
             val previousHomeLayout = readHomeLayoutState(appContext)
@@ -1480,6 +1519,20 @@ fun importThemeStorePackage(
             copyDirectoryContents(targetDir, nextStagingDir)
             val stagingAssetsDir = File(nextStagingDir, "assets").apply { mkdirs() }
             val targetAssetsDir = File(targetDir, "assets")
+            val pendingSidebar = config.optJSONObject("sidebar")?.let { sidebar ->
+                sidebarThemeFromJson(sidebar, readSidebarWidgetConfig(appContext)) { id, owner ->
+                    (importAssetUri(
+                        context = appContext,
+                        assetOwnerJson = owner,
+                        tempAssetsDir = tempAssetsDir,
+                        stagingAssetsDir = stagingAssetsDir,
+                        targetAssetsDir = targetAssetsDir,
+                        assetId = "sidebar_${id.replace('.', '_')}",
+                        warnings = warnings,
+                        budget = assetBudget,
+                    ) as ImportedThemeAsset.Resolved).uriString
+                }
+            }
             val cardsJson = config.optJSONObject("cards") ?: JSONObject()
             val pendingCards = mutableMapOf<ThemeStoreImageSlot, ThemeStoreImageState>()
             val navigationIconsJson = config.optJSONObject("navigationIcons") ?: JSONObject()
@@ -1908,7 +1961,9 @@ fun importThemeStorePackage(
 
             val prefs = themeStorePrefs(appContext)
             val editor = prefs.edit()
-            pendingAppearance?.let { editor.putThemeStoreAppearance(prefs, it) }
+            pendingInterfaceStyle?.let(editor::putThemeStoreInterfaceSelection)
+            pendingAppearance?.let { editor.putThemeStoreAppearance(prefs, it, pendingInterfaceStyle?.mode) }
+            pendingSidebar?.let(editor::putSidebarWidgetAppearance)
             pendingCards.forEach { (slot, pending) ->
                 val importedUri = pending.uriString.takeUnless { pending.hasVideoSelected }
                 val importedVideoUri = pending.videoUriString.takeIf { slot.videoUriKey != null }
@@ -1973,7 +2028,7 @@ fun importThemeStorePackage(
                         editor.putUiPassthroughScope(target, legacy, overridesGlobal = false)
                     }
                 }
-                config.optJSONObject("sidebarSurface")?.let { sidebar ->
+                config.optJSONObject("sidebarSurface")?.takeIf { pendingSidebar == null }?.let { sidebar ->
                     editor.putBoolean(SIDEBAR_SHOW_DIVIDERS_KEY, sidebar.getBoolean("showDividers"))
                     editor.putFloat(SIDEBAR_BACKGROUND_OPACITY_KEY, sidebar.getDouble("backgroundOpacity").toFloat())
                 }
@@ -2021,12 +2076,25 @@ fun importThemeStorePackage(
                 )
             }
 
+            pendingInterfaceStyle?.archive?.let { shared ->
+                val registry = InterfaceStyleRegistry(appContext)
+                val existing = registry.get(shared.style.id)
+                require(existing == null || existing.style.sha256.equals(shared.style.sha256, true)) {
+                    "A different version of this interface style is installed; remove it before importing this theme"
+                }
+                if (existing == null) {
+                    registry.install(shared.style, shared.bundle)
+                    newlyInstalledInterfaceStyle = shared.style.id
+                }
+                registry.cacheSharedArchive(shared)
+            }
             val directorySwap = beginThemeStoreDirectorySwap(targetDir, nextStagingDir)
             stagingDir = null
             var preferencesCommitted = false
             try {
                 require(editor.commit()) { "Unable to save imported theme settings" }
                 preferencesCommitted = true
+                themePreferencesCommitted = true
             } finally {
                 if (!preferencesCommitted) {
                     directorySwap.rollback()
@@ -2065,6 +2133,9 @@ fun importThemeStorePackage(
             stagingDir?.deleteRecursively()
         }
     }.getOrElse { error ->
+        if (!themePreferencesCommitted) {
+            newlyInstalledInterfaceStyle?.let { id -> runCatching { InterfaceStyleRegistry(appContext).remove(id) } }
+        }
         pendingComponentImageUris.forEach(componentStyleStore::discardSwitchImageIfUnreferenced)
         ThemeStorePackageResult(success = false, warnings = warnings, error = error)
     }
@@ -2072,6 +2143,17 @@ fun importThemeStorePackage(
 
 private fun themeStorePrefs(context: Context): SharedPreferences {
     return context.applicationContext.getSharedPreferences("settings", Context.MODE_PRIVATE)
+}
+
+private fun readThemeStoreInterfaceSelection(
+    json: JSONObject,
+    assetsDir: File,
+): ThemeStoreInterfaceSelection = importThemeStoreInterfaceSelection(json) { owner, key, maximumBytes ->
+    val path = owner.getJSONObject(key).getString("path")
+    require(path.startsWith("assets/")) { "Invalid interface style asset path" }
+    val file = safeAssetFile(assetsDir, path.removePrefix("assets/"))
+    require(file.isFile && file.length() in 1..maximumBytes) { "Invalid interface style asset size" }
+    file.readBytes()
 }
 
 private fun SharedPreferences.readThemeStoreAppearance(): ThemeStoreAppearanceState {
@@ -2093,14 +2175,24 @@ private fun SharedPreferences.readThemeStoreAppearance(): ThemeStoreAppearanceSt
             getFloat(key("monet_surface_opacity"), defaultPreset.monetSurfaceOpacity)
         ),
         pixelStyle = PixelStyle.fromValue(getString(PIXEL_STYLE_KEY, PixelStyle.DEFAULT_VALUE)).value,
+        enableBlur = getBoolean(key("enable_blur"), defaultPreset.enableBlur),
+        enableFloatingBottomBar = getBoolean(key("enable_floating_bottom_bar"), defaultPreset.enableFloatingBottomBar),
+        enableFloatingBottomBarBlur = getBoolean(key("enable_floating_bottom_bar_blur"), defaultPreset.enableFloatingBottomBarBlur),
+        pageScale = getFloat(key("page_scale"), defaultPreset.pageScale)
+            .takeIf { it.isFinite() }?.coerceIn(0.8f, 1.1f) ?: defaultPreset.pageScale,
+        fontScale = getFloat(key("font_scale"), ThemeAppearanceDefaults.FONT_SCALE)
+            .takeIf { it.isFinite() }?.coerceIn(0.85f, 1.2f) ?: ThemeAppearanceDefaults.FONT_SCALE,
+        blurIntensity = getFloat(key("blur_intensity"), ThemeAppearanceDefaults.BLUR_INTENSITY)
+            .takeIf { it.isFinite() }?.coerceIn(0.5f, 1.5f) ?: ThemeAppearanceDefaults.BLUR_INTENSITY,
     )
 }
 
 private fun SharedPreferences.Editor.putThemeStoreAppearance(
     prefs: SharedPreferences,
     appearance: ThemeStoreAppearanceState,
+    importedUiMode: String? = null,
 ) {
-    val uiMode = InterfaceStyle.normalizeValue(prefs.getString("ui_mode", UiMode.DEFAULT_VALUE))
+    val uiMode = importedUiMode ?: InterfaceStyle.normalizeValue(prefs.getString("ui_mode", UiMode.DEFAULT_VALUE))
     val strategy = ThemeSyncStrategy.fromValue(
         prefs.getString("theme_sync_strategy", ThemeSyncStrategy.SHARED.value)
     )
@@ -2112,6 +2204,12 @@ private fun SharedPreferences.Editor.putThemeStoreAppearance(
     putString(key("color_spec"), appearance.colorSpec)
     putFloat(key("monet_surface_opacity"), sanitizeMonetSurfaceOpacity(appearance.monetSurfaceOpacity))
     putString(key("theme_preset"), ThemePreset.CUSTOM.value)
+    appearance.enableBlur?.let { putBoolean(key("enable_blur"), it) }
+    appearance.enableFloatingBottomBar?.let { putBoolean(key("enable_floating_bottom_bar"), it) }
+    appearance.enableFloatingBottomBarBlur?.let { putBoolean(key("enable_floating_bottom_bar_blur"), it) }
+    appearance.pageScale?.let { putFloat(key("page_scale"), it) }
+    appearance.fontScale?.let { putFloat(key("font_scale"), it) }
+    appearance.blurIntensity?.let { putFloat(key("blur_intensity"), it) }
     putString(PIXEL_STYLE_KEY, PixelStyle.fromValue(appearance.pixelStyle).value)
 }
 
@@ -2981,6 +3079,8 @@ internal fun validateThemeStoreConfig(config: JSONObject) {
         }
     }
     config.optJSONObject("appearance")?.let(::validateThemeStoreAppearance)
+    if (config.has("sidebar")) validateSidebarThemeJson(config.getJSONObject("sidebar"))
+    if (config.has("interfaceStyle")) validateThemeStoreInterfaceSelection(config.getJSONObject("interfaceStyle"))
     config.optJSONObject("uiPassthrough")?.let(::validateUiPassthroughPackage)
     config.optJSONObject("sidebarSurface")?.let { sidebar ->
         require(sidebar.keys().asSequence().all { it == "showDividers" || it == "backgroundOpacity" } &&
@@ -3099,6 +3199,8 @@ private fun validateThemeStoreAppearance(appearance: JSONObject) {
         "monetSurfaceOpacity",
         "pixelStyle",
         "pixelPetEnabled",
+        "enableBlur", "enableFloatingBottomBar", "enableFloatingBottomBarBlur",
+        "pageScale", "fontScale", "blurIntensity",
     )
     require(appearance.keys().asSequence().all { it in allowedKeys }) {
         "Theme package contains unknown appearance settings"
@@ -3142,6 +3244,15 @@ private fun validateThemeStoreAppearance(appearance: JSONObject) {
     }
     appearance.opt("pixelPetEnabled")?.let { raw ->
         require(raw is Boolean) { "Theme pixel pet setting is invalid" }
+    }
+    listOf("enableBlur", "enableFloatingBottomBar", "enableFloatingBottomBarBlur").forEach { key ->
+        if (appearance.has(key)) require(appearance.opt(key) is Boolean) { "Invalid appearance $key" }
+    }
+    mapOf("pageScale" to 0.8f..1.1f, "fontScale" to 0.85f..1.2f, "blurIntensity" to 0.5f..1.5f).forEach { (key, range) ->
+        if (appearance.has(key)) {
+            val value = (appearance.opt(key) as? Number)?.toDouble()
+            require(value != null && value.isFinite() && value.toFloat() in range) { "Invalid appearance $key" }
+        }
     }
 }
 
@@ -3236,6 +3347,8 @@ internal fun validateEmbeddedThemeStoreAssets(config: JSONObject, tempAssetsDir:
     homeLayoutStickerRecords(config.optJSONObject("homeLayout")).forEach { sticker ->
         validateOwner(sticker, "asset")
     }
+    sidebarThemeImageOwners(config.optJSONObject("sidebar")).values.forEach { validateOwner(it, "asset") }
+    config.optJSONObject("interfaceStyle")?.let { readThemeStoreInterfaceSelection(it, tempAssetsDir) }
     val fontOwner = config.optJSONObject("font")
     validateOwner(fontOwner, "asset")
     if (AppFontPreset.fromValue(fontOwner?.optString("preset")) == AppFontPreset.Custom) {
@@ -3329,6 +3442,7 @@ private fun validateEmbeddedThemeStoreMedia(
     homeLayoutStickerRecords(config.optJSONObject("homeLayout")).forEach { sticker ->
         validateOwner(sticker, "asset")
     }
+    sidebarThemeImageOwners(config.optJSONObject("sidebar")).values.forEach { validateOwner(it, "asset") }
     validateOwner(
         config.optJSONObject("components")?.optJSONObject("switchStyle"),
         "imageAsset",
@@ -3381,6 +3495,7 @@ internal fun sanitizeThemeStoreConfigForCloud(config: JSONObject) {
     homeLayoutStickerRecords(config.optJSONObject("homeLayout")).forEach { sticker ->
         sanitizeOwner(sticker, "asset" to "uri")
     }
+    sidebarThemeImageOwners(config.optJSONObject("sidebar")).values.forEach { sanitizeOwner(it, "asset" to "uri") }
     sanitizeOwner(
         config.optJSONObject("components")?.optJSONObject("switchStyle"),
         "imageAsset" to "imageUri",
@@ -3513,6 +3628,8 @@ internal fun countConfiguredThemeStoreResources(config: JSONObject): Int {
 
     var count = 0
     if (config.optJSONObject("appearance") != null) count++
+    if (config.optJSONObject("sidebar") != null) count++
+    if (config.optJSONObject("interfaceStyle") != null) count++
     if (config.optJSONObject("homeLayout") != null) count++
     val cards = config.optJSONObject("cards")
     ThemeStoreImageSlot.entries.forEach { slot ->

@@ -55,6 +55,21 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.util.LauncherEntryActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.NoDisplay" />
+
+        <receiver
+            android:name=".ui.util.InstalledLauncherRemovalReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
         <activity-alias
             android:name=".ui.LauncherDefault"
             android:enabled="true"

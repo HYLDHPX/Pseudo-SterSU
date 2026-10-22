@@ -10,6 +10,33 @@ import org.junit.Test
 
 class HomeUiStateTest {
     @Test
+    fun managerNameSyncIsOptInAndOnlyAppliesToActiveLkm() {
+        val state = homeState(false, false).copy(
+            customManagerName = "NHSU",
+            rootRuntimeState = RootRuntimeState.Running,
+        )
+        assertFalse(state.canSyncLkmManagerName)
+        val enabled = state.copy(syncManagerNameToLkmCard = true)
+        assertTrue(enabled.canSyncLkmManagerName)
+        assertFalse(enabled.copy(lkmMode = false).canSyncLkmManagerName)
+        assertFalse(enabled.copy(lkmMode = null).canSyncLkmManagerName)
+        assertFalse(enabled.copy(isKernelActive = false).canSyncLkmManagerName)
+    }
+
+    @Test
+    fun managerNameSyncNeverReplacesErrorOrStealthStatus() {
+        val state = homeState(false, false).copy(
+            customManagerName = "NHSU",
+            syncManagerNameToLkmCard = true,
+            rootRuntimeState = RootRuntimeState.Running,
+        )
+        RootRuntimeState.entries.filterNot { it == RootRuntimeState.Running }.forEach { failure ->
+            assertFalse(state.copy(rootRuntimeState = failure).canSyncLkmManagerName)
+        }
+        assertFalse(state.asStealthModeState().canSyncLkmManagerName)
+    }
+
+    @Test
     fun jailbreakModeNeverOffersKernelUpdates() {
         val state = homeState(requiresNewKernel = false, uapiMismatch = false)
         assertTrue(state.copy(lkmMode = true, isLateLoadMode = false).canInstallKernelUpdate)

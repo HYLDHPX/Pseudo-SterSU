@@ -133,13 +133,15 @@ import java.security.SecureRandom
 import java.util.UUID
 
 private const val SETTINGS_PREFS = "settings"
+const val CUSTOM_MANAGER_NAME_KEY = "custom_manager_name"
+const val SYNC_MANAGER_NAME_LKM_CARD_KEY = "sync_manager_name_lkm_card"
+const val SYNC_MANAGER_NAME_SETTINGS_HEADER_KEY = "sync_manager_name_settings_header"
 
 class SettingsRepositoryImpl : SettingsRepository {
 
     private companion object {
         private const val INTENT_TOKEN_KEY = "intent_token"
         private val secureRandom = SecureRandom()
-        const val CUSTOM_MANAGER_NAME_KEY = "custom_manager_name"
         const val MAX_CUSTOM_MANAGER_NAME_LENGTH = 40
         const val MAX_CUSTOM_HOME_TITLE_LENGTH = 40
         const val CUSTOM_THEME_PRESET_IDS_KEY = "custom_theme_preset_ids"
@@ -599,6 +601,21 @@ class SettingsRepositoryImpl : SettingsRepository {
                 }
             }
         }
+
+    override val syncManagerNameToLkmCard: Boolean
+        get() = prefs.getBoolean(SYNC_MANAGER_NAME_LKM_CARD_KEY, false)
+
+    override val syncManagerNameToSettingsHeader: Boolean
+        get() = prefs.getBoolean(SYNC_MANAGER_NAME_SETTINGS_HEADER_KEY, false)
+
+    override fun setManagerNameSettings(name: String, syncLkmCard: Boolean, syncSettingsHeader: Boolean) {
+        val value = sanitizeCustomManagerName(name)
+        prefs.edit {
+            if (value.isBlank()) remove(CUSTOM_MANAGER_NAME_KEY) else putString(CUSTOM_MANAGER_NAME_KEY, value)
+            putBoolean(SYNC_MANAGER_NAME_LKM_CARD_KEY, syncLkmCard)
+            putBoolean(SYNC_MANAGER_NAME_SETTINGS_HEADER_KEY, syncSettingsHeader)
+        }
+    }
 
     override var customHomeTitle: String
         get() = sanitizeCustomHomeTitle(prefs.getString(CUSTOM_HOME_TITLE_KEY, null))

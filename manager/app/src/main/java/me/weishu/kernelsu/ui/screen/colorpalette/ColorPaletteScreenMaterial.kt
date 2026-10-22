@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -57,7 +58,6 @@ import androidx.compose.material3.ButtonGroupDefaults
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import me.weishu.kernelsu.ui.component.material.ExpressiveTopAppBar as LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -78,6 +78,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -96,6 +97,9 @@ import me.weishu.kernelsu.ui.component.material.expressiveTopAppBarColors
 import me.weishu.kernelsu.ui.theme.ColorMode
 import me.weishu.kernelsu.ui.theme.keyColorOptions
 import me.weishu.kernelsu.ui.theme.rememberKernelSUColorScheme
+import top.yukonga.miuix.kmp.basic.Slider
+import top.yukonga.miuix.kmp.basic.SliderDefaults
+import kotlin.math.roundToInt
 
 @Composable
 fun ColorPaletteScreenMaterial(
@@ -278,6 +282,7 @@ fun ColorPaletteScreenMaterial(
 
                 TonalCard(modifier = Modifier.padding(top = 4.dp)) {
                     var sliderValue by remember(uiState.pageScale) { mutableFloatStateOf(uiState.pageScale) }
+                    val scaleTitle = stringResource(R.string.settings_page_scale)
 
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -289,7 +294,8 @@ fun ColorPaletteScreenMaterial(
                         ) {
                             Icon(
                                 Icons.Rounded.AspectRatio,
-                                contentDescription = stringResource(id = R.string.settings_page_scale),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -297,7 +303,7 @@ fun ColorPaletteScreenMaterial(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(
-                                    text = stringResource(R.string.settings_page_scale),
+                                    text = scaleTitle,
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -308,7 +314,8 @@ fun ColorPaletteScreenMaterial(
                                 )
                             }
                             Text(
-                                text = "${(sliderValue * 100).toInt()}%",
+                                text = "${(sliderValue * 100).roundToInt()}%",
+                                modifier = Modifier.padding(start = 12.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -319,7 +326,21 @@ fun ColorPaletteScreenMaterial(
                             onValueChange = { sliderValue = it },
                             onValueChangeFinished = { actions.onSetPageScale(sliderValue) },
                             valueRange = 0.8f..1.1f,
-                            modifier = Modifier.fillMaxWidth()
+                            showKeyPoints = true,
+                            keyPoints = listOf(0.8f, 0.9f, 1f, 1.1f),
+                            magnetThreshold = 0.01f,
+                            hapticEffect = SliderDefaults.SliderHapticEffect.Step,
+                            colors = SliderDefaults.sliderColors(
+                                foregroundColor = MaterialTheme.colorScheme.primary,
+                                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                thumbColor = MaterialTheme.colorScheme.onPrimary,
+                                keyPointColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                keyPointForegroundColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .semantics { contentDescription = scaleTitle },
                         )
                     }
                 }

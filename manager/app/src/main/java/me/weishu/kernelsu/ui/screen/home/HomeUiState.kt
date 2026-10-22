@@ -98,6 +98,8 @@ data class HomeUiState(
     val showHomeLearnCard: Boolean = true,
     val miuixClassicHomeLayoutEnabled: Boolean = false,
     val customHomeTitle: String = "",
+    val customManagerName: String = "",
+    val syncManagerNameToLkmCard: Boolean = false,
     val superuserCount: Int,
     val moduleCount: Int,
     val systemInfo: SystemInfo,
@@ -107,6 +109,9 @@ data class HomeUiState(
 
     val isFullFeatured: Boolean
         get() = rootRuntimeState == RootRuntimeState.Running
+
+    internal val canSyncLkmManagerName: Boolean
+        get() = syncManagerNameToLkmCard && lkmMode == true && isKernelActive && isFullFeatured
 
     val showSusfsPathConfig: Boolean
         get() = isKernelActive && lkmMode == false && !isLateLoadMode

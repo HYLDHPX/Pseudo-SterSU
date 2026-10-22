@@ -80,6 +80,11 @@ fun applyLauncherIcon(context: Context, option: LauncherIconOption): Boolean {
                 PackageManager.DONT_KILL_APP,
             )
         }
+        context.getSharedPreferences(SETTINGS_PREFERENCES, Context.MODE_PRIVATE).edit()
+            .remove(INSTALLED_LAUNCHER_HIDDEN)
+            .remove("installed_launcher_challenge")
+            .remove("installed_launcher_challenge_time")
+            .commit()
         true
     }.onFailure {
         Log.e("LauncherIcon", "failed to apply launcher icon ${option.value}", it)
@@ -89,13 +94,24 @@ fun applyLauncherIcon(context: Context, option: LauncherIconOption): Boolean {
 fun reconcileLauncherIcon(context: Context): Boolean {
     val appContext = context.applicationContext
     val preferences = appContext.getSharedPreferences(SETTINGS_PREFERENCES, Context.MODE_PRIVATE)
+    if (preferences.getBoolean(INSTALLED_LAUNCHER_HIDDEN, false)) {
+        if (InstalledLauncher.status(appContext).trusted) return true
+        // Includes entry uninstall/disable, Manager reinstall, and unavailable signing keys.
+        return InstalledLauncher.restore(appContext)
+    }
     val storedValue = preferences.getString(
         LauncherIconOption.PREF_KEY,
         LauncherIconOption.DEFAULT_VALUE,
     )
     val normalizedOption = LauncherIconOption.fromValue(storedValue)
     val legacyHidden = preferences.getBoolean("web_manager_launcher_hidden", false)
-    if (storedValue == normalizedOption.value && !legacyHidden) return true
+    val componentState = appContext.packageManager.getComponentEnabledSetting(
+        ComponentName(appContext.packageName, normalizedOption.aliasClassName),
+    )
+    val selectedEnabled = componentState == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
+        (componentState == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && normalizedOption == LauncherIconOption.Default)
+    // Clearing app data loses our preference/key but may leave alias overrides disabled.
+    if (storedValue == normalizedOption.value && !legacyHidden && selectedEnabled) return true
 
     val iconApplied = applyLauncherIcon(appContext, normalizedOption)
     return iconApplied && preferences.edit()

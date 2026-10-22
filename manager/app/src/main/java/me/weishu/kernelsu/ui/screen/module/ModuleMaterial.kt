@@ -56,6 +56,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuAnchor
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuTarget
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Delete
@@ -310,19 +312,21 @@ fun ModulePagerMaterial(
                     }
                 },
                 actions = {
-                    var showDropdown by remember { mutableStateOf(false) }
-                    Box {
-                        IconButton(onClick = { showDropdown = true }) {
+                    OverflowMenuAnchor(
+                        target = OverflowMenuTarget.Module,
+                        icon = {
                             Icon(
                                 imageVector = Icons.Filled.MoreVert,
-                                contentDescription = stringResource(id = R.string.settings),
+                                contentDescription = null,
                             )
-                        }
+                        },
+                    ) { expanded, dismiss, wallpaper ->
                         ModuleOverflowMenu(
-                            expanded = showDropdown,
-                            onDismissRequest = { showDropdown = false },
+                            expanded = expanded,
+                            onDismissRequest = dismiss,
                             uiState = uiState,
                             actions = actions,
+                            wallpaper = wallpaper,
                             onToggleFeedback = { haptic.performHapticFeedback(HapticFeedbackType.VirtualKey) },
                         )
                     }

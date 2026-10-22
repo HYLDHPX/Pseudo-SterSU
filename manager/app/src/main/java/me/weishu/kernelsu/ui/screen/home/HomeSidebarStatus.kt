@@ -114,7 +114,7 @@ private fun SidebarStatusHero(state: HomeUiState, actions: HomeActions, colors: 
     val supported = state.kernelVersion.isGKI()
     val title = when {
         installed && !state.isFullFeatured -> stringResource(state.rootRuntimeState.labelRes)
-        installed -> stringResource(R.string.home_working)
+        installed -> state.lkmStatusLabel(R.string.home_working)
         supported -> stringResource(R.string.home_not_installed)
         else -> stringResource(R.string.home_unsupported)
     }

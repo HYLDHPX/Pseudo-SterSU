@@ -86,6 +86,9 @@ interface SettingsRepository {
     var useSoftReboot: Boolean
     var launcherIcon: String
     var customManagerName: String
+    val syncManagerNameToLkmCard: Boolean
+    val syncManagerNameToSettingsHeader: Boolean
+    fun setManagerNameSettings(name: String, syncLkmCard: Boolean, syncSettingsHeader: Boolean)
     var customHomeTitle: String
     var customWallpaperUri: String?
     var customWallpaperOpacity: Float

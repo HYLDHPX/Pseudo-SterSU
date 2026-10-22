@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.overflow.CompactOverflowMenuItem
 import me.weishu.kernelsu.ui.component.overflow.FrostedOverflowMenu
-import me.weishu.kernelsu.ui.component.overflow.OverflowMenuTarget
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuWallpaperState
 import me.weishu.kernelsu.ui.viewmodel.DEFAULT_SUPERUSER_SORT_OPTION
 
 @Composable
@@ -41,6 +41,7 @@ internal fun SuperUserOverflowMenu(
     uiState: SuperUserUiState,
     actions: SuperUserActions,
     showTools: Boolean,
+    wallpaper: OverflowMenuWallpaperState,
 ) {
     var showSortMenu by remember { mutableStateOf(false) }
     val menuScrollState = rememberScrollState()
@@ -48,7 +49,7 @@ internal fun SuperUserOverflowMenu(
     LaunchedEffect(expanded, showSortMenu) {
         if (expanded) menuScrollState.scrollTo(0) else showSortMenu = false
     }
-    FrostedOverflowMenu(expanded, onDismissRequest, OverflowMenuTarget.Superuser, menuScrollState) {
+    FrostedOverflowMenu(expanded, onDismissRequest, wallpaper, menuScrollState) {
         if (showSortMenu) {
             CompactOverflowMenuItem(
                 text = { Text(stringResource(R.string.menu_sort), fontWeight = FontWeight.SemiBold) },

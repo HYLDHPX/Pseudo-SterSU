@@ -55,7 +55,7 @@ fun HomePagerSkrootpro(
     val outputText = if (!state.isKernelActive) {
         stringResource(R.string.skrootpro_env_not_installed)
     } else {
-        "${stringResource(state.rootRuntimeState.labelRes)}\n${stringResource(R.string.skrootpro_env_active)}"
+        "${state.lkmStatusLabel(state.rootRuntimeState.labelRes)}\n${stringResource(R.string.skrootpro_env_active)}"
     }
 
     SkrootproScreen(

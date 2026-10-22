@@ -2,6 +2,8 @@ package me.weishu.kernelsu.ui.screen.settings
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,6 +53,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -61,9 +64,14 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.window.Dialog
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.LocalMainPagerState
+import me.weishu.kernelsu.ui.instantNavTransitionContentTransform
+import me.weishu.kernelsu.ui.sidebarStackForwardTransitionContentTransform
+import me.weishu.kernelsu.ui.sidebarStackPopTransitionContentTransform
+import me.weishu.kernelsu.ui.component.rememberSystemAnimationsEnabled
 import me.weishu.kernelsu.ui.component.bottombar.LocalSidebarGlassBackdrop
 import me.weishu.kernelsu.ui.component.bottombar.NavigationDestinationIcon
 import me.weishu.kernelsu.ui.component.bottombar.SidebarRailItem
@@ -76,6 +84,7 @@ import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import me.weishu.kernelsu.ui.util.LocalCustomNavigationIcons
 import me.weishu.kernelsu.ui.util.SidebarWidgetConfig
+import me.weishu.kernelsu.ui.theme.immersivePageColor
 
 internal enum class SidebarDesignPage(@StringRes val title: Int, @StringRes val summary: Int) {
     Appearance(R.string.sidebar_material_title, R.string.sidebar_editor_appearance_summary),
@@ -88,6 +97,21 @@ internal enum class SidebarDesignPage(@StringRes val title: Int, @StringRes val 
 
 internal fun useSidebarDesignTwoPane(widthDp: Float, heightDp: Float, fontScale: Float): Boolean =
     widthDp / fontScale.coerceAtLeast(1f) >= 840f && heightDp >= 480f
+
+internal fun sidebarDesignPageTransition(
+    initialPage: SidebarDesignPage?,
+    targetPage: SidebarDesignPage?,
+    animationsEnabled: Boolean,
+    layoutDirection: LayoutDirection,
+): ContentTransform {
+    if (!animationsEnabled || initialPage == targetPage) return instantNavTransitionContentTransform()
+    val direction = if (layoutDirection == LayoutDirection.Rtl) -1 else 1
+    return if (targetPage == null) {
+        sidebarStackPopTransitionContentTransform(direction)
+    } else {
+        sidebarStackForwardTransitionContentTransform(direction)
+    }
+}
 
 private fun SidebarDesignPage.icon(): ImageVector = when (this) {
     SidebarDesignPage.Appearance -> Icons.Rounded.Palette
@@ -110,7 +134,12 @@ internal fun SidebarDesignWorkspace(
 ) {
     var preview by rememberSaveable { mutableStateOf(false) }
     val stateHolder = rememberSaveableStateHolder()
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val animationsEnabled = rememberSystemAnimationsEnabled()
+    val layoutDirection = LocalLayoutDirection.current
+    // Keep the shared day/night or immersive background stationary behind both
+    // animated pages; only the page content moves, never the external rail.
+    BoxWithConstraints(Modifier.fillMaxSize()
+        .background(immersivePageColor(MaterialTheme.colorScheme.background)).clipToBounds()) {
         val twoPane = useSidebarDesignTwoPane(maxWidth.value, maxHeight.value, LocalDensity.current.fontScale)
         val active = selectedPage ?: SidebarDesignPage.Appearance
         val back = { if (!twoPane && selectedPage != null) onSelectPage(null) else onBack() }
@@ -139,12 +168,12 @@ internal fun SidebarDesignWorkspace(
             }
         }
 
-        AppearanceEditorPage(
-            title = stringResource(if (!twoPane && selectedPage != null) active.title else R.string.sidebar_widget_settings_title),
-            onBack = back,
-        ) { modifier ->
-            Box(modifier, contentAlignment = Alignment.TopCenter) {
-                if (twoPane) {
+        if (twoPane) {
+            AppearanceEditorPage(
+                title = stringResource(R.string.sidebar_widget_settings_title),
+                onBack = back,
+            ) { modifier ->
+                Box(modifier, contentAlignment = Alignment.TopCenter) {
                     Row(Modifier.widthIn(max = 1160.dp).fillMaxSize()) {
                         Column(Modifier.width(264.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -154,20 +183,51 @@ internal fun SidebarDesignWorkspace(
                                 Text(stringResource(R.string.sidebar_editor_preview))
                             }
                         }
-                        Editor(active, Modifier.weight(1f))
-                    }
-                } else if (selectedPage != null) {
-                    Editor(active, Modifier.widthIn(max = 720.dp).fillMaxWidth())
-                } else {
-                    Column(Modifier.widthIn(max = 720.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                        SidebarDesignSavedHint()
-                        OutlinedButton(onClick = { preview = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
-                            Icon(Icons.Rounded.Visibility, null, Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.sidebar_editor_preview))
+                        AnimatedContent(
+                            targetState = active,
+                            modifier = Modifier.weight(1f).fillMaxHeight().clipToBounds(),
+                            transitionSpec = {
+                                sidebarDesignPageTransition(initialState, targetState, animationsEnabled, layoutDirection)
+                            },
+                            contentKey = { it.name },
+                            label = "sidebarDesignEditor",
+                        ) { page ->
+                            Editor(page, Modifier.fillMaxSize())
                         }
-                        SidebarDesignPageList(null, onSelectPage)
+                    }
+                }
+            }
+        } else {
+            AnimatedContent(
+                targetState = selectedPage,
+                modifier = Modifier.fillMaxSize(),
+                transitionSpec = {
+                    sidebarDesignPageTransition(initialState, targetState, animationsEnabled, layoutDirection)
+                },
+                contentKey = { it?.name ?: "overview" },
+                label = "sidebarDesignPage",
+            ) { page ->
+                // Render the transition snapshot, not selectedPage: the outgoing
+                // page must retain its own title, editor and saveable-state key.
+                AppearanceEditorPage(
+                    title = stringResource(page?.title ?: R.string.sidebar_widget_settings_title),
+                    onBack = { if (page == selectedPage) back() },
+                ) { modifier ->
+                    Box(modifier, contentAlignment = Alignment.TopCenter) {
+                        if (page != null) {
+                            Editor(page, Modifier.widthIn(max = 720.dp).fillMaxWidth())
+                        } else stateHolder.SaveableStateProvider("overview") {
+                            Column(Modifier.widthIn(max = 720.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                                SidebarDesignSavedHint()
+                                OutlinedButton(onClick = { preview = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                                    Icon(Icons.Rounded.Visibility, null, Modifier.size(20.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringResource(R.string.sidebar_editor_preview))
+                                }
+                                SidebarDesignPageList(null, onSelectPage)
+                            }
+                        }
                     }
                 }
             }

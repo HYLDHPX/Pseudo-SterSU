@@ -1,5 +1,7 @@
 package me.weishu.kernelsu.ui.viewmodel
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.system.OsConstants
 import android.util.Log
 import android.widget.Toast
@@ -19,6 +21,9 @@ import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.data.repository.SettingsRepository
 import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
+import me.weishu.kernelsu.data.repository.CUSTOM_MANAGER_NAME_KEY
+import me.weishu.kernelsu.data.repository.SYNC_MANAGER_NAME_LKM_CARD_KEY
+import me.weishu.kernelsu.data.repository.SYNC_MANAGER_NAME_SETTINGS_HEADER_KEY
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.resolveRealtimeBlurEnabled
@@ -82,8 +87,30 @@ class SettingsViewModel(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
     private var refreshJob: Job? = null
+    private val prefs = ksuApp.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    private val managerNameListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == CUSTOM_MANAGER_NAME_KEY ||
+            key == SYNC_MANAGER_NAME_LKM_CARD_KEY ||
+            key == SYNC_MANAGER_NAME_SETTINGS_HEADER_KEY
+        ) {
+            _uiState.update {
+                it.copy(
+                    customManagerName = repo.customManagerName,
+                    syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard,
+                    syncManagerNameToSettingsHeader = repo.syncManagerNameToSettingsHeader,
+                )
+            }
+        }
+    }
+
     init {
+        prefs.registerOnSharedPreferenceChangeListener(managerNameListener)
         refresh()
+    }
+
+    override fun onCleared() {
+        prefs.unregisterOnSharedPreferenceChangeListener(managerNameListener)
+        super.onCleared()
     }
 
     fun refresh() {
@@ -185,6 +212,8 @@ class SettingsViewModel(
             val stealthModeCode = StealthModeStore.code()
             val launcherIcon = repo.launcherIcon
             val customManagerName = repo.customManagerName
+            val syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard
+            val syncManagerNameToSettingsHeader = repo.syncManagerNameToSettingsHeader
             val customHomeTitle = repo.customHomeTitle
             val customWallpaperUri = repo.customWallpaperUri
             val customWallpaperOpacity = repo.customWallpaperOpacity
@@ -315,6 +344,8 @@ class SettingsViewModel(
                     stealthModeCode = stealthModeCode,
                     launcherIcon = launcherIcon,
                     customManagerName = customManagerName,
+                    syncManagerNameToLkmCard = syncManagerNameToLkmCard,
+                    syncManagerNameToSettingsHeader = syncManagerNameToSettingsHeader,
                     customHomeTitle = customHomeTitle,
                     customWallpaperUri = customWallpaperUri,
                     customWallpaperOpacity = customWallpaperOpacity,
@@ -624,9 +655,15 @@ class SettingsViewModel(
         _uiState.update { it.copy(launcherIcon = repo.launcherIcon) }
     }
 
-    fun setCustomManagerName(name: String) {
-        repo.customManagerName = name
-        _uiState.update { it.copy(customManagerName = repo.customManagerName) }
+    fun setCustomManagerName(name: String, syncLkmCard: Boolean, syncSettingsHeader: Boolean) {
+        repo.setManagerNameSettings(name, syncLkmCard, syncSettingsHeader)
+        _uiState.update {
+            it.copy(
+                customManagerName = repo.customManagerName,
+                syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard,
+                syncManagerNameToSettingsHeader = repo.syncManagerNameToSettingsHeader,
+            )
+        }
     }
 
     fun setCustomHomeTitle(title: String) {

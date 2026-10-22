@@ -1,0 +1,5 @@
+<resources>
+    <string name="restore_icon">恢复 SterSU 图标</string>
+    <string name="manager_unavailable">无法打开 SterSU，请确认主应用仍已安装且未被停用。此入口应用不包含 Root 功能。</string>
+    <string name="app_settings">应用信息</string>
+</resources>

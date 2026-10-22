@@ -51,7 +51,7 @@ class SuperUserLayoutContractTest {
         assertFalse(menu.contains("expanded = showSortMenu"))
         assertTrue(menu.contains("LaunchedEffect(expanded, showSortMenu)"))
         assertTrue(menu.contains("if (expanded) menuScrollState.scrollTo(0) else showSortMenu = false"))
-        assertTrue(menu.contains("OverflowMenuTarget.Superuser, menuScrollState"))
+        assertTrue(menu.contains("FrostedOverflowMenu(expanded, onDismissRequest, wallpaper, menuScrollState)"))
     }
 
     @Test

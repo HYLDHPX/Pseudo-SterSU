@@ -27,7 +27,8 @@ internal val LocalOverflowMenuBackdrop = staticCompositionLocalOf<OverflowMenuBa
 /** Capture this Compose page only while its popup is open, independently of global blur. */
 @Composable
 internal fun OverflowMenuBackdrop(content: @Composable () -> Unit) {
-    val inherited = LocalLiquidGlassBackdrop.current ?: LocalSidebarGlassBackdrop.current
+    // The wallpaper layer retains image details that an opaque page underlay can cover.
+    val inherited = LocalSidebarGlassBackdrop.current ?: LocalLiquidGlassBackdrop.current
     val supported = !LocalInspectionMode.current && LocalView.current.isHardwareAccelerated
     val pageBackdrop = rememberBlurBackdrop(supported && inherited == null)
     val state = remember(inherited, pageBackdrop) { OverflowMenuBackdropState(inherited ?: pageBackdrop) }

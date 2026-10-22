@@ -1266,9 +1266,11 @@
     <string name="settings_manager_identity_summary">Customize the launcher name, built-in icon, and custom shortcut icon.</string>
     <string name="settings_manager_name_edit">Edit</string>
     <string name="settings_manager_name_default_summary">Using default name: %1$s</string>
-    <string name="settings_manager_name_custom_summary">Custom shortcut name: %1$s</string>
+    <string name="settings_manager_name_custom_summary">Custom name: %1$s</string>
     <string name="settings_manager_name_input_label">Manager name</string>
-    <string name="settings_manager_name_dialog_summary">Leave empty to use the default app name.</string>
+    <string name="settings_manager_name_dialog_summary">Leave empty to use the default name. This changes display and shortcut names only, not the package name or root status.</string>
+    <string name="settings_manager_name_sync_lkm_card">Sync name to LKM status card</string>
+    <string name="settings_manager_name_sync_settings_header">Sync name to settings header</string>
     <string name="settings_home_title">Home header name</string>
     <string name="settings_home_title_default_summary">Using the default name for the current interface style</string>
     <string name="settings_home_title_custom_summary">Current name: %1$s</string>
@@ -1398,7 +1400,7 @@
     <string name="theme_store_overview_summary">Theme resources are now organized by purpose. Open a section to edit it without scrolling through every setting.</string>
     <string name="theme_store_assets_summary">Manage card media, crops, navigation icons, and app fonts.</string>
     <string name="theme_store_backgrounds_summary">Manage the global image or video background, startup sound, and startup animation.</string>
-    <string name="theme_store_transfer_summary">Back up or restore the complete portable theme package.</string>
+    <string name="theme_store_transfer_summary">Share or restore wallpapers, interface style, sidebar layout, widgets and day/night colors. Weather API credentials are not included.</string>
     <string name="theme_store_transfer_format">.kstheme package</string>
     <string name="theme_store_global_background">Global background</string>
     <string name="theme_store_global_background_summary">Choose an image or video and adjust its crop, opacity, and loop duration.</string>
@@ -2375,7 +2377,7 @@
     <string name="cloud_theme_creator_guide_intro_title">Use the verified package as the source of truth</string>
     <string name="cloud_theme_creator_guide_intro">The selected local package, the public GitHub Release asset, its byte count, and SHA-256 must all describe the same file. The Release must belong to the approved GitHub account.</string>
     <string name="cloud_theme_creator_guide_step_package">Create and verify the local package</string>
-    <string name="cloud_theme_creator_guide_step_package_body">Choose “Create a cloud-safe package” to export the current theme, or select an existing .kstheme file. Continue only after the local package card shows its size and SHA-256.</string>
+    <string name="cloud_theme_creator_guide_step_package_body">Choose “Create a cloud-safe package” to include the current interface style, sidebar, widgets, colors and wallpapers. Weather API credentials stay on your device. Older saved packages must be recreated to include these settings. Continue after the local package card shows its size and SHA-256.</string>
     <string name="cloud_theme_creator_guide_step_release">Upload the exact file to GitHub Releases</string>
     <string name="cloud_theme_creator_guide_step_release_body">Use a public Release under the same GitHub account entered in Creator Center. Do not recompress, rename internal entries, or modify the file after local verification.</string>
     <string name="cloud_theme_creator_guide_release_example">https://github.com/fixz232/my-themes/releases/download/aurora-v1/aurora-night.kstheme</string>
@@ -3525,8 +3527,24 @@
     <string name="appearance_editor_icon_appearance">Shape &amp; color</string>
     <string name="appearance_editor_icon_name_hint">Leave blank to use the default name.</string>
     <string name="overflow_menu_wallpaper">Menu wallpaper</string>
-    <string name="overflow_menu_wallpaper_summary">Applies only to this page\'s top-right menu. Choose an image up to 32 MB. Frosting and light/dark overlays keep text readable. Clear it to restore the default glass background.</string>
+    <string name="overflow_menu_actions">More actions</string>
+    <string name="overflow_menu_wallpaper_summary">Long-press the top-right menu button to change its wallpaper. Each page is set independently. Choose an image up to 32 MB, then adjust its crop. Frosting and light/dark overlays keep text readable.</string>
     <string name="overflow_menu_wallpaper_pick">Choose from gallery</string>
+    <string name="overflow_menu_wallpaper_crop">Crop image</string>
     <string name="overflow_menu_wallpaper_clear">Restore default glass</string>
     <string name="overflow_menu_wallpaper_error">Could not save the wallpaper. Choose a valid image under 32 MB and check available storage.</string>
+    <string name="launcher_install_title">Install a custom icon app</string>
+    <string name="launcher_install_summary">Choose and crop an image, then install a separate entry app</string>
+    <string name="launcher_install_preparing">Preparing and signing the entry locally…</string>
+    <string name="launcher_install_ready">Entry installed and signature verified. The main icon is still visible.</string>
+    <string name="launcher_install_hidden">The custom entry is active. The main launcher icon is hidden.</string>
+    <string name="launcher_install_hide">Verify entry and hide main icon</string>
+    <string name="launcher_install_verify">Test and hide</string>
+    <string name="launcher_install_restore">Restore main icon</string>
+    <string name="launcher_install_not_ready">Install the entry before hiding the main icon. Cancelling installation leaves your current icon unchanged.</string>
+    <string name="launcher_install_conflict">A different entry app is installed, disabled, or signed with an old key. Restore the main icon, uninstall that entry, and try again.</string>
+    <string name="launcher_install_permission">Installation permission was not granted. Your current icon state is unchanged.</string>
+    <string name="launcher_install_verify_failed">Could not verify the entry or update the main icon. Keep using the original entry.</string>
+    <string name="launcher_install_hide_warning">The entry will open SterSU once to verify it works. Only then will the main launcher icon be hidden. Long-press the new entry and choose “Restore SterSU icon” to recover. Restore the main icon before uninstalling the entry. This is not stealth mode and does not hide the app from system settings.</string>
+    <string name="launcher_install_help">The entry is a permission-free app, not a pinned shortcut. Your launcher may still apply its normal icon mask. To change its name or image, generate and install it again. Old pinned shortcuts must be removed from the desktop manually. Reinstalling SterSU or clearing its data requires reinstalling the entry too. Emergency recovery via ADB: adb shell am start -n io.github.fixz.stersu/me.weishu.kernelsu.ui.MainActivity</string>
 </resources>

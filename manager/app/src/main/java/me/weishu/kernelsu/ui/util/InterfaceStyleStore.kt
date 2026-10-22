@@ -303,6 +303,33 @@ class InterfaceStyleRegistry(context: Context) {
     }
 
     @Synchronized
+    internal fun sharedCatalogProof(style: InterfaceStylePackage): Pair<ByteArray, ByteArray> {
+        val parent = packageCacheFile(style).parentFile
+        return File(parent, "${style.sha256}.catalog.json").inputStream().use { it.readLimited(MAX_CATALOG_BYTES) } to
+            File(parent, "${style.sha256}.catalog.sig").inputStream().use { it.readLimited(MAX_SIGNATURE_BYTES) }
+    }
+
+    @Synchronized
+    internal fun cacheSharedArchive(shared: SharedInterfaceStyleArchive) {
+        cachePackage(shared.style, shared.bytes)
+        val catalog = shared.catalog ?: return
+        val signature = requireNotNull(shared.signature)
+        val parent = packageCacheFile(shared.style).parentFile
+        listOf("catalog.json" to catalog, "catalog.sig" to signature).forEach { (suffix, bytes) ->
+            val file = AtomicFile(File(parent, "${shared.style.sha256}.$suffix"))
+            val output = file.startWrite()
+            try {
+                output.write(bytes)
+                output.fd.sync()
+                file.finishWrite(output)
+            } catch (error: Throwable) {
+                file.failWrite(output)
+                throw error
+            }
+        }
+    }
+
+    @Synchronized
     fun resourceFile(id: String, path: String): File? {
         require(ID_PATTERN.matches(id)) { "Interface style id is invalid" }
         require(path in ALLOWED_BUNDLE_PATHS && path != BUNDLE_MANIFEST_PATH) {
@@ -463,6 +490,77 @@ internal fun readVerifiedInterfaceStyleArchive(file: File, style: InterfaceStyle
             .equals(style.sha256, ignoreCase = true))
         bytes
     }.getOrNull()
+}
+
+internal data class SharedInterfaceStyleArchive(
+    val style: InterfaceStylePackage,
+    val bytes: ByteArray,
+    val bundle: InterfaceStyleBundle,
+    val catalog: ByteArray? = null,
+    val signature: ByteArray? = null,
+)
+
+/** Keep the store's signature and hash checks when a theme carries a downloaded renderer. */
+internal fun verifySharedInterfaceStyleArchive(
+    id: String,
+    bytes: ByteArray,
+    catalog: ByteArray?,
+    signature: ByteArray?,
+): SharedInterfaceStyleArchive {
+    require((catalog == null) == (signature == null)) { "Interface style catalog proof is incomplete" }
+    val styles = if (catalog != null && signature != null) {
+        require(catalog.size <= MAX_CATALOG_BYTES && signature.size <= MAX_SIGNATURE_BYTES) {
+            "Interface style catalog proof is too large"
+        }
+        verifyInterfaceStyleCatalogSignature(catalog, signature)
+        parseInterfaceStyleCatalogLenient(catalog.toString(Charsets.UTF_8)).styles
+    } else APK_TRUSTED_INTERFACE_STYLES
+    val style = styles.firstOrNull { it.id == id }
+        ?: error("Shared interface style is not in a trusted catalog")
+    require(bytes.size.toLong() == style.sizeBytes &&
+        MessageDigest.getInstance("SHA-256").digest(bytes).toHexString().equals(style.sha256, true)) {
+        "Shared interface style does not match its trusted catalog"
+    }
+    val bundle = parseInterfaceStyleBundle(bytes, style)
+    return SharedInterfaceStyleArchive(style, bytes, bundle, catalog, signature)
+}
+
+internal fun readSharedInterfaceStyleArchive(
+    context: Context,
+    engine: String,
+    variant: String?,
+    preferredId: String?,
+): SharedInterfaceStyleArchive {
+    val registry = InterfaceStyleRegistry(context)
+    val installed = registry.list().firstOrNull {
+        it.style.engine == engine && it.style.variant == variant &&
+            (preferredId == null || it.style.id == preferredId)
+    } ?: error("The current interface style is not installed")
+    val style = installed.style
+    val bytes = registry.cachedPackage(style) ?: runCatching {
+        context.assets.open("interface-style/packages/${style.id}.ksstyle").use { it.readLimited(MAX_PACKAGE_BYTES) }
+    }.getOrElse { error("Please download the current interface style again before sharing it") }
+    if (APK_TRUSTED_INTERFACE_STYLES.any { it.id == style.id && it.sha256 == style.sha256 }) {
+        return verifySharedInterfaceStyleArchive(style.id, bytes, null, null)
+    }
+    val directory = File(context.filesDir, "interface-styles")
+    val candidates = listOf<() -> Pair<ByteArray, ByteArray>>(
+        { registry.sharedCatalogProof(style) },
+        {
+            File(directory, CATALOG_CACHE_NAME).inputStream().use { it.readLimited(MAX_CATALOG_BYTES) } to
+                File(directory, CATALOG_SIGNATURE_CACHE_NAME).inputStream().use { it.readLimited(MAX_SIGNATURE_BYTES) }
+        },
+        {
+            context.assets.open(CATALOG_ASSET).use { it.readLimited(MAX_CATALOG_BYTES) } to
+                context.assets.open(CATALOG_SIGNATURE_ASSET).use { it.readLimited(MAX_SIGNATURE_BYTES) }
+        },
+    )
+    return candidates.firstNotNullOfOrNull { read ->
+        runCatching {
+            val (catalog, signature) = read()
+            verifySharedInterfaceStyleArchive(style.id, bytes, catalog, signature)
+        }.getOrNull()
+    } ?: error("The signed catalog for this interface style is unavailable; download the style again before sharing")
 }
 
 class InterfaceStyleCatalogRepository(

@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.overflow.CompactOverflowMenuItem
 import me.weishu.kernelsu.ui.component.overflow.FrostedOverflowMenu
-import me.weishu.kernelsu.ui.component.overflow.OverflowMenuTarget
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuWallpaperState
 
 @Composable
 internal fun ModuleOverflowMenu(
@@ -26,9 +26,10 @@ internal fun ModuleOverflowMenu(
     onDismissRequest: () -> Unit,
     uiState: ModuleUiState,
     actions: ModuleActions,
+    wallpaper: OverflowMenuWallpaperState,
     onToggleFeedback: () -> Unit = {},
 ) {
-    FrostedOverflowMenu(expanded, onDismissRequest, OverflowMenuTarget.Module) {
+    FrostedOverflowMenu(expanded, onDismissRequest, wallpaper) {
         listOf(
             Triple(R.string.module_sort_action_first, uiState.sortActionFirst, actions.onToggleSortActionFirst),
             Triple(R.string.module_sort_enabled_first, uiState.sortEnabledFirst, actions.onToggleSortEnabledFirst),

@@ -78,6 +78,8 @@ import me.weishu.kernelsu.ui.component.ApkeEmptyState
 import me.weishu.kernelsu.ui.component.ApkeErrorState
 import me.weishu.kernelsu.ui.component.ApkeLoadingState
 import me.weishu.kernelsu.ui.component.ScrollToTopOnChange
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuAnchor
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuTarget
 import me.weishu.kernelsu.ui.component.material.ExpressiveScaffold
 import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import me.weishu.kernelsu.ui.component.material.rememberExpressivePageScrollBehavior
@@ -158,20 +160,22 @@ fun SuperUserPagerMaterial(
                     }
                 },
                 actions = {
-                    var showDropdown by remember { mutableStateOf(false) }
-                    Box {
-                        IconButton(onClick = { showDropdown = true }) {
+                    OverflowMenuAnchor(
+                        target = OverflowMenuTarget.Superuser,
+                        icon = {
                             Icon(
                                 imageVector = Icons.Filled.MoreVert,
-                                contentDescription = stringResource(R.string.settings),
+                                contentDescription = null,
                             )
-                        }
+                        },
+                    ) { expanded, dismiss, wallpaper ->
                         SuperUserOverflowMenu(
-                            expanded = showDropdown,
-                            onDismissRequest = { showDropdown = false },
+                            expanded = expanded,
+                            onDismissRequest = dismiss,
                             uiState = uiState,
                             actions = actions,
                             showTools = sidebar,
+                            wallpaper = wallpaper,
                         )
                     }
                 },

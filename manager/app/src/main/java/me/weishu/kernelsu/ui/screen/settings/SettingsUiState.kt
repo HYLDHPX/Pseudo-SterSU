@@ -96,6 +96,8 @@ data class SettingsUiState(
     val enableWebDebugging: Boolean = false,
     val launcherIcon: String = LauncherIconOption.DEFAULT_VALUE,
     val customManagerName: String = "",
+    val syncManagerNameToLkmCard: Boolean = false,
+    val syncManagerNameToSettingsHeader: Boolean = false,
     val customHomeTitle: String = "",
     val customWallpaperUri: String? = null,
     val customWallpaperOpacity: Float = DEFAULT_CUSTOM_WALLPAPER_OPACITY,

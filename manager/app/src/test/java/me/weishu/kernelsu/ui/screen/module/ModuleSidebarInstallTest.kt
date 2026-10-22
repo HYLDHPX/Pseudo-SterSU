@@ -1,10 +1,20 @@
 package me.weishu.kernelsu.ui.screen.module
 
 import java.io.File
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.runtime.mutableIntStateOf
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import me.weishu.kernelsu.ui.component.bottombar.MainDestination
+import me.weishu.kernelsu.ui.component.bottombar.MainPagerState
 import me.weishu.kernelsu.ui.component.bottombar.shouldShowSidebarModuleInstall
 import me.weishu.kernelsu.ui.navigation3.Route
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -37,11 +47,16 @@ class ModuleSidebarInstallTest {
     }
 
     @Test
-    fun sidebarUsesTheExistingPickerAndClearsStaleCallbacks() {
+    fun sidebarPreparesTheExistingPickerWithoutWaitingForPagerSettlement() {
         val page = source("screen/module/ModuleScreen.kt")
         assertTrue(page.contains("if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value)"))
         assertTrue(page.contains("rememberModuleZipPicker(actions.onOpenFlash)"))
-        assertTrue(page.contains("isCurrentPage && rawUiState.installButtonVisible && currentAppWindowSize().canShowSidebar"))
+        val registration = page.substringAfter("val installAvailable =").substringBefore("wallpaperEditorRequest?.let")
+        assertTrue(registration.contains("rawUiState.installButtonVisible && currentAppWindowSize().canShowSidebar"))
+        assertFalse(registration.contains("isCurrentPage"))
+        assertFalse(registration.contains("hasLoaded"))
+        assertFalse(registration.contains("isRefreshing"))
+        assertFalse(registration.contains("LaunchedEffect"))
         assertTrue(page.contains("DisposableEffect(mainPagerState, installAvailable)"))
         assertTrue(page.contains("rememberUpdatedState(pickModuleZip)"))
         assertTrue(page.contains("if (mainPagerState.moduleInstallAction === action) mainPagerState.moduleInstallAction = null"))
@@ -50,6 +65,45 @@ class ModuleSidebarInstallTest {
         assertTrue(picker.contains("ActivityResultContracts.GetMultipleContents()"))
         assertTrue(picker.contains("0 -> pickerOpen = false"))
         assertTrue(picker.contains("confirmDialog.showConfirm"))
+    }
+
+    @Test
+    fun preparedInstallActionIsAvailableDuringNavigationAndRapidRetargeting() {
+        // Hold animation work so assertions run before the pager has settled.
+        val pending = ArrayDeque<Runnable>()
+        val dispatcher = object : CoroutineDispatcher() {
+            override fun dispatch(context: CoroutineContext, block: Runnable) {
+                pending.addLast(block)
+            }
+        }
+        val scope = CoroutineScope(Job() + dispatcher)
+        val pageCount = mutableIntStateOf(4)
+        val pager = object : PagerState() {
+            override val pageCount: Int get() = pageCount.intValue
+        }
+        val state = MainPagerState(pager, scope, pageCount)
+        var pickerLaunches = 0
+        val preparedAction: () -> Unit = { pickerLaunches++ }
+        state.moduleInstallAction = preparedAction
+        state.updateFeatureAvailability(true)
+        try {
+            repeat(3) {
+                state.animateTo(MainDestination.Module)
+                assertTrue(state.isNavigating)
+                assertEquals(0, pager.settledPage)
+                assertTrue(shouldShowSidebarModuleInstall(state.destinationForPage(), Route.Main))
+                assertSame(preparedAction, state.moduleInstallAction)
+                state.moduleInstallAction?.invoke()
+
+                state.animateTo(MainDestination.Settings)
+                assertFalse(shouldShowSidebarModuleInstall(state.destinationForPage(), Route.Main))
+                assertSame(preparedAction, state.moduleInstallAction)
+            }
+            assertEquals(3, pickerLaunches)
+        } finally {
+            scope.cancel()
+            while (pending.isNotEmpty()) pending.removeFirst().run()
+        }
     }
 
     @Test

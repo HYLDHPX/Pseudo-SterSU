@@ -114,6 +114,7 @@ import me.weishu.kernelsu.ui.theme.immersivePageColor
 import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.util.FULL_CUSTOM_WALLPAPER_CROP
 import me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight
+import me.weishu.kernelsu.ui.util.managerDisplayName
 
 /** Device-oriented settings shared by sidebar, seasonal and pixel interface styles. */
 @Composable
@@ -243,8 +244,18 @@ internal fun SettingsSidebarScreen(
                         SettingsHomeCard {
                             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("SterSU", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.weight(1f))
+                                    Text(
+                                        text = managerDisplayName(
+                                            customName = uiState.customManagerName,
+                                            defaultName = stringResource(R.string.app_name),
+                                            syncEnabled = uiState.syncManagerNameToSettingsHeader,
+                                        ),
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
                                     Icon(if (sidebarStyle) Icons.AutoMirrored.Rounded.ViewSidebar else Icons.Rounded.Palette,
                                         null, Modifier.size(30.dp))
                                 }

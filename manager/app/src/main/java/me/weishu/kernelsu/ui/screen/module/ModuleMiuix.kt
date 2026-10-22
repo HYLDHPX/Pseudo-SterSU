@@ -136,6 +136,8 @@ import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as Icon
 import top.yukonga.miuix.kmp.basic.IconButton
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuAnchor
+import me.weishu.kernelsu.ui.component.overflow.OverflowMenuTarget
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -331,25 +333,22 @@ fun ModulePagerMiuix(
                         titleColor = topBarColors.content,
                         title = stringResource(R.string.module),
                         actions = {
-                            Box {
-                                val showTopPopup = remember { mutableStateOf(false) }
-                                IconButton(
-                                    onClick = { showTopPopup.value = true },
-                                    holdDownState = showTopPopup.value
-                                ) {
+                            OverflowMenuAnchor(
+                                target = OverflowMenuTarget.Module,
+                                icon = {
                                     Icon(
                                         imageVector = MiuixIcons.MoreCircle,
                                         tint = topBarColors.content,
-                                        contentDescription = stringResource(R.string.settings)
+                                        contentDescription = null,
                                     )
-                                }
+                                },
+                            ) { expanded, dismiss, wallpaper ->
                                 ModuleOverflowMenu(
-                                    expanded = showTopPopup.value,
-                                    onDismissRequest = {
-                                        showTopPopup.value = false
-                                    },
+                                    expanded = expanded,
+                                    onDismissRequest = dismiss,
                                     uiState = uiState,
                                     actions = actions,
+                                    wallpaper = wallpaper,
                                 )
                             }
                             RebootListPopupMiuix(

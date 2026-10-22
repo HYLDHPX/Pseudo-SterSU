@@ -618,7 +618,7 @@ private fun ActivatedLkmCard(
             crop = wallpaperState.crop,
         )
         val lkmVideoUriString = wallpaperState.videoUriString
-        val displayTitle = customTitle.ifBlank { stringResource(state.rootRuntimeState.labelRes) }
+        val displayTitle = customTitle.ifBlank { state.lkmStatusLabel(state.rootRuntimeState.labelRes) }
         val displaySubtitle = customSubtitle.ifBlank {
             stringResource(R.string.home_working_version, state.ksuVersionLabel)
         }

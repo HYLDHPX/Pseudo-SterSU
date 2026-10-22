@@ -1,8 +1,12 @@
 package me.weishu.kernelsu.ui.screen.settings
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.ui.unit.LayoutDirection
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -95,5 +99,65 @@ class SidebarDesignWorkspaceTest {
         assertTrue(cards.contains("SettingsWallpaperCropDialog("))
         assertTrue(cards.contains("pendingImageDark"))
         assertTrue(cards.contains("releaseUnused("))
+    }
+
+    @Test
+    fun everySectionHasForwardAndReturnTransitions() {
+        SidebarDesignPage.entries.forEach { page ->
+            val forward = sidebarDesignPageTransition(null, page, true, LayoutDirection.Ltr)
+            val back = sidebarDesignPageTransition(page, null, true, LayoutDirection.Ltr)
+            listOf(forward, back).forEach { transition ->
+                assertFalse(page.name, transition.targetContentEnter == EnterTransition.None)
+                assertFalse(page.name, transition.initialContentExit == ExitTransition.None)
+                assertNull(transition.sizeTransform)
+            }
+            assertEquals(1f, forward.targetContentZIndex, 0f)
+            assertEquals(0f, back.targetContentZIndex, 0f)
+        }
+    }
+
+    @Test
+    fun directSectionLinksAndTabletEditorSwitchesAlsoAnimate() {
+        SidebarDesignPage.entries.forEach { from ->
+            SidebarDesignPage.entries.filter { it != from }.forEach { to ->
+                val transition = sidebarDesignPageTransition(from, to, true, LayoutDirection.Ltr)
+                assertFalse(transition.targetContentEnter == EnterTransition.None)
+                assertFalse(transition.initialContentExit == ExitTransition.None)
+                assertNull(transition.sizeTransform)
+            }
+        }
+    }
+
+    @Test
+    fun systemAnimationOptOutAndUnchangedPagesAreInstantInBothDirections() {
+        val pages = listOf<SidebarDesignPage?>(null) + SidebarDesignPage.entries
+        LayoutDirection.entries.forEach { direction ->
+            pages.forEach { from ->
+                pages.forEach { to ->
+                    val disabled = sidebarDesignPageTransition(from, to, false, direction)
+                    assertEquals(EnterTransition.None, disabled.targetContentEnter)
+                    assertEquals(ExitTransition.None, disabled.initialContentExit)
+                    assertNull(disabled.sizeTransform)
+                }
+                val unchanged = sidebarDesignPageTransition(from, from, true, direction)
+                assertEquals(EnterTransition.None, unchanged.targetContentEnter)
+                assertEquals(ExitTransition.None, unchanged.initialContentExit)
+            }
+        }
+    }
+
+    @Test
+    fun phoneAndTabletUseSnapshotContentAndKeepTheirSharedBackdropStill() {
+        val workspace = File(source + "SidebarDesignWorkspace.kt").readText()
+        assertEquals(2, Regex("AnimatedContent\\(").findAll(workspace).count())
+        listOf("targetState = selectedPage", "targetState = active", "Editor(page,",
+            "page?.title ?: R.string.sidebar_widget_settings_title", "contentKey = { it?.name ?: \"overview\" }",
+            "onBack = { if (page == selectedPage) back() }",
+            "stateHolder.SaveableStateProvider(\"overview\")", "rememberSystemAnimationsEnabled()",
+            "layoutDirection == LayoutDirection.Rtl", "sidebarStackForwardTransitionContentTransform(direction)",
+            "sidebarStackPopTransitionContentTransform(direction)",
+            "immersivePageColor(MaterialTheme.colorScheme.background)).clipToBounds()").forEach {
+            assertTrue(it, workspace.contains(it))
+        }
     }
 }

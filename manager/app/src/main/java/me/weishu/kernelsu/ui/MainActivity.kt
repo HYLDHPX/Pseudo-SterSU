@@ -1104,6 +1104,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onPostResume() {
+        super.onPostResume()
+        val challenge = intent.getStringExtra("launcher_challenge") ?: return
+        intent.removeExtra("launcher_challenge")
+        // Hide aliases only after the signed entry has reached the real, resumed Manager.
+        if (!me.weishu.kernelsu.ui.util.InstalledLauncher.acceptChallenge(this, challenge)) {
+            android.widget.Toast.makeText(this, R.string.launcher_install_verify_failed, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         KernelStatusEvents.requestRefresh()
@@ -1372,6 +1382,10 @@ private fun <T : Any> instantNavTransition(): AnimatedContentTransitionScope<Sce
 }
 
 private fun <T : Any> sidebarStackForwardTransition(direction: Int): AnimatedContentTransitionScope<Scene<T>>.() -> ContentTransform = {
+    sidebarStackForwardTransitionContentTransform(direction)
+}
+
+internal fun sidebarStackForwardTransitionContentTransform(direction: Int): ContentTransform =
     ContentTransform(
         targetContentEnter = fadeIn(
             animationSpec = tween(SIDEBAR_STACK_ENTER_FADE_MS),
@@ -1388,13 +1402,12 @@ private fun <T : Any> sidebarStackForwardTransition(direction: Int): AnimatedCon
         targetContentZIndex = 1f,
         sizeTransform = null,
     )
-}
 
 private fun <T : Any> sidebarStackPopTransition(direction: Int): AnimatedContentTransitionScope<Scene<T>>.() -> ContentTransform = {
     sidebarStackPopTransitionContentTransform(direction)
 }
 
-private fun sidebarStackPopTransitionContentTransform(direction: Int): ContentTransform = ContentTransform(
+internal fun sidebarStackPopTransitionContentTransform(direction: Int): ContentTransform = ContentTransform(
     targetContentEnter = fadeIn(
         animationSpec = tween(SIDEBAR_STACK_ENTER_FADE_MS),
     ) + slideInHorizontally(
@@ -1411,7 +1424,7 @@ private fun sidebarStackPopTransitionContentTransform(direction: Int): ContentTr
     sizeTransform = null,
 )
 
-private fun instantNavTransitionContentTransform(): ContentTransform {
+internal fun instantNavTransitionContentTransform(): ContentTransform {
     return ContentTransform(
         targetContentEnter = EnterTransition.None,
         initialContentExit = ExitTransition.None,

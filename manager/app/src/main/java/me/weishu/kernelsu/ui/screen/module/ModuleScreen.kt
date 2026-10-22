@@ -216,7 +216,11 @@ private fun ModulePagerContent(
         val mainPagerState = LocalMainPagerState.current
         val pickModuleZip = rememberModuleZipPicker(actions.onOpenFlash)
         val latestPickModuleZip by rememberUpdatedState(pickModuleZip)
-        val installAvailable = isCurrentPage && rawUiState.installButtonVisible && currentAppWindowSize().canShowSidebar
+        // Retained pager pages can prepare the picker before navigation starts.
+        // isCurrentPage follows settledPage, so using it here leaves the footer
+        // empty until the entire pager spring finishes. The rail already gates
+        // visibility by the selected destination, route and root/stealth state.
+        val installAvailable = rawUiState.installButtonVisible && currentAppWindowSize().canShowSidebar
         DisposableEffect(mainPagerState, installAvailable) {
             val action: (() -> Unit)? = if (installAvailable) ({ latestPickModuleZip() }) else null
             mainPagerState.moduleInstallAction = action

@@ -202,6 +202,8 @@ base {
 }
 
 dependencies {
+    // Apache-2.0; used only to sign the locally generated, permission-free launcher.
+    implementation("com.android.tools.build:apksig:8.5.2")
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.splashscreen)
 
@@ -265,6 +267,20 @@ dependencies {
     implementation(libs.commons.compress)
     implementation(libs.xz)
     implementation(libs.protobuf.kotlin.lite)
+}
+
+// Build the unsigned, dependency-free template, not another signed Manager APK.
+val generateLauncherTemplate = tasks.register<Sync>("generateLauncherTemplate") {
+    dependsOn(":launcher:assembleRelease")
+    from(project(":launcher").layout.buildDirectory.file("outputs/apk/release/launcher-release-unsigned.apk"))
+    into(layout.buildDirectory.dir("generated/launcherTemplate/launcher"))
+    rename { "template.apk" }
+}
+android.sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/launcherTemplate").get().asFile)
+tasks.named("preBuild") { dependsOn(generateLauncherTemplate) }
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    // The integration test reads this generated APK directly, outside the test classpath.
+    inputs.file(layout.buildDirectory.file("generated/launcherTemplate/launcher/template.apk"))
 }
 
 kotlin {

@@ -1,12 +1,17 @@
 package me.weishu.kernelsu.ui.screen.launchericon
 
 import android.widget.Toast
+import android.content.Intent
+import android.provider.Settings
+import androidx.core.net.toUri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import me.weishu.kernelsu.ui.component.passthrough.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +26,7 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,13 +43,17 @@ import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Check
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,8 +69,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.R
@@ -71,9 +85,15 @@ import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
 import me.weishu.kernelsu.ui.theme.immersivePageColor
 import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.util.CustomWallpaperCrop
+import me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight
 import me.weishu.kernelsu.ui.util.LauncherIconOption
+import me.weishu.kernelsu.ui.util.InstalledLauncher
+import me.weishu.kernelsu.ui.util.InstalledLauncherStatus
+import me.weishu.kernelsu.ui.util.INSTALLED_LAUNCHER_HIDDEN
+import me.weishu.kernelsu.ui.util.UiPassthroughSettings
+import me.weishu.kernelsu.ui.theme.UiPassthroughTheme
 import me.weishu.kernelsu.ui.util.loadCustomImageBitmap
-import me.weishu.kernelsu.ui.util.module.Shortcut
+import java.io.File
 import me.weishu.kernelsu.ui.viewmodel.SettingsViewModel
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -105,8 +125,44 @@ fun LauncherIconScreen() {
     var customIconUri by remember { mutableStateOf<String?>(null) }
     var showCustomIconCrop by remember { mutableStateOf(false) }
     var showManagerNameDialog by remember { mutableStateOf(false) }
+    var launcherStatus by remember { mutableStateOf(InstalledLauncherStatus(false, false, false)) }
+    var preparing by remember { mutableStateOf(false) }
+    var showHideConfirmation by remember { mutableStateOf(false) }
+    var pendingInstallPath by rememberSaveable { mutableStateOf<String?>(null) }
+    var statusRefreshJob by remember { mutableStateOf<Job?>(null) }
     val customIconFailedMessage = stringResource(R.string.settings_app_icon_custom_failed)
     val defaultManagerName = stringResource(R.string.app_name)
+    fun refreshEntry() {
+        statusRefreshJob?.cancel()
+        statusRefreshJob = scope.launch {
+            launcherStatus = withContext(Dispatchers.IO) { InstalledLauncher.status(context) }
+        }
+    }
+    fun showError(error: Throwable) {
+        Toast.makeText(context, error.localizedMessage ?: customIconFailedMessage, Toast.LENGTH_LONG).show()
+    }
+    val installLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        pendingInstallPath = null
+        refreshEntry() // Installer result codes are not reliable on all OEM installers.
+    }
+    val installPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        val file = pendingInstallPath?.let(::File)
+        if (context.packageManager.canRequestPackageInstalls() && file?.isFile == true) {
+            runCatching { installLauncher.launch(InstalledLauncher.installationIntent(context, file)) }.onFailure(::showError)
+        } else {
+            pendingInstallPath = null
+            Toast.makeText(context, R.string.launcher_install_permission, Toast.LENGTH_LONG).show()
+        }
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { refreshEntry() }
+    DisposableEffect(context) {
+        val preferences = context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == INSTALLED_LAUNCHER_HIDDEN) refreshEntry()
+        }
+        preferences.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
     val customIconPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
@@ -118,32 +174,59 @@ fun LauncherIconScreen() {
         customIconPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
     LauncherIconScreenMiuix(
-        selectedIndex = selectedIndex,
+        selectedIndex = if (launcherStatus.hidden) -1 else selectedIndex,
         customManagerName = uiState.customManagerName,
         defaultManagerName = defaultManagerName,
         onBack = dropUnlessResumed { navigator.pop() },
         onEditManagerName = { showManagerNameDialog = true },
-        onSelect = viewModel::setLauncherIconByIndex,
+        onSelect = {
+            viewModel.setLauncherIconByIndex(it)
+            refreshEntry()
+        },
         onPickCustomIcon = pickCustomIcon,
+        preparing = preparing,
+        launcherStatus = launcherStatus,
+        onVerifyAndHide = { showHideConfirmation = true },
+        onRestoreEntry = {
+            if (!InstalledLauncher.restore(context)) {
+                Toast.makeText(context, R.string.launcher_install_verify_failed, Toast.LENGTH_LONG).show()
+            }
+            refreshEntry()
+        },
     )
     SettingsWallpaperCropDialog(
         show = showCustomIconCrop,
         uriString = customIconUri,
         crop = FullImageCrop,
-        onCropChange = saveShortcut@{ crop ->
-            val uri = customIconUri ?: return@saveShortcut
+        onCropChange = createEntry@{ crop ->
+            if (preparing) return@createEntry
+            val uri = customIconUri ?: return@createEntry
+            preparing = true
+            showCustomIconCrop = false
             scope.launch {
-                val bitmap = withContext(Dispatchers.IO) {
-                    loadCustomImageBitmap(context, uri, maxSide = 1024, crop = crop)
-                }
-                if (bitmap == null) {
-                    Toast.makeText(context, customIconFailedMessage, Toast.LENGTH_LONG).show()
-                } else {
+                try {
                     val managerName = uiState.customManagerName.ifBlank { defaultManagerName }
-                    Shortcut.createManagerShortcut(context, bitmap, managerName)
+                    val file = withContext(Dispatchers.IO) {
+                        val bitmap = checkNotNull(loadCustomImageBitmap(context, uri, maxSide = 512, crop = crop)) {
+                            customIconFailedMessage
+                        }
+                        try { InstalledLauncher.create(context, bitmap, managerName) } finally { bitmap.recycle() }
+                    }
+                    pendingInstallPath = file.absolutePath
+                    if (context.packageManager.canRequestPackageInstalls()) {
+                        installLauncher.launch(InstalledLauncher.installationIntent(context, file))
+                    } else {
+                        installPermissionLauncher.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            "package:${context.packageName}".toUri()))
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    showError(error)
+                } finally {
+                    preparing = false
+                    customIconUri = null
                 }
-                showCustomIconCrop = false
-                customIconUri = null
             }
         },
         onDismissRequest = {
@@ -159,9 +242,34 @@ fun LauncherIconScreen() {
     ManagerNameDialog(
         show = showManagerNameDialog,
         initialName = uiState.customManagerName,
+        initialSyncLkmCard = uiState.syncManagerNameToLkmCard,
+        initialSyncSettingsHeader = uiState.syncManagerNameToSettingsHeader,
         onDismissRequest = { showManagerNameDialog = false },
         onConfirm = viewModel::setCustomManagerName,
     )
+    if (showHideConfirmation) {
+        UiPassthroughTheme(UiPassthroughSettings()) {
+            AlertDialog(
+                onDismissRequest = { showHideConfirmation = false },
+                title = { Text(stringResource(R.string.launcher_install_hide)) },
+                text = {
+                    Text(stringResource(R.string.launcher_install_hide_warning),
+                        modifier = Modifier.heightIn(max = adaptiveDialogContentMaxHeight())
+                            .verticalScroll(rememberScrollState()))
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showHideConfirmation = false
+                        runCatching { InstalledLauncher.verifyAndHide(context) }.onFailure(::showError)
+                    }) { Text(stringResource(R.string.launcher_install_verify)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showHideConfirmation = false }) { Text(stringResource(android.R.string.cancel)) }
+                },
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 1f),
+            )
+        }
+    }
 }
 
 @Composable
@@ -173,6 +281,10 @@ private fun LauncherIconScreenMiuix(
     onEditManagerName: () -> Unit,
     onSelect: (Int) -> Unit,
     onPickCustomIcon: () -> Unit,
+    preparing: Boolean,
+    launcherStatus: InstalledLauncherStatus,
+    onVerifyAndHide: () -> Unit,
+    onRestoreEntry: () -> Unit,
 ) {
     Scaffold(
         containerColor = immersivePageColor(LauncherIdentityColors.Page),
@@ -202,6 +314,10 @@ private fun LauncherIconScreenMiuix(
             onEditManagerName = onEditManagerName,
             onSelect = onSelect,
             onPickCustomIcon = onPickCustomIcon,
+            preparing = preparing,
+            launcherStatus = launcherStatus,
+            onVerifyAndHide = onVerifyAndHide,
+            onRestoreEntry = onRestoreEntry,
             onRestore = { onSelect(0) },
             modifier = Modifier.padding(innerPadding),
         )
@@ -216,6 +332,10 @@ private fun LauncherIconPickerContent(
     onEditManagerName: () -> Unit,
     onSelect: (Int) -> Unit,
     onPickCustomIcon: () -> Unit,
+    preparing: Boolean,
+    launcherStatus: InstalledLauncherStatus,
+    onVerifyAndHide: () -> Unit,
+    onRestoreEntry: () -> Unit,
     onRestore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -265,7 +385,27 @@ private fun LauncherIconPickerContent(
         }
 
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-            LauncherIconCustomCard(onClick = onPickCustomIcon)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LauncherIconCustomCard(onClick = onPickCustomIcon, preparing = preparing)
+                val statusText = when {
+                    launcherStatus.hidden -> R.string.launcher_install_hidden
+                    launcherStatus.trusted -> R.string.launcher_install_ready
+                    launcherStatus.installed -> R.string.launcher_install_conflict
+                    else -> R.string.launcher_install_not_ready
+                }
+                Text(stringResource(statusText), color = LauncherIdentityColors.Muted,
+                    modifier = Modifier.padding(horizontal = 4.dp), style = MaterialTheme.typography.bodySmall)
+                if (launcherStatus.trusted && !launcherStatus.hidden) {
+                    TextButton(onClick = onVerifyAndHide, enabled = !preparing) {
+                        Text(stringResource(R.string.launcher_install_hide))
+                    }
+                }
+                if (launcherStatus.hidden) {
+                    TextButton(onClick = onRestoreEntry) {
+                        Text(stringResource(R.string.launcher_install_restore))
+                    }
+                }
+            }
         }
 
         itemsIndexed(LauncherIconOption.entries) { index, option ->
@@ -305,7 +445,7 @@ private fun LauncherIconPickerContent(
                     }
                 }
                 Text(
-                    text = stringResource(R.string.settings_app_icon_only_builtin),
+                    text = stringResource(R.string.launcher_install_help),
                     color = LauncherIdentityColors.Muted,
                     fontSize = skrootproSp(12.5f, maxScale = 1f),
                     modifier = Modifier.padding(horizontal = 4.dp),
@@ -325,14 +465,14 @@ internal fun launcherIconColumnCount(width: Dp): Int = when {
 }
 
 @Composable
-private fun LauncherIconCustomCard(onClick: () -> Unit) {
+private fun LauncherIconCustomCard(onClick: () -> Unit, preparing: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(LauncherIdentityColors.Surface)
             .border(1.dp, LauncherIdentityColors.Border, RoundedCornerShape(18.dp))
-            .clickable(onClick = onClick)
+            .clickable(enabled = !preparing, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -351,15 +491,15 @@ private fun LauncherIconCustomCard(onClick: () -> Unit) {
                 modifier = Modifier.size(28.dp),
             )
         }
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                text = stringResource(R.string.settings_app_icon_custom),
+                text = stringResource(R.string.launcher_install_title),
                 color = LauncherIdentityColors.Ink,
                 fontSize = skrootproSp(16f, maxScale = 1f),
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = stringResource(R.string.settings_app_icon_custom_pick),
+                text = stringResource(if (preparing) R.string.launcher_install_preparing else R.string.launcher_install_summary),
                 color = LauncherIdentityColors.Muted,
                 fontSize = skrootproSp(13f, maxScale = 1f),
             )

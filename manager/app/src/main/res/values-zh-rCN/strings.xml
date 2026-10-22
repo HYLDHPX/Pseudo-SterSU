@@ -1377,9 +1377,11 @@
     <string name="settings_manager_identity_summary">自定义桌面名称、内置图标和自定义快捷入口图标。</string>
     <string name="settings_manager_name_edit">编辑</string>
     <string name="settings_manager_name_default_summary">当前使用默认名称：%1$s</string>
-    <string name="settings_manager_name_custom_summary">当前快捷入口名称：%1$s</string>
+    <string name="settings_manager_name_custom_summary">当前自定义名称：%1$s</string>
     <string name="settings_manager_name_input_label">管理器名称</string>
-    <string name="settings_manager_name_dialog_summary">留空则使用默认应用名称。</string>
+    <string name="settings_manager_name_dialog_summary">留空恢复默认名称。仅修改显示和快捷入口名称，不更改包名或 Root 状态。</string>
+    <string name="settings_manager_name_sync_lkm_card">同步到 LKM 状态卡片</string>
+    <string name="settings_manager_name_sync_settings_header">同步到设置页面顶部</string>
     <string name="settings_home_title">自定义主页顶部名称</string>
     <string name="settings_home_title_default_summary">当前跟随界面风格使用默认名称</string>
     <string name="settings_home_title_custom_summary">当前名称：%1$s</string>
@@ -1635,7 +1637,7 @@
     <string name="theme_store_overview_summary">主题资源已按用途整理，进入对应页面即可编辑，不再需要从头滚动到尾。</string>
     <string name="theme_store_assets_summary">管理卡片媒体、裁剪范围、导航栏图标和应用字体。</string>
     <string name="theme_store_backgrounds_summary">管理全局图片或视频背景、启动音效和启动动画。</string>
-    <string name="theme_store_transfer_summary">备份或恢复完整的可分享主题包。</string>
+    <string name="theme_store_transfer_summary">分享或还原壁纸、界面风格、侧栏布局、组件和日夜配色，不包含天气 API 密钥。</string>
     <string name="theme_store_transfer_format">.kstheme 主题包</string>
     <string name="theme_store_global_background">全局背景</string>
     <string name="theme_store_global_background_summary">选择图片或视频，并调整裁剪、透明度和循环时长。</string>
@@ -2314,7 +2316,7 @@
     <string name="cloud_theme_creator_guide_intro_title">以已校验主题包为唯一基准</string>
     <string name="cloud_theme_creator_guide_intro">本地选择的主题包、公开 GitHub Release 文件、文件大小和 SHA-256 必须全部对应同一个文件；Release 必须属于已认证的 GitHub 账号。</string>
     <string name="cloud_theme_creator_guide_step_package">生成并校验本地主题包</string>
-    <string name="cloud_theme_creator_guide_step_package_body">可点击“从当前主题生成云端安全包”，也可选择已有 .kstheme 文件。只有本地主题包卡片显示文件大小和 SHA-256 后才能继续。</string>
+    <string name="cloud_theme_creator_guide_step_package_body">点击“从当前主题生成云端安全包”，会一并打包当前界面风格、侧栏、组件、配色和壁纸，天气 API 密钥仅保留在本机。以前保存的主题包需重新生成才能包含这些设置。本地主题包卡片显示文件大小和 SHA-256 后即可继续。</string>
     <string name="cloud_theme_creator_guide_step_release">把完全相同的文件上传到 GitHub Release</string>
     <string name="cloud_theme_creator_guide_step_release_body">Release 必须公开，并位于创作者中心所填的同一个 GitHub 账号下。本地校验后不要重新压缩、修改内部文件或替换内容。</string>
     <string name="cloud_theme_creator_guide_release_example">https://github.com/fixz232/my-themes/releases/download/aurora-v1/aurora-night.kstheme</string>
@@ -3478,8 +3480,24 @@
     <string name="appearance_editor_icon_appearance">形状与颜色</string>
     <string name="appearance_editor_icon_name_hint">留空时使用默认名称。</string>
     <string name="overflow_menu_wallpaper">菜单壁纸</string>
-    <string name="overflow_menu_wallpaper_summary">仅用于当前页面的右上角菜单，两处菜单可独立设置。支持 32 MB 以内的图片，自动叠加磨砂与日夜遮罩，保持文字清晰。清除后恢复默认磨砂玻璃。</string>
+    <string name="overflow_menu_actions">更多操作</string>
+    <string name="overflow_menu_wallpaper_summary">长按右上角菜单按钮即可设置当前菜单壁纸，两处菜单独立保存。选择 32 MB 以内的图片后，可调整裁剪范围。自动叠加磨砂与日夜遮罩，保持文字和图标清晰。</string>
     <string name="overflow_menu_wallpaper_pick">从图库选择</string>
+    <string name="overflow_menu_wallpaper_crop">裁剪图片</string>
     <string name="overflow_menu_wallpaper_clear">恢复默认磨砂玻璃</string>
     <string name="overflow_menu_wallpaper_error">壁纸保存失败，请选择 32 MB 以内的有效图片，并检查存储空间。</string>
+    <string name="launcher_install_title">安装式自定义图标</string>
+    <string name="launcher_install_summary">选择并裁剪图片，安装独立的桌面入口应用</string>
+    <string name="launcher_install_preparing">正在本机生成并签名入口…</string>
+    <string name="launcher_install_ready">入口已安装并通过签名检查，主应用图标仍然保留。</string>
+    <string name="launcher_install_hidden">正在使用自定义入口，主应用桌面图标已隐藏。</string>
+    <string name="launcher_install_hide">验证入口并隐藏主图标</string>
+    <string name="launcher_install_verify">测试并隐藏</string>
+    <string name="launcher_install_restore">恢复主应用图标</string>
+    <string name="launcher_install_not_ready">请先安装入口，再隐藏主图标。取消安装不会改变当前图标。</string>
+    <string name="launcher_install_conflict">已安装的入口签名不一致、已停用或使用旧密钥。请先恢复主图标，卸载旧入口后再试。</string>
+    <string name="launcher_install_permission">未授予安装权限，当前图标状态保持不变。</string>
+    <string name="launcher_install_verify_failed">无法验证入口或更新主图标，请继续使用原入口。</string>
+    <string name="launcher_install_hide_warning">将先通过新入口打开一次 SterSU，验证成功后才隐藏主应用桌面图标。长按新入口，选择“恢复 SterSU 图标”即可恢复。卸载入口前请先恢复主图标。这不是隐身模式，也不会在系统设置中隐藏应用。</string>
+    <string name="launcher_install_help">入口是不申请权限的独立应用，不是桌面快捷方式；桌面仍可能使用系统图标遮罩。修改名称或图片需重新生成并安装入口。旧快捷方式请从桌面手动移除。重装 SterSU 或清除其数据后，入口也需重新安装。ADB 应急打开：adb shell am start -n io.github.fixz.stersu/me.weishu.kernelsu.ui.MainActivity</string>
 </resources>

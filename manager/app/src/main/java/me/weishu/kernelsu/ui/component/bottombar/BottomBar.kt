@@ -66,7 +66,8 @@ class MainPagerState(
     var stealthModeEnabled by mutableStateOf(initialStealthModeEnabled)
         private set
 
-    // Registered by the visible module page; never retained after that page is disposed.
+    // Prepared by the composed module page, including offscreen pager retention;
+    // the rail gates visibility, and disposal releases the callback.
     internal var moduleInstallAction: (() -> Unit)? by mutableStateOf(null)
 
     private var navJob: Job? = null

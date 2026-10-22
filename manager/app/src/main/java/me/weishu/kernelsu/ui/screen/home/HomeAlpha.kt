@@ -143,7 +143,7 @@ private fun AlphaStatusCard(
                 )
                 AlphaInfoLine(
                     label = "Root",
-                    value = stringResource(state.rootRuntimeState.labelRes),
+                    value = state.lkmStatusLabel(state.rootRuntimeState.labelRes),
                     strong = true,
                 )
                 AlphaInfoLine(

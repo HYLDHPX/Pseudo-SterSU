@@ -23,6 +23,8 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.data.repository.SettingsRepository
 import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
 import me.weishu.kernelsu.data.repository.CUSTOM_HOME_TITLE_KEY
+import me.weishu.kernelsu.data.repository.CUSTOM_MANAGER_NAME_KEY
+import me.weishu.kernelsu.data.repository.SYNC_MANAGER_NAME_LKM_CARD_KEY
 import me.weishu.kernelsu.data.repository.MIUIX_CLASSIC_HOME_LAYOUT_KEY
 import me.weishu.kernelsu.data.repository.SHOW_GKI_WARNING_KEY
 import me.weishu.kernelsu.data.repository.SHOW_HOME_LEARN_CARD_KEY
@@ -78,7 +80,9 @@ class HomeViewModel(
             key == SHOW_HOME_SUPPORT_CARD_KEY ||
             key == SHOW_HOME_LEARN_CARD_KEY ||
             key == MIUIX_CLASSIC_HOME_LAYOUT_KEY ||
-            key == CUSTOM_HOME_TITLE_KEY
+            key == CUSTOM_HOME_TITLE_KEY ||
+            key == CUSTOM_MANAGER_NAME_KEY ||
+            key == SYNC_MANAGER_NAME_LKM_CARD_KEY
         ) {
             _uiState.update {
                 it.copy(
@@ -88,6 +92,8 @@ class HomeViewModel(
                     showHomeLearnCard = repo.showHomeLearnCard,
                     miuixClassicHomeLayoutEnabled = repo.miuixClassicHomeLayoutEnabled,
                     customHomeTitle = repo.customHomeTitle,
+                    customManagerName = repo.customManagerName,
+                    syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard,
                 )
             }
         }
@@ -120,7 +126,13 @@ class HomeViewModel(
                 buildStateSafely()
             }
             if (generation != refreshGeneration.get()) return@launch
-            _uiState.update { baseState }
+            // Appearance preferences may change while the root probe is running.
+            _uiState.update {
+                baseState.copy(
+                    customManagerName = repo.customManagerName,
+                    syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard,
+                )
+            }
             // KPM / SUSFS 需要 root 探测，放在状态之后异步补齐，避免拖慢主页首屏
             val systemInfo = withContext(Dispatchers.IO) {
                 baseState.systemInfo.copy(
@@ -278,6 +290,8 @@ class HomeViewModel(
             showHomeLearnCard = repo.showHomeLearnCard,
             miuixClassicHomeLayoutEnabled = repo.miuixClassicHomeLayoutEnabled,
             customHomeTitle = repo.customHomeTitle,
+            customManagerName = repo.customManagerName,
+            syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard,
             superuserCount = runCatching { getSuperuserCount() }.getOrDefault(0),
             moduleCount = runCatching { getModuleCount() }.getOrDefault(0),
             systemInfo = SystemInfo(
@@ -440,6 +454,8 @@ class HomeViewModel(
                 repo.miuixClassicHomeLayoutEnabled
             }.getOrDefault(false),
             customHomeTitle = runCatching { repo.customHomeTitle }.getOrDefault(""),
+            customManagerName = runCatching { repo.customManagerName }.getOrDefault(""),
+            syncManagerNameToLkmCard = runCatching { repo.syncManagerNameToLkmCard }.getOrDefault(false),
             superuserCount = 0,
             moduleCount = 0,
             systemInfo = SystemInfo(
