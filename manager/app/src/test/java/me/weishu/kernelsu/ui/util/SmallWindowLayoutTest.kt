@@ -10,7 +10,7 @@ import org.junit.Test
 class SmallWindowLayoutTest {
     @Test
     fun phoneFloatingWindowsDoNotLoseWidthToASidebar() {
-        listOf(240f, 280f, 320f, 359f).forEach { width ->
+        listOf(240f, 280f, 319f).forEach { width ->
             val window = AppWindowSize(width, 600f, 1f)
             assertTrue(window.compactNavigation)
             assertFalse(window.canShowSidebar)
@@ -35,7 +35,27 @@ class SmallWindowLayoutTest {
     @Test
     fun enlargedTextGetsMoreHorizontalSpace() {
         assertTrue(AppWindowSize(393f, 780f, 1.3f).compactNavigation)
+        assertTrue(AppWindowSize(393f, 780f, 1.3f).canShowSidebar)
         assertFalse(AppWindowSize(840f, 960f, 2f).compactNavigation)
+    }
+
+    @Test
+    fun sidebarStyleSurvivesNarrowPhonesAndPageScaling() {
+        listOf(320f, 360f, 393f).forEach { width ->
+            listOf(1f, 1.3f, 2f).forEach { fontScale ->
+                assertTrue(AppWindowSize(width, 600f, fontScale).canShowSidebar)
+            }
+        }
+        // A 360dp phone at the maximum 110% page scale is still a phone.
+        assertTrue(AppWindowSize(360f / 1.1f, 600f / 1.1f, 1.3f).canShowSidebar)
+    }
+
+    @Test
+    fun shortWindowsKeepScrollableSidebarUntilItCannotFit() {
+        assertTrue(AppWindowSize(840f, 320f, 1.3f).canShowSidebar)
+        assertTrue(AppWindowSize(840f, 479f, 1.3f).canShowSidebar)
+        assertFalse(AppWindowSize(840f, 319f, 1f).canShowSidebar)
+        assertFalse(AppWindowSize(319f, 600f, 1f).canShowSidebar)
     }
 
     @Test

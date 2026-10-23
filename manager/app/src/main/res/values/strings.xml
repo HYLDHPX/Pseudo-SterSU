@@ -3534,7 +3534,7 @@
     <string name="overflow_menu_wallpaper_clear">Restore default glass</string>
     <string name="overflow_menu_wallpaper_error">Could not save the wallpaper. Choose a valid image under 32 MB and check available storage.</string>
     <string name="launcher_install_title">Install a custom icon app</string>
-    <string name="launcher_install_summary">Choose and crop an image, then install a separate entry app</string>
+    <string name="launcher_install_summary">Choose and crop an image, then install a separate entry app. The main icon is hidden automatically after the new entry opens SterSU successfully.</string>
     <string name="launcher_install_preparing">Preparing and signing the entry locally…</string>
     <string name="launcher_install_ready">Entry installed and signature verified. The main icon is still visible.</string>
     <string name="launcher_install_hidden">The custom entry is active. The main launcher icon is hidden.</string>
@@ -3547,4 +3547,16 @@
     <string name="launcher_install_verify_failed">Could not verify the entry or update the main icon. Keep using the original entry.</string>
     <string name="launcher_install_hide_warning">The entry will open SterSU once to verify it works. Only then will the main launcher icon be hidden. Long-press the new entry and choose “Restore SterSU icon” to recover. Restore the main icon before uninstalling the entry. This is not stealth mode and does not hide the app from system settings.</string>
     <string name="launcher_install_help">The entry is a permission-free app, not a pinned shortcut. Your launcher may still apply its normal icon mask. To change its name or image, generate and install it again. Old pinned shortcuts must be removed from the desktop manually. Reinstalling SterSU or clearing its data requires reinstalling the entry too. Emergency recovery via ADB: adb shell am start -n io.github.fixz.stersu/me.weishu.kernelsu.ui.MainActivity</string>
+    <string name="theme_comments_title">Comments</string>
+    <string name="theme_comments_summary">Share feedback and reply to other users. Each theme has its own discussion.</string>
+    <string name="theme_comments_open">View and write comments</string>
+    <string name="theme_comments_unconfigured">Comments are not enabled yet</string>
+    <string name="theme_comments_unconfigured_summary">The store administrator needs to deploy and configure the Waline service. Downloads and theme installation are unaffected.</string>
+    <string name="theme_comments_privacy_title">Before entering the discussion</string>
+    <string name="theme_comments_privacy">Comments are provided by %1$s. The service receives your public nickname, comment, optional email address, IP address and browser information. Avatars and remote images may contact third-party sites; avatar URLs may contain an email hash. No root permissions, app list or unique device identifiers are shared. Never post passwords or private logs. Comments may require moderation.</string>
+    <string name="theme_comments_agree">Agree and enter</string>
+    <string name="theme_comments_retry">Reload comments</string>
+    <string name="theme_comments_failed">Comments could not be opened</string>
+    <string name="theme_comments_retry_summary">Check your connection or update Android System WebView, then retry.</string>
+    <string name="theme_comments_invalid_subject">This theme has an invalid discussion identifier. Go back and refresh the store.</string>
 </resources>

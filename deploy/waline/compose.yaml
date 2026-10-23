@@ -1,0 +1,40 @@
+services:
+  waline-init:
+    image: lizheming/waline:1.43.4@sha256:a0889757b9d0ffe4a6730440000e84ad0fe7ae93f572f93d03218390447c78c0
+    restart: "no"
+    entrypoint: ["node", "/setup/init-db.cjs"]
+    volumes:
+      - waline-data:/app/data
+      - ./init-db.cjs:/setup/init-db.cjs:ro
+  waline:
+    # Official Waline 1.43.4, pinned so updates are explicit and reversible.
+    image: lizheming/waline:1.43.4@sha256:a0889757b9d0ffe4a6730440000e84ad0fe7ae93f572f93d03218390447c78c0
+    restart: unless-stopped
+    depends_on:
+      waline-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8360:8360"
+    volumes:
+      - waline-data:/app/data
+    environment:
+      TZ: Asia/Shanghai
+      SQLITE_PATH: /app/data
+      SQLITE_DB: waline
+      JWT_TOKEN: ${WALINE_JWT_SECRET:?Set a private random WALINE_JWT_SECRET in .env}
+      SERVER_URL: https://${WALINE_HOST:?Set WALINE_HOST in .env}
+      SITE_NAME: SterSU Theme Store
+      SITE_URL: https://${WALINE_HOST}
+      SECURE_DOMAINS: appassets.androidplatform.net,${WALINE_HOST}
+      COMMENT_AUDIT: "true"
+      IPQPS: "60"
+      DISABLE_USERAGENT: "true"
+      DISABLE_REGION: "true"
+      AVATAR_PROXY: "false"
+      # Keep anonymous feedback local to this service, without an external Akismet submission.
+      AKISMET_KEY: "false"
+      MARKDOWN_TEX: "false"
+      MARKDOWN_HIGHLIGHT: "false"
+
+volumes:
+  waline-data:

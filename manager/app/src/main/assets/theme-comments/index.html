@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src https:; img-src https: data:; font-src 'self'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'">
+  <title>Comments</title>
+  <link rel="stylesheet" href="./vendor/waline.css">
+  <link rel="stylesheet" href="./comments.css">
+  <script type="module" src="./comments.js"></script>
+</head>
+<body>
+  <main>
+    <section id="connection" aria-live="polite" role="status">
+      <p id="connection-message"></p>
+      <button id="retry" type="button" hidden></button>
+    </section>
+    <div id="waline" hidden></div>
+    <p id="guidance" class="guidance"></p>
+  </main>
+</body>
+</html>

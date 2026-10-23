@@ -251,6 +251,7 @@ import me.weishu.kernelsu.ui.screen.themestore.ThemeStoreCustomizeSection
 import me.weishu.kernelsu.ui.screen.themestore.CloudThemeCreatorScreen
 import me.weishu.kernelsu.ui.screen.themestore.CloudThemeCreatorGuideScreen
 import me.weishu.kernelsu.ui.screen.themestore.CloudThemeDetailScreen
+import me.weishu.kernelsu.ui.screen.themestore.ThemeCommentsScreen
 import me.weishu.kernelsu.ui.screen.themestore.CloudThemeRankingScreen
 import me.weishu.kernelsu.ui.screen.themestore.ThemeStoreLibraryScreen
 import me.weishu.kernelsu.ui.screen.themestore.ThemeStoreMyScreen
@@ -755,6 +756,9 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.ThemeStoreMy> { ThemeStoreMyScreen() }
                                 entry<Route.ThemeStoreLibrary> { ThemeStoreLibraryScreen() }
                                 entry<Route.CloudThemeDetail> { key -> CloudThemeDetailScreen(key.themeId) }
+                                entry<Route.ThemeComments> { key ->
+                                    ThemeCommentsScreen(key.subjectId, key.subjectName, key.interfaceStyle)
+                                }
                                 entry<Route.CloudThemeRanking> { CloudThemeRankingScreen() }
                                 entry<Route.CloudThemeCreator> { CloudThemeCreatorScreen() }
                                 entry<Route.CloudThemeCreatorSubmission> {
@@ -1225,7 +1229,7 @@ private fun Route?.isStoreRoute(): Boolean = when (this) {
     Route.ThemeStore, Route.ThemeStoreCustomize, Route.InterfaceStyleStore,
     Route.StoreInterfaceStyles, Route.ThemeStoreAssets, Route.ThemeStoreFonts,
     Route.ThemeStoreBackgrounds, Route.ThemeStoreTransfer, Route.ThemeStoreMy,
-    Route.ThemeStoreLibrary, is Route.CloudThemeDetail, Route.CloudThemeRanking,
+    Route.ThemeStoreLibrary, is Route.CloudThemeDetail, is Route.ThemeComments, Route.CloudThemeRanking,
     Route.CloudThemeCreator, Route.CloudThemeCreatorSubmission, Route.CloudThemeCreatorGuide,
     -> true
     else -> false

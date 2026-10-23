@@ -200,6 +200,7 @@ class MainLayoutTest {
         assertTrue(shouldShowSettingsSidebar(Route.PluginStore, settingsAncestor = true))
         assertFalse(shouldShowSettingsSidebar(Route.PluginStore, settingsAncestor = false))
         assertFalse(shouldShowSettingsSidebar(Route.CloudThemeDetail("theme"), settingsAncestor = true))
+        assertFalse(shouldShowSettingsSidebar(Route.ThemeComments("theme", "Theme"), settingsAncestor = true))
         assertFalse(shouldShowSettingsSidebar(Route.NavigationIcons, settingsAncestor = true, storeAncestor = true))
         assertFalse(shouldShowSettingsSidebar(Route.SidebarWidgetSettings, settingsAncestor = true, storeAncestor = true))
         assertFalse(shouldShowSettingsSidebar(Route.Install, settingsAncestor = true))

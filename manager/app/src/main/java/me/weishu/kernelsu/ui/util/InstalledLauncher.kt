@@ -35,7 +35,16 @@ private const val CHALLENGE_EXTRA = "launcher_challenge"
 internal fun validLauncherChallenge(expected: String?, actual: String?, createdAt: Long, now: Long): Boolean =
     !expected.isNullOrBlank() && expected == actual && createdAt > 0 && now >= createdAt && now - createdAt in 0..120_000L
 
-internal data class InstalledLauncherStatus(val installed: Boolean, val trusted: Boolean, val hidden: Boolean)
+internal data class InstalledLauncherStatus(
+    val installed: Boolean,
+    val trusted: Boolean,
+    val hidden: Boolean,
+    val lastUpdateTime: Long? = null,
+)
+
+internal fun shouldAutoHideInstalledLauncher(previousUpdateTime: Long?, current: InstalledLauncherStatus): Boolean =
+    current.installed && current.trusted && !current.hidden &&
+        current.lastUpdateTime != null && current.lastUpdateTime > 0 && current.lastUpdateTime != previousUpdateTime
 
 /** This is only a launcher replacement; it never changes root or stealth mode. */
 internal object InstalledLauncher {
@@ -65,7 +74,8 @@ internal object InstalledLauncher {
                 context.packageManager.getApplicationEnabledSetting(packageName(context)) !in disabledStates &&
                 context.packageManager.getComponentEnabledSetting(component) !in disabledStates
         }.getOrDefault(false)
-        return InstalledLauncherStatus(installed = true, trusted = trusted, hidden = hidden)
+        return InstalledLauncherStatus(installed = true, trusted = trusted, hidden = hidden,
+            lastUpdateTime = info.lastUpdateTime)
     }
 
     /** Run off the UI thread. The per-install signing key never leaves AndroidKeyStore. */

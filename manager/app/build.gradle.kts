@@ -1,5 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
+import java.net.URI
+
 plugins {
     alias(libs.plugins.agp.app)
     alias(libs.plugins.compose.compiler)
@@ -165,6 +167,16 @@ android {
         versionName = managerVersionName
 
         buildConfigField("boolean", "IS_PR_BUILD", isPrBuild.toString())
+        val walineServerUrl = providers.gradleProperty("STERSU_WALINE_SERVER_URL")
+            .orElse(providers.environmentVariable("STERSU_WALINE_SERVER_URL"))
+            // Public service URL only. Database and administrator credentials stay server-side.
+            .getOrElse("https://waline.nh24.top").trim()
+        require(walineServerUrl.isEmpty() || runCatching {
+            val uri = URI(walineServerUrl)
+            uri.scheme == "https" && uri.host != null && uri.rawUserInfo == null &&
+                uri.rawQuery == null && uri.rawFragment == null
+        }.getOrDefault(false)) { "STERSU_WALINE_SERVER_URL must be an HTTPS server URL without credentials, query or fragment" }
+        buildConfigField("String", "WALINE_SERVER_URL", "\"$walineServerUrl\"")
 
         externalNativeBuild {
             cmake {

@@ -35,6 +35,21 @@ class InstalledLauncherTest {
     }
 
     @Test
+    fun automaticHidingRequiresANewOrUpdatedTrustedEntry() {
+        val installed = InstalledLauncherStatus(true, true, false, lastUpdateTime = 2_000)
+        assertTrue(shouldAutoHideInstalledLauncher(null, installed))
+        assertTrue(shouldAutoHideInstalledLauncher(1_000, installed))
+        // Cancelling an install leaves the package timestamp unchanged.
+        assertFalse(shouldAutoHideInstalledLauncher(2_000, installed))
+        assertFalse(shouldAutoHideInstalledLauncher(null, InstalledLauncherStatus(false, false, false)))
+        assertFalse(shouldAutoHideInstalledLauncher(1_000, installed.copy(trusted = false)))
+        assertFalse(shouldAutoHideInstalledLauncher(1_000, installed.copy(installed = false)))
+        assertFalse(shouldAutoHideInstalledLauncher(1_000, installed.copy(hidden = true)))
+        assertFalse(shouldAutoHideInstalledLauncher(null, installed.copy(lastUpdateTime = null)))
+        assertFalse(shouldAutoHideInstalledLauncher(null, installed.copy(lastUpdateTime = 0)))
+    }
+
+    @Test
     fun binaryManifestKeepsAllOtherChunksAndSupportsUnicodeNames() {
         val original = manifest()
         val before = ByteBuffer.wrap(original).order(ByteOrder.LITTLE_ENDIAN)
@@ -160,12 +175,19 @@ class InstalledLauncherTest {
     }
 
     @Test
-    fun installationAndCancellationCannotHideTheMainActivity() {
+    fun automaticVerificationStillRequiresTheEntryToReachTheManager() {
         val screen = source("ui/screen/launchericon/LauncherIconScreen.kt")
         val entry = source("ui/util/InstalledLauncher.kt")
         assertTrue(screen.contains("canRequestPackageInstalls()"))
         assertTrue(screen.contains("InstalledLauncher.create(context, bitmap, managerName)"))
         assertFalse(screen.contains("createManagerShortcut"))
+        val installationResult = screen.substringAfter("val installLauncher = rememberLauncherForActivityResult(")
+            .substringBefore("val installPermissionLauncher =")
+        assertTrue(installationResult.contains("pendingInstallPath != null"))
+        assertTrue(installationResult.contains("shouldAutoHideInstalledLauncher(previousUpdateTime, installed)"))
+        assertTrue(installationResult.contains("InstalledLauncher.verifyAndHide(context)"))
+        assertFalse(installationResult.contains("setComponentEnabledSetting"))
+        assertTrue(screen.contains("pendingInstallPreviousUpdateTime by rememberSaveable"))
         assertTrue(entry.contains("status(context).trusted"))
         assertTrue(entry.contains("setCertificateSubject"))
         assertTrue(entry.contains("AndroidKeyStore"))

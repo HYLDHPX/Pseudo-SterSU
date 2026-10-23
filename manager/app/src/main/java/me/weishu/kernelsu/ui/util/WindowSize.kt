@@ -16,7 +16,10 @@ internal data class AppWindowSize(val widthDp: Float, val heightDp: Float, val f
     val narrow: Boolean get() = widthDp < 360f * fontScale.coerceIn(1f, 1.3f)
     val short: Boolean get() = heightDp < 480f
     val compactNavigation: Boolean get() = narrow || short
-    val canShowSidebar: Boolean get() = !compactNavigation
+    // A narrow content layout does not mean the selected sidebar style must be
+    // replaced. In particular, large text made full-size phones use the same
+    // bottom navigation as Miuix. The rail already scrolls in short windows.
+    val canShowSidebar: Boolean get() = widthDp >= 320f && heightDp >= 320f
 }
 
 @Composable

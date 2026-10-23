@@ -448,13 +448,14 @@ fun BottomBar(
     if (!mainState.fullFeatured || mainState.stealthModeEnabled) return
     val destinations = mainDestinations(mainState.kpmActive, mainState.stealthModeEnabled)
 
-    if (currentAppWindowSize().compactNavigation) {
-        CompactBottomBar(navigationBadge, destinations, modifier)
+    val window = currentAppWindowSize()
+    if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value && window.canShowSidebar) {
+        SidebarWidgetRail(navigationBadge, destinations, modifier)
         return
     }
 
-    if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) {
-        SidebarWidgetRail(navigationBadge, destinations, modifier)
+    if (window.compactNavigation) {
+        CompactBottomBar(navigationBadge, destinations, modifier)
         return
     }
 

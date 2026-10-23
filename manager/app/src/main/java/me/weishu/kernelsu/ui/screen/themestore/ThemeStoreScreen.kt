@@ -1454,6 +1454,7 @@ private fun InterfaceStyleDetailContent(
             }
         }
     }
+    ThemeCommentsEntry(style.id, style.name, interfaceStyle = true)
     StoreSectionHeading(stringResource(R.string.store_redesign_information))
     me.weishu.kernelsu.ui.component.store.StorePanel {
         InterfaceStyleMetadataRow(stringResource(R.string.interface_style_version_label), style.version.toString())

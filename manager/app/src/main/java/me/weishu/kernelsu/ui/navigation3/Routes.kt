@@ -228,6 +228,14 @@ sealed interface Route : NavKey, Parcelable {
 
     @Parcelize
     @Serializable
+    data class ThemeComments(
+        val subjectId: String,
+        val subjectName: String,
+        val interfaceStyle: Boolean = false,
+    ) : Route
+
+    @Parcelize
+    @Serializable
     data object CloudThemeRanking : Route
 
     @Parcelize

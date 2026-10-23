@@ -442,7 +442,9 @@ private fun WallpaperCropTools(
     onReset: () -> Unit,
     onGenerateResponsiveCrops: ((ResponsiveCropSet) -> Unit)?,
 ) {
-    val zoom = (1f / maxOf(crop.width, crop.height).coerceAtLeast(0.05f)).coerceIn(1f, 8f)
+    val normalizedAspect = normalizedCropAspectRatio(imageBitmap, cropAspectRatio)
+    val maxZoom = maximumCropZoom(crop, normalizedAspect)
+    val zoom = cropZoom(crop).coerceAtMost(maxZoom)
     var zoomEditing by remember(imageBitmap, cropAspectRatio) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -544,10 +546,11 @@ private fun WallpaperCropTools(
                     onCommitBeforeChange()
                     zoomEditing = true
                 }
-                onCropChange(scaleCropForZoom(crop, next, cropAspectRatio, imageBitmap))
+                onCropChange(scaleCropForZoom(crop, next, normalizedAspect))
             },
             onValueChangeFinished = { zoomEditing = false },
-            valueRange = 1f..8f,
+            valueRange = 1f..maxZoom,
+            enabled = maxZoom > 1f,
         )
     }
 }
@@ -578,16 +581,30 @@ private data class CropEditSnapshot(
     val responsiveCrops: ResponsiveCropSet?,
 )
 
-private fun scaleCropForZoom(
+internal fun cropZoom(crop: CustomWallpaperCrop): Float =
+    (1f / maxOf(crop.width, crop.height).coerceAtLeast(0.05f)).coerceIn(1f, 8f)
+
+private fun zoomBaseCrop(crop: CustomWallpaperCrop, normalizedAspectRatio: Float?): CustomWallpaperCrop {
+    val safeCrop = sanitizeCustomWallpaperCrop(crop)
+    // A free crop keeps its current proportions; 1x always uses the largest fitting crop.
+    val aspectRatio = normalizedAspectRatio ?: (safeCrop.width / safeCrop.height)
+    return fitCropToAspect(FULL_CUSTOM_WALLPAPER_CROP, aspectRatio, 0.12f)
+}
+
+internal fun maximumCropZoom(crop: CustomWallpaperCrop, normalizedAspectRatio: Float?): Float {
+    val base = zoomBaseCrop(crop, normalizedAspectRatio)
+    return (minOf(base.width, base.height) / 0.12f).coerceIn(1f, 8f)
+}
+
+internal fun scaleCropForZoom(
     crop: CustomWallpaperCrop,
     zoom: Float,
-    cropAspectRatio: Float?,
-    imageBitmap: ImageBitmap,
+    normalizedAspectRatio: Float?,
 ): CustomWallpaperCrop {
-    val normalizedAspect = normalizedCropAspectRatio(imageBitmap, cropAspectRatio)
-    val base = fitCropToAspect(DEFAULT_CUSTOM_WALLPAPER_CROP, normalizedAspect, 0.12f)
-    val width = (base.width / zoom.coerceIn(1f, 8f)).coerceAtLeast(0.12f)
-    val height = if (normalizedAspect != null) width / normalizedAspect else base.height / zoom.coerceIn(1f, 8f)
+    val base = zoomBaseCrop(crop, normalizedAspectRatio)
+    val safeZoom = zoom.coerceIn(1f, maximumCropZoom(crop, normalizedAspectRatio))
+    val width = base.width / safeZoom
+    val height = base.height / safeZoom
     val centerX = (crop.left + crop.right) / 2f
     val centerY = (crop.top + crop.bottom) / 2f
     val safeWidth = width.coerceAtMost(1f)

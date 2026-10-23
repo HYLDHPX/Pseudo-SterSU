@@ -1,0 +1,93 @@
+:root {
+  color-scheme: light;
+  --waline-color: #202329;
+  --waline-bg-color: #ffffff;
+  --waline-bg-color-light: #f1f3f5;
+  --waline-bg-color-hover: #e8ebef;
+  --waline-theme-color: #46569b;
+  --waline-active-color: #354481;
+  --waline-text-color: #535b64;
+  --waline-light-grey: #535b64;
+  --waline-dark-grey: #535b64;
+  --waline-border-color: #dce0e5;
+  --waline-disable-bg-color: #eef0f2;
+  --waline-disable-color: #535b64;
+  --waline-info-color: #535b64;
+  --waline-info-bg-color: #eef0f2;
+  --waline-bq-color: #e8ebef;
+  --waline-box-shadow: none;
+  font: 16px/1.6 system-ui, sans-serif;
+  color: var(--waline-color);
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --waline-color: #f3f4f5;
+  --waline-bg-color: #1c1e20;
+  --waline-bg-color-light: #282b2e;
+  --waline-bg-color-hover: #33373b;
+  --waline-theme-color: #c2caff;
+  --waline-active-color: #d6dcff;
+  --waline-text-color: #c1c6cc;
+  --waline-light-grey: #c1c6cc;
+  --waline-dark-grey: #c1c6cc;
+  --waline-border-color: #3b4046;
+  --waline-disable-bg-color: #282b2e;
+  --waline-disable-color: #c1c6cc;
+  --waline-info-color: #c1c6cc;
+  --waline-info-bg-color: #282b2e;
+  --waline-bq-color: #33373b;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: var(--waline-bg-color); overflow-wrap: anywhere; }
+main { max-width: 840px; margin: auto; padding: 8px 20px max(24px, env(safe-area-inset-bottom)); }
+[hidden] { display: none !important; }
+#connection { padding: 32px 0; text-align: center; }
+#connection-message, .guidance { color: var(--waline-text-color); }
+.guidance { margin: 20px 0 0; font-size: .875rem; }
+button { font: inherit; cursor: pointer; }
+input, textarea { font-family: inherit; }
+#retry { min-height: 48px; padding: 8px 20px; border: 1px solid var(--waline-border-color);
+  border-radius: 12px; color: var(--waline-theme-color); background: var(--waline-bg-color); }
+.wl-panel { margin: 0 0 24px; }
+.wl-header { flex-wrap: wrap; }
+.wl-header label { color: var(--waline-color); }
+.wl-header-item { flex: 1 1 180px; min-width: 0; }
+.wl-editor { min-height: 140px; font-size: 1rem; color: var(--waline-color); }
+.wl-editor::placeholder { color: var(--waline-text-color); opacity: 1; }
+/* Foreground and background must change together, not crossfade through unreadable colors. */
+.wl-editor, .wl-input, .wl-btn { transition: none; }
+.wl-btn, .wl-more button { min-height: 44px; }
+.wl-editor:focus-visible, .wl-input:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--waline-theme-color); outline-offset: 2px;
+}
+.wl-btn.primary { color: #ffffff; background: #46569b; border-color: #46569b; }
+:root[data-theme='dark'] .wl-btn.primary { color: #171b2d; background: #c2caff; border-color: #c2caff; }
+:root[data-theme] .wl-btn.primary:disabled {
+  color: var(--waline-disable-color); background: var(--waline-disable-bg-color);
+  border-color: var(--waline-border-color); cursor: not-allowed;
+}
+.wl-meta-head { flex-wrap: wrap; gap: 8px 16px; }
+.wl-count { flex: 1 0 auto; white-space: nowrap; }
+.wl-sort { flex-wrap: wrap; padding-inline-start: 0; }
+.wl-sort li { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.wl-card .wl-like, .wl-card .wl-reply {
+  min-width: 44px; min-height: 44px; justify-content: center; transition: none;
+}
+.wl-content { overflow-wrap: anywhere; }
+.wl-content img { max-width: 100%; height: auto; }
+.wl-card .wl-content.expand::before {
+  background: linear-gradient(transparent, var(--waline-bg-color));
+}
+.wl-card .wl-content.expand::after { color: var(--waline-text-color); background: var(--waline-bg-color); }
+.wl-meta { overflow-wrap: anywhere; }
+@media (max-width: 360px) {
+  main { padding-inline: 12px; }
+  .wl-header-item { flex-basis: 100%; }
+  .wl-meta-head { flex-direction: column; align-items: flex-start; }
+  .wl-sort { display: flex; gap: 8px; }
+  .wl-sort li + li { margin-inline-start: 0; }
+  .wl-card .wl-children { padding-left: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

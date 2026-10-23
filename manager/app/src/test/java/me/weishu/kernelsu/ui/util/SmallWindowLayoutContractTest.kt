@@ -35,6 +35,26 @@ class SmallWindowLayoutContractTest {
     }
 
     @Test
+    fun selectedSidebarStyleTakesPriorityOverCompactBottomNavigation() {
+        val bottomBar = source("component/bottombar/BottomBar.kt")
+            .substringAfter("fun BottomBar(").substringBefore("fun SideRail(")
+        val sidebar = bottomBar.indexOf("InterfaceStyle.SidebarWidget.value && window.canShowSidebar")
+        val compact = bottomBar.indexOf("if (window.compactNavigation)")
+        assertTrue(sidebar >= 0)
+        assertTrue(compact > sidebar)
+        assertTrue(bottomBar.substring(sidebar, compact).contains("SidebarWidgetRail("))
+        assertTrue(bottomBar.substring(sidebar, compact).contains("return"))
+    }
+
+    @Test
+    fun sidebarHostAndModuleInstallUseTheSameAvailabilityPolicy() {
+        assertTrue(source("MainActivity.kt").contains("currentAppWindowSize().canShowSidebar && shouldHostSidebarRail("))
+        assertTrue(source("component/bottombar/BottomBar.kt").contains("return currentAppWindowSize().canShowSidebar"))
+        assertTrue(source("screen/module/ModuleScreen.kt").contains("rawUiState.installButtonVisible && currentAppWindowSize().canShowSidebar"))
+        assertTrue(source("screen/module/ModuleMaterial.kt").contains("!(sidebar && currentAppWindowSize().canShowSidebar)"))
+    }
+
+    @Test
     fun collapsingTheSidebarDoesNotRemoveTheRebootMenu() {
         val home = source("screen/home/HomeMaterial.kt")
         assertTrue(home.contains("showReboot && (!sidebarStyle || !me.weishu.kernelsu.ui.util.currentAppWindowSize().canShowSidebar)"))

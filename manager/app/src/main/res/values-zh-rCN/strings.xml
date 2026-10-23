@@ -3487,7 +3487,7 @@
     <string name="overflow_menu_wallpaper_clear">恢复默认磨砂玻璃</string>
     <string name="overflow_menu_wallpaper_error">壁纸保存失败，请选择 32 MB 以内的有效图片，并检查存储空间。</string>
     <string name="launcher_install_title">安装式自定义图标</string>
-    <string name="launcher_install_summary">选择并裁剪图片，安装独立的桌面入口应用</string>
+    <string name="launcher_install_summary">选择并裁剪图片，安装独立的桌面入口应用。安装完成后自动验证，成功打开 SterSU 才会隐藏主图标。</string>
     <string name="launcher_install_preparing">正在本机生成并签名入口…</string>
     <string name="launcher_install_ready">入口已安装并通过签名检查，主应用图标仍然保留。</string>
     <string name="launcher_install_hidden">正在使用自定义入口，主应用桌面图标已隐藏。</string>
@@ -3500,4 +3500,16 @@
     <string name="launcher_install_verify_failed">无法验证入口或更新主图标，请继续使用原入口。</string>
     <string name="launcher_install_hide_warning">将先通过新入口打开一次 SterSU，验证成功后才隐藏主应用桌面图标。长按新入口，选择“恢复 SterSU 图标”即可恢复。卸载入口前请先恢复主图标。这不是隐身模式，也不会在系统设置中隐藏应用。</string>
     <string name="launcher_install_help">入口是不申请权限的独立应用，不是桌面快捷方式；桌面仍可能使用系统图标遮罩。修改名称或图片需重新生成并安装入口。旧快捷方式请从桌面手动移除。重装 SterSU 或清除其数据后，入口也需重新安装。ADB 应急打开：adb shell am start -n io.github.fixz.stersu/me.weishu.kernelsu.ui.MainActivity</string>
+    <string name="theme_comments_title">评论区</string>
+    <string name="theme_comments_summary">分享使用反馈、回复其他用户，每款主题都有独立的讨论区。</string>
+    <string name="theme_comments_open">查看与发表评论</string>
+    <string name="theme_comments_unconfigured">评论服务尚未启用</string>
+    <string name="theme_comments_unconfigured_summary">商店管理员还需部署并配置 Waline 服务，主题下载与安装不受影响。</string>
+    <string name="theme_comments_privacy_title">进入评论区前</string>
+    <string name="theme_comments_privacy">评论服务由 %1$s 提供，会接收公开昵称、评论内容、选填邮箱、IP 地址和浏览器信息。头像及远程图片可能请求第三方站点，头像地址可能包含邮箱摘要；不会获取 root 权限、应用列表或唯一设备标识。请勿发布密码及含隐私的日志。评论可能需要审核后显示。</string>
+    <string name="theme_comments_agree">同意并进入</string>
+    <string name="theme_comments_retry">重新加载评论</string>
+    <string name="theme_comments_failed">无法打开评论区</string>
+    <string name="theme_comments_retry_summary">请检查网络连接，或更新 Android 系统 WebView 后重试。</string>
+    <string name="theme_comments_invalid_subject">主题的讨论区标识无效，请返回并刷新商店。</string>
 </resources>

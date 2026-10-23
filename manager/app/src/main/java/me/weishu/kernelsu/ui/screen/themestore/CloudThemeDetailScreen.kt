@@ -401,6 +401,7 @@ private fun CloudThemeDetailContent(
                 }
             }
         }
+        item(key = "comments") { ThemeCommentsEntry(theme.id, theme.name) }
         item {
             Column(
                 modifier = Modifier.fillMaxWidth(),
