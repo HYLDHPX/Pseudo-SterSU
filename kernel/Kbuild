@@ -161,6 +161,12 @@ ccflags-y += -I$(objtree)/security/selinux/include
 # It is built against the installed UAPI headers of the target kernel
 # (CONFIG_HEADERS_INSTALL, enabled by gki_defconfig).
 KSU_UAPI_INC := $(objtree)/usr/include
+ifeq ($(CONFIG_KSU_SUSFS),y)
+# Source-patched SUSFS uses its own exec hook, not syscall_event_bridge.o.
+# Do not stage a runner or advertise PREINIT until that hook supports it.
+$(info -- KernelSU: source-patched SUSFS exec hook does not support preinit)
+ccflags-y += -DKSU_NO_PREINIT
+else
 ifneq ($(wildcard $(KSU_UAPI_INC)/linux/unistd.h),)
 kernelsu-objs += preinit/preinit.o
 kernelsu-objs += preinit/blob.o
@@ -190,6 +196,7 @@ asflags-y += -DKSU_PREINIT_RUNNER_BIN=\"$(obj)/preinit/runner.elf\"
 else
 $(warning -- KernelSU: $(KSU_UAPI_INC) not found, preinit disabled)
 ccflags-y += -DKSU_NO_PREINIT
+endif
 endif
 
 obj-$(CONFIG_KSU) += kernelsu.o
