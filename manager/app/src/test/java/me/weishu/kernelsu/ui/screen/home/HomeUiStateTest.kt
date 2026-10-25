@@ -10,6 +10,34 @@ import org.junit.Test
 
 class HomeUiStateTest {
     @Test
+    fun refreshingKeepsRuntimeRowsUntilProbesFinish() {
+        val fresh = homeState(false, false).copy(rootRuntimeState = RootRuntimeState.Running)
+        val previous = fresh.copy(systemInfo = fresh.systemInfo.copy(kpm = "0.12.0", susfs = "2.0"))
+
+        val pending = fresh.withPendingRuntimeSummaries(previous)
+
+        assertEquals(previous.systemInfo.kpm, pending.systemInfo.kpm)
+        assertEquals(previous.systemInfo.susfs, pending.systemInfo.susfs)
+        assertEquals(fresh.systemInfo.deviceModel, pending.systemInfo.deviceModel)
+    }
+
+    @Test
+    fun pendingSummariesNeverLeakAcrossRuntimeOrKernelChanges() {
+        val fresh = homeState(false, false).copy(rootRuntimeState = RootRuntimeState.Running)
+        val previous = fresh.copy(systemInfo = fresh.systemInfo.copy(kpm = "0.12.0", susfs = "2.0"))
+        listOf(
+            fresh.copy(rootRuntimeState = RootRuntimeState.DriverDisconnected),
+            fresh.copy(lkmMode = false),
+            fresh.copy(ksuVersion = 33200),
+            fresh.copy(kernelUAPIVersion = 6),
+            fresh.copy(systemInfo = fresh.systemInfo.copy(kernelVersion = "6.6.1")),
+            fresh.asStealthModeState(),
+        ).forEach { changed ->
+            assertEquals(changed, changed.withPendingRuntimeSummaries(previous))
+        }
+    }
+
+    @Test
     fun managerNameSyncIsOptInAndOnlyAppliesToActiveLkm() {
         val state = homeState(false, false).copy(
             customManagerName = "NHSU",

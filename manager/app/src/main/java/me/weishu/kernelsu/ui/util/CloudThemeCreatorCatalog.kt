@@ -29,6 +29,7 @@ internal const val CLOUD_THEME_CREATOR_REVIEWER = CLOUD_THEME_GITHUB_OWNER
 internal const val CLOUD_THEME_MAX_CREATOR_REGISTRY_BYTES = 512L * 1024L
 internal const val CLOUD_THEME_MAX_GITHUB_ISSUES_BYTES = 2L * 1024L * 1024L
 internal const val CLOUD_THEME_CREATOR_PICKER_MIME_TYPE = "*/*"
+internal const val CLOUD_THEME_MAX_REPOSITORY_PACKAGE_BYTES = 100L * 1024L * 1024L
 
 private const val CLOUD_THEME_DRAFT_SCHEMA = "io.github.fixz.apkesu.theme-submission-draft"
 private const val CLOUD_THEME_DRAFT_VERSION = 1
@@ -217,22 +218,19 @@ internal fun validateCloudThemeCreatorPackageUrl(rawUrl: String, githubLogin: St
         allowPackage = true,
     )
     val uri = URI(validated)
-    require(uri.host.equals("github.com", ignoreCase = true)) {
-        "Theme package must use a GitHub Release URL"
-    }
-    val pathParts = uri.rawPath.orEmpty().split('/')
-    require(pathParts.firstOrNull().orEmpty().isEmpty() && pathParts.drop(1).none(String::isEmpty)) {
-        "Theme package has an invalid GitHub Release path"
-    }
-    val segments = pathParts.drop(1)
+    val segments = uri.path.orEmpty().split('/').drop(1)
+    val repositoryFile = uri.host.equals("raw.githubusercontent.com", ignoreCase = true) &&
+        segments.size >= 4
+    val legacyRelease = uri.host.equals("github.com", ignoreCase = true) &&
+        segments.size >= 6 && segments[2] == "releases" && segments[3] == "download"
     require(
-        segments.size >= 6 &&
-            segments[0].equals(github, ignoreCase = true) &&
-            segments[2] == "releases" &&
-            segments[3] == "download" &&
-            segments.drop(4).none { it == "." || it == ".." }
+        (repositoryFile || legacyRelease) &&
+            segments.firstOrNull().equals(github, ignoreCase = true) &&
+            uri.rawQuery == null && uri.port in listOf(-1, 443) &&
+            uri.rawPath.orEmpty().split('/').size == segments.size + 1 &&
+            segments.none { it.isEmpty() || it == "." || it == ".." || '\\' in it }
     ) {
-        "Theme package must be uploaded to a Release under the creator's GitHub account"
+        "Theme package must be a public repository file under the creator account (legacy Releases are also accepted)"
     }
     return validated
 }
@@ -316,6 +314,9 @@ internal fun buildCloudThemeSubmissionManifest(draft: CloudThemeSubmissionDraft)
     val versionName = draft.versionName.requiredDraftText("Version name", 40)
     val minimumManagerVersion = 1L
     require(draft.hasInspectedPackage) { "Select and verify a .kstheme package first" }
+    require(draft.packageSizeBytes <= CLOUD_THEME_MAX_REPOSITORY_PACKAGE_BYTES) {
+        "Repository publishing supports packages up to 100 MiB; reduce embedded media before submitting"
+    }
     val packageUrl = validateCloudThemeCreatorPackageUrl(draft.packageUrl, github)
     require(draft.isRemoteVerified) { "Verify that the remote package matches the local package" }
     val screenshots = draft.screenshotUrlsText

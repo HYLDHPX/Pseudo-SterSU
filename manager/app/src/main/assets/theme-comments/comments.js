@@ -1,4 +1,8 @@
+import { createCommentAccount } from './auth.js';
+import { observeCommentReads } from './network.js';
+
 const params = new URLSearchParams(location.search);
+const accountMode = params.get('mode') === 'account';
 const chinese = (params.get('lang') || navigator.language).toLowerCase().startsWith('zh');
 const copy = chinese ? {
   title: '\u8bc4\u8bba\u533a',
@@ -14,7 +18,7 @@ const copy = chinese ? {
   guidance: 'Nicknames are not verified GitHub identities. Keep discussions respectful and protect your privacy.',
 };
 document.documentElement.lang = chinese ? 'zh-CN' : 'en';
-document.title = copy.title;
+document.title = accountMode ? (chinese ? '\u8bc4\u8bba\u8d26\u53f7' : 'Comment account') : copy.title;
 document.querySelector('#guidance').textContent = copy.guidance;
 const connection = document.querySelector('#connection');
 const message = document.querySelector('#connection-message');
@@ -25,12 +29,69 @@ let dark = params.get('dark') === 'true';
 let instance;
 let pending = false;
 let disposed = false;
-let controller;
+let stopObserving;
 let commentPath;
+let account;
+let fontVersion;
+let customFont;
+const resizeEditor = () => document.querySelectorAll('.wl-editor')
+  .forEach(editor => editor.dispatchEvent(new Event('autosize:update')));
 document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 
-// JavaScript-to-native bridges are deliberately absent. Only appearance can be updated by the host.
+// Native-to-page calls update appearance or hand off the active browser login result.
+// The local action/status channel has no root operations; tokens require service verification.
 window.stersuComments = {
+  restoreAccount() { void account?.restore(); },
+  setAppearance(appearance) {
+    if (!appearance || typeof appearance !== 'object') return;
+    this.setDarkMode(appearance.dark);
+    const root = document.documentElement;
+    const previousFont = root.style.getPropertyValue('--comments-font-scale') + root.style.getPropertyValue('--comments-font-family');
+    const colors = {
+      background: '--comments-background', surface: '--waline-bg-color',
+      surfaceVariant: '--waline-bg-color-light', surfaceHover: '--waline-bg-color-hover',
+      foreground: '--comments-ink', muted: '--comments-muted',
+      primary: '--waline-theme-color', onPrimary: '--comments-on-primary',
+      outline: '--waline-border-color', error: '--comments-error',
+    };
+    for (const [key, variable] of Object.entries(colors)) {
+      // Accept only literal host colors, never CSS URLs or arbitrary declarations.
+      if (/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(appearance[key] || ''))
+        root.style.setProperty(variable, appearance[key]);
+    }
+    for (const [key, variable, min, max] of [
+      ['fontScale', '--comments-font-scale', .5, 3],
+      ['textOpacity', '--comments-text-opacity', 0, 1],
+      ['iconOpacity', '--comments-icon-opacity', .2, 1],
+      ['imageOpacity', '--comments-image-opacity', 0, 1],
+    ]) {
+      const value = appearance[key];
+      if (typeof value === 'number' && Number.isFinite(value))
+        root.style.setProperty(variable, String(Math.max(min, Math.min(max, value))));
+    }
+    const fonts = ['system-ui', 'sans-serif', 'serif', 'monospace', 'cursive', 'SterSUCustom'];
+    if (fonts.includes(appearance.fontFamily))
+      root.style.setProperty('--comments-font-family', `${appearance.fontFamily}, sans-serif`);
+    if (appearance.fontFamily === 'SterSUCustom' && /^[0-9a-f]{64}$/.test(appearance.fontVersion || '') &&
+        appearance.fontVersion !== fontVersion) {
+      fontVersion = appearance.fontVersion;
+      const version = fontVersion;
+      const font = new FontFace('SterSUCustom', `url('./font.ttf?v=${version}')`);
+      font.load().then(loaded => {
+        if (version === fontVersion) {
+          if (customFont) document.fonts.delete(customFont);
+          document.fonts.add(loaded);
+          customFont = loaded;
+          resizeEditor();
+        }
+      }).catch(() => {
+        if (version === fontVersion) fontVersion = undefined;
+        // The platform font remains available if the custom file is unavailable.
+      });
+    }
+    if (previousFont !== root.style.getPropertyValue('--comments-font-scale') + root.style.getPropertyValue('--comments-font-family'))
+      resizeEditor();
+  },
   setDarkMode(next) {
     if (typeof next !== 'boolean' || next === dark) return;
     dark = next;
@@ -39,34 +100,44 @@ window.stersuComments = {
     instance?.update({ dark: next, path: commentPath });
   },
 };
+try { window.stersuComments.setAppearance(JSON.parse(params.get('appearance') || 'null')); } catch { /* Default palette. */ }
 
 async function mountComments() {
   if (pending || disposed) return;
+  if (instance) {
+    // Use Waline's retry so the editor's draft and reply target remain mounted.
+    container.querySelector('.wl-operation .wl-btn')?.click();
+    return;
+  }
   pending = true;
   connection.hidden = false;
   retry.hidden = true;
   message.textContent = copy.loading;
-  let timeout;
   try {
     const server = new URL(params.get('server'));
     if (server.protocol !== 'https:' || server.username || server.password || server.search || server.hash)
       throw new Error('Invalid comment server');
     commentPath = params.get('path');
-    if (!/^\/stersu\/(theme|style)\/[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}$/.test(commentPath || ''))
+    if (!accountMode && !/^\/stersu\/(theme|style)\/[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}$/.test(commentPath || ''))
       throw new Error('Invalid comment thread');
     const serverURL = server.href.replace(/\/+$/, '');
-    controller = new AbortController();
-    timeout = setTimeout(() => controller.abort(), 15000);
-    const health = new URL(`${serverURL}/api/comment`);
-    health.search = new URLSearchParams({ type: 'count', url: commentPath }).toString();
-    const response = await fetch(health, { signal: controller.signal, credentials: 'omit' });
-    if (!response.ok) throw new Error('Comment service unavailable');
-    const result = await response.json();
-    if (!result || result.errno !== 0 || !Object.prototype.hasOwnProperty.call(result, 'data'))
-      throw new Error('Invalid Waline response');
-    clearTimeout(timeout);
+    account ??= createCommentAccount(serverURL, chinese, accountMode);
+    // A slow session check must not delay reading comments or typing a draft.
+    void account.restore();
+    if (accountMode) {
+      connection.hidden = true;
+      document.querySelector('#guidance').hidden = true;
+      return;
+    }
     const { init } = await import('./vendor/waline.js');
     if (disposed) return;
+    stopObserving?.();
+    stopObserving = observeCommentReads(serverURL, state => {
+      if (disposed) return;
+      connection.hidden = state === 'ready';
+      retry.hidden = state !== 'failed';
+      message.textContent = state === 'failed' ? copy.failed : copy.loading;
+    });
     container.hidden = false;
     instance = init({
       el: container, serverURL, path: commentPath, lang: chinese ? 'zh-CN' : 'en', dark,
@@ -76,14 +147,13 @@ async function mountComments() {
       highlighter: false, reaction: false, pageview: false, comment: false, noRss: true,
       locale: { placeholder: copy.placeholder },
     });
-    connection.hidden = true;
+    account.connect();
   } catch {
     if (!disposed) {
       message.textContent = copy.failed;
       retry.hidden = false;
     }
   } finally {
-    clearTimeout(timeout);
     pending = false;
   }
 }
@@ -91,7 +161,8 @@ async function mountComments() {
 retry.addEventListener('click', mountComments);
 window.addEventListener('pagehide', () => {
   disposed = true;
-  controller?.abort();
+  stopObserving?.();
+  account?.destroy();
   instance?.destroy();
 });
 mountComments();

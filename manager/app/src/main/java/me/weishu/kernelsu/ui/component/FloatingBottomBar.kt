@@ -4,7 +4,9 @@ package me.weishu.kernelsu.ui.component
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -12,13 +14,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -27,9 +31,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -55,7 +59,6 @@ import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import me.weishu.kernelsu.ui.component.liquid.InnerShadow
 import me.weishu.kernelsu.ui.component.liquid.FrostedGlassCardStyle
@@ -82,6 +85,7 @@ import me.weishu.kernelsu.ui.component.rain.rainNavigationIndicator
 import me.weishu.kernelsu.ui.component.rain.rainNavigationSurface
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.theme.LocalUiPassthroughSettings
+import me.weishu.kernelsu.ui.theme.LocalImmersiveBackgroundActive
 import me.weishu.kernelsu.ui.theme.uiPassthroughNavigationColor
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.blur
@@ -169,6 +173,7 @@ private fun rememberGravityRotatedHighlight(
 fun RowScope.FloatingBottomBarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    selected: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val scale = LocalFloatingBottomBarTabScale.current
@@ -181,7 +186,8 @@ fun RowScope.FloatingBottomBarItem(
     Column(
         modifier
             .clip(itemShape)
-            .clickable(
+            .selectable(
+                selected = selected,
                 interactionSource = null,
                 indication = null,
                 role = Role.Tab,
@@ -226,22 +232,23 @@ fun FloatingBottomBar(
     val accentColor = MiuixTheme.colorScheme.primary
     val surfaceContainer = MiuixTheme.colorScheme.surfaceContainer
     val passthrough = LocalUiPassthroughSettings.current
-    val containerColor = uiPassthroughNavigationColor(when {
-        isLiquidGlass -> liquidGlassSurfaceColor().copy(alpha = if (isBlurEnabled) 0.48f else 0.76f)
-        isRainStyle -> rainNavigationContainerColor()
-        isSnowStyle -> seasonNavigationContainerColor()
-        isPixelStyle -> pixelNavigationContainerColor()
-        isBlurEnabled -> surfaceContainer.copy(0.4f)
-        else -> surfaceContainer
-    })
-
+    val immersiveBackground = LocalImmersiveBackgroundActive.current
     val activeBackdrop = if (
-        isBlurEnabled && !passthrough.enabled && !isPixelStyle && !isRainStyle && !isLiquidGlass
+        isBlurEnabled && !immersiveBackground && !passthrough.enabled && !isPixelStyle && !isRainStyle && !isLiquidGlass
     ) {
         backdrop
     } else {
         null
     }
+    val containerColor = uiPassthroughNavigationColor(when {
+        isLiquidGlass -> liquidGlassSurfaceColor().copy(alpha = if (isBlurEnabled) 0.48f else 0.76f)
+        isRainStyle -> rainNavigationContainerColor()
+        isSnowStyle -> seasonNavigationContainerColor()
+        isPixelStyle -> pixelNavigationContainerColor()
+        activeBackdrop != null -> surfaceContainer.copy(0.4f)
+        else -> surfaceContainer
+    })
+
     val tabsBackdrop = if (activeBackdrop != null) rememberLayerBackdrop() else null
     val density = LocalDensity.current
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
@@ -263,7 +270,8 @@ fun FloatingBottomBar(
         }
     }
 
-    var currentIndex by remember(selectedIndex) { mutableIntStateOf(selectedIndex()) }
+    val onSelectedState = rememberUpdatedState(onSelected)
+    val selectedIndexState = rememberUpdatedState(selectedIndex)
 
     class DampedDragAnimationHolder {
         var instance: DampedDragAnimation? = null
@@ -271,14 +279,14 @@ fun FloatingBottomBar(
 
     val holder = remember { DampedDragAnimationHolder() }
 
-    val dampedDragAnimation = remember(animationScope, tabsCount, density, isLtr) {
+    val dampedDragAnimation = remember(animationScope, tabsCount, density, isLtr, isRainStyle) {
         DampedDragAnimation(
             animationScope = animationScope,
-            initialValue = selectedIndex().toFloat(),
+            initialValue = selectedIndexState.value().coerceIn(0, tabsCount - 1).toFloat(),
             valueRange = 0f..(tabsCount - 1).toFloat(),
             visibilityThreshold = 0.001f,
             initialScale = 1f,
-            pressedScale = 78f / 56f,
+            pressedScale = if (isRainStyle) 1.04f else 78f / 56f,
             canDrag = { offset ->
                 val anim = holder.instance ?: return@DampedDragAnimation true
                 if (tabWidthPx == 0f) return@DampedDragAnimation false
@@ -296,8 +304,8 @@ fun FloatingBottomBar(
             onDragStarted = {},
             onDragStopped = {
                 val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
-                currentIndex = targetIndex
-                animateToValue(targetIndex.toFloat())
+                animationScope.launch { animateToValue(targetIndex.toFloat()) }
+                onSelectedState.value(targetIndex)
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
                 }
@@ -316,17 +324,22 @@ fun FloatingBottomBar(
         ).also { holder.instance = it }
     }
 
-    LaunchedEffect(selectedIndex) {
-        snapshotFlow { selectedIndex() }.collectLatest { currentIndex = it }
-    }
-    LaunchedEffect(dampedDragAnimation) {
-        snapshotFlow { currentIndex }.drop(1).collectLatest { index ->
-            dampedDragAnimation.animateToValue(index.toFloat())
-            onSelected(index)
+    // Programmatic selection only moves the indicator. Sending it back to the
+    // pager starts a second navigation and can cancel an in-flight page change.
+    LaunchedEffect(dampedDragAnimation, isRainStyle) {
+        snapshotFlow { selectedIndexState.value().coerceIn(0, tabsCount - 1) }.collectLatest { index ->
+            if (isRainStyle) {
+                dampedDragAnimation.animateToValue(
+                    index.toFloat(),
+                    tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                )
+            } else {
+                dampedDragAnimation.animateToValue(index.toFloat())
+            }
         }
     }
 
-    val interactiveHighlight = remember(animationScope, tabWidthPx) {
+    val interactiveHighlight = remember(animationScope, tabWidthPx, dampedDragAnimation, isLtr) {
         InteractiveHighlight(
             animationScope = animationScope,
             position = { size, _ ->
@@ -349,11 +362,13 @@ fun FloatingBottomBar(
     }
 
     Box(
-        modifier = modifier.width(IntrinsicSize.Min),
+        modifier = modifier,
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
             Modifier
+                .fillMaxWidth()
+                .selectableGroup()
                 .onGloballyPositioned { coords ->
                     totalWidthPx = coords.size.width.toFloat()
                     val contentWidthPx = totalWidthPx - with(density) { 8.dp.toPx() }
@@ -447,6 +462,7 @@ fun FloatingBottomBar(
                 Row(
                     Modifier
                         .clearAndSetSemantics {}
+                        .fillMaxWidth()
                         .alpha(0f)
                         .layerBackdrop(tabsBackdrop)
                         .graphicsLayer { translationX = panelOffset }
@@ -531,7 +547,7 @@ fun FloatingBottomBar(
                                 Modifier.rainNavigationIndicator(
                                     shape = pillShape,
                                     paintBackground = false,
-                                    interactionKey = currentIndex,
+                                    interactionKey = selectedIndex(),
                                 )
                             } else {
                                 Modifier
@@ -560,7 +576,7 @@ fun FloatingBottomBar(
                             } else if (isRainStyle) {
                                 Modifier.rainNavigationIndicator(
                                     shape = pillShape,
-                                    interactionKey = currentIndex,
+                                    interactionKey = selectedIndex(),
                                 )
                             } else if (isSnowStyle) {
                                 Modifier.seasonNavigationIndicator(pillShape)

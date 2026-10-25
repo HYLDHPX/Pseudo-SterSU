@@ -37,7 +37,7 @@ internal object SettingsCatalog {
         entry("season_motion", SettingsCategory.Appearance, R.string.settings_season_card_motion, R.string.settings_season_card_motion_summary) {
             it.uiMode == InterfaceStyle.Snow.value
         },
-        entry("rain_motion", SettingsCategory.Appearance, R.string.settings_rain_card_motion, R.string.settings_rain_card_motion_summary) {
+        entry("rain_design", SettingsCategory.Appearance, R.string.rain_design_title, R.string.rain_design_summary) {
             it.uiMode == InterfaceStyle.Rain.value
         },
         entry("pixel_motion", SettingsCategory.Appearance, R.string.settings_pixel_card_motion, R.string.settings_pixel_card_motion_summary) {

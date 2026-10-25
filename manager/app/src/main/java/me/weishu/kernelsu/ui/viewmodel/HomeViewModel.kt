@@ -34,6 +34,7 @@ import me.weishu.kernelsu.getKernelVersion
 import me.weishu.kernelsu.isCompatibleUapiVersion
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.screen.home.HomeUiState
+import me.weishu.kernelsu.ui.screen.home.withPendingRuntimeSummaries
 import me.weishu.kernelsu.ui.screen.home.GkiSeccompHookReport
 import me.weishu.kernelsu.ui.screen.home.KernelHookType
 import me.weishu.kernelsu.ui.screen.home.RootRuntimeState
@@ -126,9 +127,11 @@ class HomeViewModel(
                 buildStateSafely()
             }
             if (generation != refreshGeneration.get()) return@launch
+            val pendingState = baseState.withPendingRuntimeSummaries(_uiState.value)
             // Appearance preferences may change while the root probe is running.
             _uiState.update {
                 baseState.copy(
+                    systemInfo = pendingState.systemInfo,
                     customManagerName = repo.customManagerName,
                     syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard,
                 )
@@ -142,7 +145,7 @@ class HomeViewModel(
             }
             if (generation != refreshGeneration.get()) return@launch
             _uiState.update { current ->
-                if (current.systemInfo == baseState.systemInfo) {
+                if (current.systemInfo == pendingState.systemInfo) {
                     current.copy(systemInfo = systemInfo)
                 } else {
                     current

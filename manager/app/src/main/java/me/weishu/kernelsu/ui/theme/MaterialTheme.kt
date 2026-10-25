@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
+import me.weishu.kernelsu.ui.component.rain.LocalRainSettings
+import me.weishu.kernelsu.ui.component.rain.withRainAppearance
 import me.weishu.kernelsu.ui.util.AppFontState
 import me.weishu.kernelsu.ui.util.resolveAppFontFamily
 import me.weishu.kernelsu.ui.webui.MonetColorsProvider
@@ -29,10 +31,13 @@ fun MaterialKernelSUTheme(
     val systemDarkTheme = isSystemInDarkTheme()
     val darkTheme = appSettings.colorMode.isDark || (appSettings.colorMode.isSystem && systemDarkTheme)
     val amoledMode = appSettings.colorMode.isAmoled
-    val dynamicColor = appSettings.keyColor == 0
+    val rain = LocalRainSettings.current
+    val seedColor = if (rain.active) (if (darkTheme) rain.darkAccent else rain.lightAccent) ?: rain.scene.keyColor
+        else appSettings.keyColor
+    val dynamicColor = seedColor == 0
 
     val colorScheme = rememberKernelSUColorScheme(
-        seedColor = if (dynamicColor) Color.Unspecified else Color(appSettings.keyColor),
+        seedColor = if (dynamicColor) Color.Unspecified else Color(seedColor),
         isDark = darkTheme,
         isAmoled = amoledMode,
         paletteStyle = appSettings.paletteStyle,
@@ -50,8 +55,8 @@ fun MaterialKernelSUTheme(
     val sidebar = LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
     val effectiveColorScheme = if (sidebar) {
         sidebarColorScheme(colorScheme, dark = darkTheme, amoled = amoledMode)
-    } else colorScheme
-    val animatedColorScheme = effectiveColorScheme.animateAsState()
+    } else colorScheme.withMonetSurfaceOpacity(appSettings.monetSurfaceOpacity)
+    val animatedColorScheme = effectiveColorScheme.withRainAppearance(rain, darkTheme).animateAsState()
     val appFontFamily = remember(appFontState) {
         resolveAppFontFamily(context, appFontState)
     }

@@ -16,11 +16,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.R
+import me.weishu.kernelsu.ui.LocalUiMode
+import me.weishu.kernelsu.ui.UiMode
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.TextButton as MiuixTextButton
 import top.yukonga.miuix.kmp.basic.TextField
@@ -35,6 +38,36 @@ fun ThemePresetNameDialog(
     onConfirm: (String) -> Unit,
 ) {
     if (!show) return
+    if (LocalUiMode.current == UiMode.Material) {
+        var name by rememberSaveable(initialName) { mutableStateOf(initialName) }
+        val trimmed = name.trim()
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            title = { Text(title) },
+            text = {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(40) },
+                    label = { Text(stringResource(R.string.theme_custom_preset_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().imePadding(),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = trimmed.isNotBlank(),
+                    onClick = {
+                        onConfirm(trimmed)
+                        onDismissRequest()
+                    },
+                ) { Text(stringResource(R.string.confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissRequest) { Text(stringResource(android.R.string.cancel)) }
+            },
+        )
+        return
+    }
     MiuixThemePresetNameDialog(
         title = title,
         initialName = initialName,

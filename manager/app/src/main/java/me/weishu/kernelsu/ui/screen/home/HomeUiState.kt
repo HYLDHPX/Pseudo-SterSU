@@ -164,6 +164,17 @@ data class HomeUiState(
         } ?: "--"
 }
 
+internal fun HomeUiState.withPendingRuntimeSummaries(previous: HomeUiState): HomeUiState {
+    if (!isFullFeatured || !previous.isFullFeatured ||
+        ksuVersion != previous.ksuVersion || kernelUAPIVersion != previous.kernelUAPIVersion ||
+        lkmMode != previous.lkmMode || systemInfo.kernelVersion != previous.systemInfo.kernelVersion
+    ) return this
+
+    // These root probes finish after the base refresh. Keep the last result until
+    // then so the information card (and its Crop wallpaper) does not shrink/grow.
+    return copy(systemInfo = systemInfo.copy(kpm = previous.systemInfo.kpm, susfs = previous.systemInfo.susfs))
+}
+
 internal fun HomeUiState.asStealthModeState(): HomeUiState = copy(
     ksuVersion = null,
     isKernelActive = false,

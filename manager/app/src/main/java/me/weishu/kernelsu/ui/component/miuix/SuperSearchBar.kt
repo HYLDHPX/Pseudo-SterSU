@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
@@ -54,6 +55,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Constraints
@@ -271,6 +273,7 @@ fun SearchBar(
             .padding(horizontal = 12.dp)
             .padding(top = searchBarTopPadding, bottom = 6.dp)
             .heightIn(min = 45.dp)
+            .clip(CircleShape)
             .then(
                 if (isLiquidGlassTheme()) {
                     Modifier.globalLiquidGlassSurface(
@@ -305,6 +308,8 @@ fun SearchBar(
                             text = searchStatus.label,
                             color = colorScheme.onSurfaceContainerHigh,
                             fontSize = 17.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     innerTextField()

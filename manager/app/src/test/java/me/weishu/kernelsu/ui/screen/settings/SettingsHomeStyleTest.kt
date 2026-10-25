@@ -72,7 +72,7 @@ class SettingsHomeStyleTest {
     fun deviceHomeRetainsDialogsAndDoesNotForceSidebarOrCategoryMode() {
         val source = settingsSource("SettingsSidebarScreen.kt")
         val pager = settingsSource("SettingsScreen.kt")
-        assertTrue(pager.contains("usesDeviceSettingsHome(uiState.uiMode) && pageMode.value == SettingsPageMode.Categories"))
+        assertTrue(pager.contains("usesDeviceSettingsHome(LocalInterfaceStyle.current) && pageMode.value == SettingsPageMode.Categories"))
         assertTrue(pager.contains("SettingsOverviewScreen("))
         assertTrue(source.contains("if (sidebarStyle) {\n                                    TextButton(onClick = openSidebar"))
         assertTrue(source.contains("showDeviceTextEditor && device.editing == null"))

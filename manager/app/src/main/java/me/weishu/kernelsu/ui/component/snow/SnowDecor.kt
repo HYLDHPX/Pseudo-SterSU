@@ -306,6 +306,7 @@ fun Modifier.snowMiuixCardSurface(
         return rainMiuixCardSurface(
             enabled = true,
             capHeight = capHeight,
+            shape = shape,
         )
     }
     if (!isSnowInterfaceStyle()) return this

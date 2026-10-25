@@ -3,6 +3,7 @@ package me.weishu.kernelsu.ui.util
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -10,6 +11,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
+import me.weishu.kernelsu.ui.LocalUiMode
+import me.weishu.kernelsu.ui.UiMode
 import me.weishu.kernelsu.ui.theme.LocalBlurIntensity
 import me.weishu.kernelsu.ui.theme.LocalImmersiveBackgroundActive
 import me.weishu.kernelsu.ui.component.liquid.lens
@@ -46,7 +49,11 @@ fun BlurredBar(
     val immersiveBackgroundActive = LocalImmersiveBackgroundActive.current
     val blurIntensity = LocalBlurIntensity.current
     val liquidShape = remember { RoundedCornerShape(0.dp) }
-    val surfaceColor = if (isLiquidGlass) liquidGlassSurfaceColor() else MiuixTheme.colorScheme.surface
+    val surfaceColor = when {
+        isLiquidGlass -> liquidGlassSurfaceColor()
+        LocalUiMode.current == UiMode.Material -> MaterialTheme.colorScheme.surface
+        else -> MiuixTheme.colorScheme.surface
+    }
     Box(
         modifier = when {
             immersiveBackgroundActive -> Modifier

@@ -144,6 +144,7 @@ fun ThemeStoreMyScreen(
             onRefresh = { linkedAccount?.let { syncProfile(it.login) } },
             onOpenLibrary = dropUnlessResumed { navigator.push(Route.ThemeStoreLibrary) },
             onOpenCreatorCenter = dropUnlessResumed { navigator.push(Route.CloudThemeCreator) },
+            onOpenCommentAccount = dropUnlessResumed { navigator.push(Route.ThemeCommentAccount) },
         )
     }
     if (embedded) {
@@ -175,6 +176,7 @@ private fun ThemeStoreProfileContent(
     onRefresh: () -> Unit,
     onOpenLibrary: () -> Unit,
     onOpenCreatorCenter: () -> Unit,
+    onOpenCommentAccount: () -> Unit,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -182,6 +184,12 @@ private fun ThemeStoreProfileContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { StoreSectionHeading(stringResource(R.string.store_redesign_profile)) }
+        item { StoreDestination(
+            title = stringResource(R.string.theme_comments_account_title),
+            summary = stringResource(R.string.theme_comments_account_entry),
+            icon = Icons.Rounded.Person,
+            onClick = onOpenCommentAccount,
+        ) }
         item {
             if (linkedAccount == null || changingAccount) {
                 GitHubProfileAccountForm(

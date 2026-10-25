@@ -111,9 +111,14 @@ internal object InstalledLauncher {
             context.assets.open("launcher/template.apk").use {
                 writeLauncherArchive(it, unsigned, label, png)
             }
-            signLauncherArchive(unsigned, output, entry.privateKey, entry.certificate as X509Certificate)
+            try {
+                signLauncherArchive(unsigned, output, entry.privateKey, entry.certificate as X509Certificate)
+            } catch (error: Exception) {
+                throw IllegalStateException(context.getString(R.string.launcher_install_sign_failed), error)
+            }
             return output
         } catch (error: Exception) {
+            Log.e("InstalledLauncher", "Unable to generate launcher entry APK", error)
             output.delete()
             throw error
         } finally {

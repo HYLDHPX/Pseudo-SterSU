@@ -57,6 +57,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -189,7 +190,8 @@ fun SuperUserPagerMaterial(
         PullToRefreshBox(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(innerPadding)
+                .clipToBounds(),
             isRefreshing = uiState.isRefreshing,
             onRefresh = {
                 haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)

@@ -47,8 +47,6 @@ import me.weishu.kernelsu.ui.component.snow.SEASON_CARD_MOTION_ENABLED_KEY
 import me.weishu.kernelsu.ui.component.snow.DEFAULT_SEASON_CARD_MOTION_ENABLED
 import me.weishu.kernelsu.ui.component.snow.SeasonStyle
 import me.weishu.kernelsu.ui.component.rain.RAIN_STYLE_KEY
-import me.weishu.kernelsu.ui.component.rain.RAIN_CARD_MOTION_ENABLED_KEY
-import me.weishu.kernelsu.ui.component.rain.DEFAULT_RAIN_CARD_MOTION_ENABLED
 import me.weishu.kernelsu.ui.component.rain.RainStyle
 import me.weishu.kernelsu.ui.component.pixel.PIXEL_STYLE_KEY
 import me.weishu.kernelsu.ui.component.pixel.PIXEL_CARD_MOTION_ENABLED_KEY
@@ -155,7 +153,6 @@ class MainActivityViewModel(
             seasonStyle = settingRepo.seasonStyle,
             seasonCardMotionEnabled = settingRepo.seasonCardMotionEnabled,
             rainStyle = settingRepo.rainStyle,
-            rainCardMotionEnabled = settingRepo.rainCardMotionEnabled,
             pixelStyle = settingRepo.pixelStyle,
             pixelCardMotionEnabled = settingRepo.pixelCardMotionEnabled,
             globalSnowEnabled = settingRepo.globalSnowEnabled,
@@ -253,7 +250,6 @@ class MainActivityViewModel(
             seasonStyle = SeasonStyle.DEFAULT_VALUE,
             seasonCardMotionEnabled = DEFAULT_SEASON_CARD_MOTION_ENABLED,
             rainStyle = RainStyle.DEFAULT_VALUE,
-            rainCardMotionEnabled = DEFAULT_RAIN_CARD_MOTION_ENABLED,
             pixelStyle = PixelStyle.DEFAULT_VALUE,
             pixelCardMotionEnabled = DEFAULT_PIXEL_CARD_MOTION_ENABLED,
             globalSnowEnabled = false,
@@ -349,7 +345,6 @@ class MainActivityViewModel(
             SEASON_STYLE_KEY,
             SEASON_CARD_MOTION_ENABLED_KEY,
             RAIN_STYLE_KEY,
-            RAIN_CARD_MOTION_ENABLED_KEY,
             PIXEL_STYLE_KEY,
             PIXEL_CARD_MOTION_ENABLED_KEY,
             GLOBAL_SNOW_ENABLED_KEY,

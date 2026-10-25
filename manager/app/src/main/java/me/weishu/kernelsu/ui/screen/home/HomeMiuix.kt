@@ -112,8 +112,9 @@ import me.weishu.kernelsu.ui.component.liquid.isLiquidGlassTheme
 import me.weishu.kernelsu.ui.component.pixel.PixelMotto
 import me.weishu.kernelsu.ui.component.pixel.pixelAwareMiuixCardCornerRadius
 import me.weishu.kernelsu.ui.component.snow.SeasonMotto
-import me.weishu.kernelsu.ui.component.rain.RainMotto
 import me.weishu.kernelsu.ui.component.rain.isRainInterfaceStyle
+import me.weishu.kernelsu.ui.component.rain.RainChromeArea
+import me.weishu.kernelsu.ui.component.rain.rainChromeDecoration
 import me.weishu.kernelsu.ui.component.snow.isSnowInterfaceStyle
 import me.weishu.kernelsu.ui.component.snow.snowMiuixCardColors
 import me.weishu.kernelsu.ui.component.snow.snowMiuixCardSurface
@@ -222,11 +223,6 @@ fun HomePagerMiuix(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         SeasonMotto(
-                            modifier = Modifier
-                                .fillMaxWidth(0.76f)
-                                .widthIn(max = 300.dp),
-                        )
-                        RainMotto(
                             modifier = Modifier
                                 .fillMaxWidth(0.76f)
                                 .widthIn(max = 300.dp),
@@ -424,6 +420,7 @@ private fun TopBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(barColor)
+                .rainChromeDecoration(RainChromeArea.TopBar)
                 .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
                 .height(56.dp)
                 .padding(start = 24.dp, end = 12.dp),
@@ -2672,7 +2669,7 @@ private fun Modifier.homeLiquidGlassSurface(
 ): Modifier {
     if (isRainInterfaceStyle()) {
         return snowMiuixCardSurface(
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(18.dp),
         )
     }
     if (!enabled) {

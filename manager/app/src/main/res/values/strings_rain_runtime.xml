@@ -1,0 +1,26 @@
+<resources>
+    <string name="rain_weather_ready">Current source: weather · %1$s</string>
+    <string name="rain_weather_source">sidebar weather</string>
+    <string name="rain_weather_disabled">Weather is off. Using the time of day.</string>
+    <string name="rain_weather_consent">Weather consent is required. Using the time of day.</string>
+    <string name="rain_weather_waiting">Waiting for a weather reading. Using the time of day.</string>
+    <string name="rain_weather_stale">The weather reading has expired. Using the time of day.</string>
+    <string name="rain_weather_failed">Weather is unavailable or permission was denied. Using the time of day.</string>
+    <string name="rain_weather_unsupported">This weather condition does not change the rain scene. Using the time of day.</string>
+    <string name="rain_weather_refresh">Refresh weather</string>
+    <string name="rain_weather_refreshing">Refreshing…</string>
+    <string name="rain_weather_settings">Configure sidebar weather</string>
+    <string name="rain_wallpaper_overlay">Rain over custom wallpaper</string>
+    <string name="rain_wallpaper_overlay_note">Draws rain above global and page wallpapers, below text, images and controls. Wallpaper opacity stays unchanged.</string>
+    <string name="rain_wallpaper_sound">Keep rain sound with a custom wallpaper</string>
+    <string name="rain_presets">My presets</string>
+    <string name="rain_presets_note">Save up to 12 presets. Saving the same name updates it. Applying a preset keeps the current layout; wallpapers are managed separately.</string>
+    <string name="rain_presets_empty">No saved presets. Save the current rain design to reuse it later.</string>
+    <string name="rain_preset_save">Save current design</string>
+    <string name="rain_preset_name">Preset name</string>
+    <string name="rain_preset_apply">Apply</string>
+    <string name="rain_preset_delete">Delete preset %1$s</string>
+    <string name="rain_copy_profile">Copy to %1$s</string>
+    <string name="rain_copy_profile_note">Copy all rain settings to another layout without switching layouts.</string>
+    <string name="rain_copy_profile_confirm">Replace the rain settings saved for this layout? Sidebar components and wallpapers are unchanged.</string>
+</resources>

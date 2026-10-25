@@ -1,7 +1,7 @@
 package me.weishu.kernelsu.ui.component.bottombar
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.MutatePriority
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -41,8 +41,6 @@ import me.weishu.kernelsu.ui.util.shouldShowSplitPane
 import me.weishu.kernelsu.ui.util.currentAppWindowSize
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
-import top.yukonga.miuix.kmp.utils.PagerNavigationSpringSpec
-import kotlin.math.abs
 
 class MainPagerState(
     val pagerState: PagerState,
@@ -80,7 +78,7 @@ class MainPagerState(
     fun animateToPage(targetIndex: Int) {
         if (targetIndex !in 0 until pagerState.pageCount) return
         if (targetIndex > 0 && !fullFeatured) return
-        if (targetIndex == selectedPage && !isNavigating && pagerState.settledPage == targetIndex) return
+        if (targetIndex == selectedPage && (isNavigating || pagerState.settledPage == targetIndex)) return
 
         val generation = ++navigationGeneration
         navJob?.cancel()
@@ -94,7 +92,7 @@ class MainPagerState(
         navJob = coroutineScope.launch {
             val myJob = coroutineContext.job
             try {
-                pagerState.springAnimateToPage(targetIndex)
+                pagerState.animateMainPageTo(targetIndex)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } finally {
@@ -255,66 +253,15 @@ class MainPagerState(
     }
 }
 
-private suspend fun PagerState.springAnimateToPage(target: Int) {
+private suspend fun PagerState.animateMainPageTo(target: Int) {
     if (target !in 0 until pageCount) return
-
-    var needsSnap = false
-    scroll(MutatePriority.UserInput) {
-        val pageSize = layoutInfo.pageSize + layoutInfo.pageSpacing
-        if (pageSize <= 0) {
-            needsSnap = true
-            return@scroll
-        }
-
-        val currentOffset = currentPageOffsetFraction
-        if (!currentOffset.isFinite()) {
-            needsSnap = true
-            return@scroll
-        }
-        val distance = target - currentPage - currentOffset
-        val targetScroll = distance * pageSize
-        if (abs(targetScroll) <= MAIN_PAGER_SCROLL_EPSILON) return@scroll
-
-        var consumedScroll = 0f
-        var skipScroll = false
-        Animatable(0f).animateTo(
-            targetValue = targetScroll,
-            animationSpec = PagerNavigationSpringSpec,
-        ) {
-            if (skipScroll) return@animateTo
-
-            val delta = value - consumedScroll
-            if (abs(delta) > MAIN_PAGER_SCROLL_EPSILON) {
-                val consumed = scrollBy(delta)
-                consumedScroll += consumed
-                if (abs(delta - consumed) > MAIN_PAGER_CONSUMPTION_EPSILON) {
-                    skipScroll = true
-                }
-            } else {
-                consumedScroll = value
-            }
-
-            if (abs(velocity) < MAIN_PAGER_VELOCITY_EPSILON &&
-                abs(targetScroll - consumedScroll) < MAIN_PAGER_REMAINING_EPSILON
-            ) {
-                skipScroll = true
-            }
-        }
-
-        val remaining = targetScroll - consumedScroll
-        if (abs(remaining) > MAIN_PAGER_SCROLL_EPSILON) {
-            scrollBy(remaining)
-        }
-    }
-
-    if (
-        needsSnap ||
-        currentPage != target ||
-        !currentPageOffsetFraction.isFinite() ||
-        abs(currentPageOffsetFraction) > MAIN_PAGER_SETTLED_EPSILON
-    ) {
-        scrollToPage(target)
-    }
+    // Let Pager own target tracking, rounding and cancellation. The old manual scroll
+    // stopped consuming small rounded deltas but waited for the whole spring before
+    // snapping the remainder, leaving two pages visible and navigation feeling late.
+    animateScrollToPage(
+        page = target,
+        animationSpec = tween(durationMillis = MAIN_PAGER_TRANSITION_MILLIS, easing = FastOutSlowInEasing),
+    )
 }
 
 internal fun shouldResetMainPagerForFeatureAvailability(
@@ -359,11 +306,7 @@ fun rememberMainPagerState(
     }
 }
 
-private const val MAIN_PAGER_SETTLED_EPSILON = 0.001f
-private const val MAIN_PAGER_SCROLL_EPSILON = 0.5f
-private const val MAIN_PAGER_CONSUMPTION_EPSILON = 0.1f
-private const val MAIN_PAGER_VELOCITY_EPSILON = 0.1f
-private const val MAIN_PAGER_REMAINING_EPSILON = 1f
+internal const val MAIN_PAGER_TRANSITION_MILLIS = 240
 
 @Immutable
 data class NavigationBadgeState(
@@ -434,6 +377,10 @@ internal fun CustomNavigationIconSet.labelFor(destination: MainDestination, fall
 @Composable
 fun useNavigationRail(): Boolean {
     if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) return currentAppWindowSize().canShowSidebar
+    val rain = me.weishu.kernelsu.ui.component.rain.LocalRainSettings.current
+    if (rain.active && rain.layout == me.weishu.kernelsu.ui.component.rain.RainLayout.Miuix && rain.miuixSidebar) {
+        return currentAppWindowSize().canShowSidebar
+    }
     return shouldShowSplitPane()
 }
 
@@ -460,7 +407,7 @@ fun BottomBar(
     }
 
     if (LocalUiMode.current == UiMode.Material) {
-        BottomBarMaterial(navigationBadge, destinations)
+        BottomBarMaterial(navigationBadge, destinations, blurBackdrop, backdrop, modifier)
         return
     }
 

@@ -1,0 +1,26 @@
+<resources>
+    <string name="rain_weather_ready">当前来源：天气 · %1$s</string>
+    <string name="rain_weather_source">侧栏天气</string>
+    <string name="rain_weather_disabled">天气未开启，当前按时段切换。</string>
+    <string name="rain_weather_consent">天气服务尚未授权，当前按时段切换。</string>
+    <string name="rain_weather_waiting">等待天气数据，当前按时段切换。</string>
+    <string name="rain_weather_stale">天气数据已过期，当前按时段切换。</string>
+    <string name="rain_weather_failed">天气获取失败或权限不足，当前按时段切换。</string>
+    <string name="rain_weather_unsupported">当前天气不改变雨景，按时段切换。</string>
+    <string name="rain_weather_refresh">刷新天气</string>
+    <string name="rain_weather_refreshing">正在刷新…</string>
+    <string name="rain_weather_settings">配置侧栏天气</string>
+    <string name="rain_wallpaper_overlay">自定义壁纸上叠加雨幕</string>
+    <string name="rain_wallpaper_overlay_note">在全局和单页壁纸上绘制雨幕，位于文字、图片和控件下方，不改变壁纸透明度。</string>
+    <string name="rain_wallpaper_sound">使用自定义壁纸时保留雨声</string>
+    <string name="rain_presets">我的预设</string>
+    <string name="rain_presets_note">最多保存 12 个，同名保存会更新。应用预设不切换布局；壁纸单独管理。</string>
+    <string name="rain_presets_empty">暂无预设，保存当前雨境设计后可随时恢复。</string>
+    <string name="rain_preset_save">保存当前设计</string>
+    <string name="rain_preset_name">预设名称</string>
+    <string name="rain_preset_apply">应用</string>
+    <string name="rain_preset_delete">删除预设 %1$s</string>
+    <string name="rain_copy_profile">复制到%1$s</string>
+    <string name="rain_copy_profile_note">将当前雨境参数复制到其它布局，不切换当前布局。</string>
+    <string name="rain_copy_profile_confirm">覆盖该布局已保存的雨境参数？侧栏组件和壁纸不受影响。</string>
+</resources>

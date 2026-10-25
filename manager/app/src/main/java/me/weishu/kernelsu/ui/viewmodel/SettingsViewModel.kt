@@ -72,7 +72,6 @@ class SettingsViewModel(
         val seasonStyle: String,
         val seasonCardMotionEnabled: Boolean,
         val rainStyle: String,
-        val rainCardMotionEnabled: Boolean,
         val pixelStyle: String,
         val pixelCardMotionEnabled: Boolean,
     )
@@ -143,7 +142,6 @@ class SettingsViewModel(
                     seasonStyle = repo.seasonStyle,
                     seasonCardMotionEnabled = repo.seasonCardMotionEnabled,
                     rainStyle = repo.rainStyle,
-                    rainCardMotionEnabled = repo.rainCardMotionEnabled,
                     pixelStyle = repo.pixelStyle,
                     pixelCardMotionEnabled = repo.pixelCardMotionEnabled,
                 )
@@ -159,7 +157,6 @@ class SettingsViewModel(
                     seasonStyle = appearance.seasonStyle,
                     seasonCardMotionEnabled = appearance.seasonCardMotionEnabled,
                     rainStyle = appearance.rainStyle,
-                    rainCardMotionEnabled = appearance.rainCardMotionEnabled,
                     pixelStyle = appearance.pixelStyle,
                     pixelCardMotionEnabled = appearance.pixelCardMotionEnabled,
                 )
@@ -581,11 +578,6 @@ class SettingsViewModel(
                 themePreset = ThemePreset.RAIN.value,
             )
         }
-    }
-
-    fun setRainCardMotionEnabled(enabled: Boolean) {
-        repo.rainCardMotionEnabled = enabled
-        _uiState.update { it.copy(rainCardMotionEnabled = enabled) }
     }
 
     fun setPixelStyleIndex(index: Int) {

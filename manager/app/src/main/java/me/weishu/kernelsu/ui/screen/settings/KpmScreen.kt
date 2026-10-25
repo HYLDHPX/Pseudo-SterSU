@@ -574,7 +574,7 @@ private fun NativeKpmScreen(
     var trustAcknowledged by rememberSaveable { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<KpmEntry?>(null) }
     var controlTarget by remember { mutableStateOf<KpmEntry?>(null) }
-    var wallpaperEditorRequest by remember { mutableStateOf<Route.ModuleWallpaperEditor?>(null) }
+    var wallpaperEditorRequest by rememberSaveable { mutableStateOf<Route.ModuleWallpaperEditor?>(null) }
     var controlArgs by rememberSaveable { mutableStateOf("") }
     var controlOutput by remember { mutableStateOf("") }
     var excludedApps by remember { mutableStateOf(emptySet<String>()) }

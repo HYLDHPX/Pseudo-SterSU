@@ -31,6 +31,7 @@ import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.runtime.Composable
@@ -163,7 +164,13 @@ private fun SidebarWidgetControls(
         }
         if (selectedSection == SidebarDesignPage.Appearance) {
             SettingsSection {
-                SidebarMaterialOptions(config, editingDark, onEditingDarkChange, onUpdate)
+                if (me.weishu.kernelsu.ui.component.rain.isRainInterfaceStyle()) {
+                    val navigator = LocalNavigator.current
+                    Text(stringResource(R.string.rain_sidebar_material_note), style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { navigator.push(Route.RainDesign) }) { Text(stringResource(R.string.rain_design_title)) }
+                } else {
+                    SidebarMaterialOptions(config, editingDark, onEditingDarkChange, onUpdate)
+                }
             }
         }
         if (selectedSection == SidebarDesignPage.Avatar) {

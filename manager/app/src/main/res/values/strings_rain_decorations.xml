@@ -1,0 +1,32 @@
+<resources>
+    <string name="rain_decorations">Surface decoration</string>
+    <string name="rain_decorations_note">Choose each surface independently. Soft reflections, water film and fine ripples preserve the original text, images and controls.</string>
+    <string name="rain_decoration_card">Card top ornament</string>
+    <string name="rain_decoration_card_border">Card frame</string>
+    <string name="rain_decoration_card_interior">Card interior</string>
+    <string name="rain_card_border_outline">Soft glass rim</string>
+    <string name="rain_card_border_double">Crystal reflection</string>
+    <string name="rain_card_border_dashed">Rain-polished rim</string>
+    <string name="rain_card_interior_mist">Soft mist</string>
+    <string name="rain_card_interior_streaks">Flowing rain</string>
+    <string name="rain_decoration_top_bar">Top bar</string>
+    <string name="rain_decoration_navigation">Navigation bar</string>
+    <string name="rain_decoration_sidebar">Sidebar</string>
+    <string name="rain_decoration_opacity">Decoration strength</string>
+    <string name="rain_decoration_ripples">Ripples</string>
+    <string name="rain_decoration_streams">Rain streaks</string>
+    <string name="rain_decoration_none">None</string>
+    <string name="rain_interaction_title">Rain layers and interaction</string>
+    <string name="rain_through_ui">Rain across the interface</string>
+    <string name="rain_foreground_opacity">Foreground rain strength</string>
+    <string name="rain_surface_interaction">Card and sidebar rain impacts</string>
+    <string name="rain_thunder">Distant thunder in thunderstorms</string>
+    <string name="rain_interaction_note">Near rain passes over the interface and creates small ripples where it crosses cards and sidebars. Distant thunder uses a slow, local glow in the thunderstorm scene. Effects follow the animation and wallpaper-rain switches and never intercept touch.</string>
+    <string name="rain_card_edge_strength">Card edges</string>
+    <string name="rain_card_interior_strength">Card interiors</string>
+    <string name="rain_top_bar_strength">Top bar</string>
+    <string name="rain_navigation_strength">Navigation</string>
+    <string name="rain_sidebar_strength">Sidebar</string>
+    <string name="rain_thunder_interval">Thunder interval (seconds)</string>
+    <string name="rain_region_strength_note">Region strengths multiply the master decoration strength. Text, icons and images keep their opacity.</string>
+</resources>

@@ -79,6 +79,7 @@ fun applyLauncherIcon(context: Context, option: LauncherIconOption): Boolean {
                 enabledState,
                 PackageManager.DONT_KILL_APP,
             )
+            if (candidate == option) synchronizeManagerIconShortcut(context, option)
         }
         context.getSharedPreferences(SETTINGS_PREFERENCES, Context.MODE_PRIVATE).edit()
             .remove(INSTALLED_LAUNCHER_HIDDEN)

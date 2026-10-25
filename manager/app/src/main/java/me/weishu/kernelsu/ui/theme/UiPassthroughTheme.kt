@@ -79,5 +79,7 @@ fun uiPassthroughNavigationColor(defaultColor: Color): Color {
     val settings = LocalUiPassthroughSettings.current
     return if (settings.enabled) {
         uiBackgroundWithOpacity(defaultColor, settings.bottomBarOpacity, MaterialTheme.colorScheme.surface)
+    } else if (me.weishu.kernelsu.ui.component.rain.isRainInterfaceStyle()) {
+        me.weishu.kernelsu.ui.component.rain.rainNavigationContainerColor()
     } else defaultColor
 }

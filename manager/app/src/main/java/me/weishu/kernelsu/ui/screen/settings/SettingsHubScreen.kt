@@ -111,7 +111,7 @@ fun SettingsHubScreen(
     isSidebarMoreSettings: Boolean = false,
     onNavigateBack: (() -> Unit)? = null,
 ) {
-    val sidebar = uiState.uiMode == InterfaceStyle.SidebarWidget.value
+    val sidebar = me.weishu.kernelsu.ui.LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
     val scrollBehavior = if (sidebar) TopAppBarDefaults.pinnedScrollBehavior() else TopAppBarDefaults.enterAlwaysScrollBehavior()
     Scaffold(
         modifier = Modifier

@@ -36,9 +36,10 @@ import me.weishu.kernelsu.ui.component.snow.SEASON_CARD_MOTION_ENABLED_KEY
 import me.weishu.kernelsu.ui.component.snow.DEFAULT_SEASON_CARD_MOTION_ENABLED
 import me.weishu.kernelsu.ui.component.snow.SeasonStyle
 import me.weishu.kernelsu.ui.component.rain.RAIN_STYLE_KEY
-import me.weishu.kernelsu.ui.component.rain.RAIN_CARD_MOTION_ENABLED_KEY
-import me.weishu.kernelsu.ui.component.rain.DEFAULT_RAIN_CARD_MOTION_ENABLED
 import me.weishu.kernelsu.ui.component.rain.RainStyle
+import me.weishu.kernelsu.ui.component.rain.readRainSettings
+import me.weishu.kernelsu.ui.util.isRainCollection
+import me.weishu.kernelsu.ui.util.supportsVariant
 import me.weishu.kernelsu.ui.component.pixel.PIXEL_STYLE_KEY
 import me.weishu.kernelsu.ui.component.pixel.PIXEL_CARD_MOTION_ENABLED_KEY
 import me.weishu.kernelsu.ui.component.pixel.DEFAULT_PIXEL_CARD_MOTION_ENABLED
@@ -203,7 +204,7 @@ class SettingsRepositoryImpl : SettingsRepository {
                 else -> null
             }
             val candidates = interfaceStyleRegistry.list().filter {
-                it.style.engine == engine && it.style.variant == variant &&
+                it.style.engine == engine && it.style.supportsVariant(variant) &&
                     (mode != InterfaceStyle.Delta.value || it.style.id == "alpha-delta")
             }
             val selectedId = prefs.getString(ACTIVE_INTERFACE_STYLE_ID_KEY, null)
@@ -230,7 +231,7 @@ class SettingsRepositoryImpl : SettingsRepository {
         }
         val selectedId = prefs.getString(ACTIVE_INTERFACE_STYLE_ID_KEY, null)
         return interfaceStyleRegistry.list().any { installed ->
-            installed.style.engine == engine && installed.style.variant == variant &&
+            installed.style.engine == engine && installed.style.supportsVariant(variant) &&
                 (mode != InterfaceStyle.Delta.value || installed.style.id == "alpha-delta") &&
                 (selectedId == null || installed.style.id == selectedId)
         }
@@ -437,9 +438,6 @@ class SettingsRepositoryImpl : SettingsRepository {
             }
         }
 
-    override var rainCardMotionEnabled: Boolean
-        get() = prefs.getBoolean(RAIN_CARD_MOTION_ENABLED_KEY, DEFAULT_RAIN_CARD_MOTION_ENABLED)
-        set(value) = prefs.edit { putBoolean(RAIN_CARD_MOTION_ENABLED_KEY, value) }
 
     override var pixelStyle: String
         get() = PixelStyle.fromValue(prefs.getString(PIXEL_STYLE_KEY, PixelStyle.DEFAULT_VALUE)).value
@@ -1045,7 +1043,7 @@ class SettingsRepositoryImpl : SettingsRepository {
         }
         val preservedColorMode = themeMode
         val season = SeasonStyle.fromValue(style.variant)
-        val rain = RainStyle.fromValue(style.variant)
+        val rain = if (style.isRainCollection) readRainSettings(prefs).scene else RainStyle.fromValue(style.variant)
         val pixel = PixelStyle.fromValue(style.variant)
         val keyColor = when (mode) {
             InterfaceStyle.Snow.value -> season.keyColor

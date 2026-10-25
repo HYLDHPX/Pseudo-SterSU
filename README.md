@@ -31,6 +31,14 @@ SterSU 是基于 [KernelSU](https://github.com/tiann/KernelSU) 的开源衍生�
 - **小米天气**：读取设备本机天气提供方的数据，不申请定位权限；设备未提供接口时显示不可用。详见 [小米天气接口说明](./docs/XIAOMI_WEATHER_PROVIDER.md)。
 - **Open-Meteo**：使用用户填写的经纬度请求第三方天气服务，服务端可见网络 IP；显示名称仅保存在本机。使用条件与署名见 [Open-Meteo 接口说明](./docs/OPEN_METEO_SIDEBAR.md)。
 
+## 主题评论区来源
+
+主题商店的评论功能基于 [Waline](https://github.com/walinejs/waline) 开源评论系统，官方文档为 [waline.js.org](https://waline.js.org/)。管理器随包分发 `@waline/client` **3.16.1** 的客户端 JS 与 CSS，遵循 **MIT** 许可，并保留原作者的版权、许可文件及客户端署名。
+
+SterSU 自行实现 Android WebView 接入、主题讨论标识、日夜主题与背景同步，以及「商店 → 我的」中的邮箱登录、注册和账号资料设置。评论和账号数据由所配置的 Waline 服务处理；SterSU 不是 Waline 官方客户端，双方不存在官方隶属或背书关系。客户端的 MIT 许可不改变本项目或 Waline 服务端各自的许可。
+
+来源版本、资源摘要和部署说明见 [主题评论区说明](./docs/WALINE_THEME_COMMENTS.md)；随包原始许可见 [Waline 客户端 LICENSE](./manager/app/src/main/assets/theme-comments/vendor/LICENSE)。感谢 Waline 作者与所有贡献者。
+
 ## 许可与来源
 
 SterSU 继承上游的许可边界，具体以各文件声明为准：

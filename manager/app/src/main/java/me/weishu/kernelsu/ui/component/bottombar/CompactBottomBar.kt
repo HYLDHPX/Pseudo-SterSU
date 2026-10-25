@@ -26,6 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import me.weishu.kernelsu.ui.component.rain.rainNavigationIndicator
+import me.weishu.kernelsu.ui.component.rain.RainChromeArea
+import me.weishu.kernelsu.ui.component.rain.rainChromeDecoration
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -57,7 +60,7 @@ internal fun CompactBottomBar(
     val orderedDestinations = sidebarConfig?.let {
         orderSidebarDestinations(it.navigationOrder, destinations)
     } ?: destinations
-    Surface(modifier = modifier.fillMaxWidth(), color = uiPassthroughNavigationColor(MaterialTheme.colorScheme.surfaceContainer)) {
+    Surface(modifier = modifier.fillMaxWidth().rainChromeDecoration(RainChromeArea.Navigation), color = uiPassthroughNavigationColor(MaterialTheme.colorScheme.surfaceContainer)) {
         BoxWithConstraints(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(
             WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
         )).padding(horizontal = 4.dp, vertical = 4.dp)) {
@@ -71,6 +74,7 @@ internal fun CompactBottomBar(
                         modifier = Modifier.width(itemWidth).heightIn(min = 48.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(if (selected) MaterialTheme.colorScheme.surfaceContainerHighest else Color.Transparent)
+                            .rainNavigationIndicator(RoundedCornerShape(12.dp), paintBackground = false, interactionKey = destination, selected = selected)
                             .selectable(selected = selected, role = Role.Tab, onClick = { pager.animateTo(destination) })
                             .padding(horizontal = 4.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,

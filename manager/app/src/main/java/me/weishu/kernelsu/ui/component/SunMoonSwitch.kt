@@ -9,6 +9,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
@@ -17,6 +18,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -138,6 +140,10 @@ fun StyledSwitch(
     val toggleModifier = if (onCheckedChange != null) {
         Modifier.toggleable(
             value = checked,
+            interactionSource = remember { MutableInteractionSource() },
+            // The animated knob is the feedback; a default indication paints
+            // the entire rectangular 48dp touch target over transparent cards.
+            indication = null,
             enabled = enabled,
             role = Role.Switch,
             onValueChange = onCheckedChange,
@@ -158,7 +164,8 @@ fun StyledSwitch(
             modifier = Modifier
                 .size(width = switchWidth, height = switchHeight)
                 .then(
-                    if (resolvedStyle == SwitchStyle.CloudStar) Modifier.clip(RoundedCornerShape(percent = 50))
+                    if (resolvedStyle == SwitchStyle.CloudStar || resolvedStyle == SwitchStyle.Sparkle)
+                        Modifier.clip(RoundedCornerShape(percent = 50))
                     else Modifier
                 )
         ) {

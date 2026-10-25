@@ -2,6 +2,7 @@ package me.weishu.kernelsu.ui.component.material
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -15,6 +16,9 @@ import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
 import me.weishu.kernelsu.ui.component.liquid.globalLiquidGlassSurface
 import me.weishu.kernelsu.ui.component.liquid.liquidGlassMaterialCardColors
+import me.weishu.kernelsu.ui.component.rain.rainCardDecoration
+import me.weishu.kernelsu.ui.component.rain.rainCardInterior
+import me.weishu.kernelsu.ui.component.rain.isRainInterfaceStyle
 
 @Composable
 private fun tonalCardContainerColor(): Color =
@@ -34,12 +38,16 @@ fun TonalCard(
     Card(
         onClick = onClick,
         modifier = modifier
-            .globalLiquidGlassSurface(shape = shape),
+            .globalLiquidGlassSurface(shape = shape).rainCardDecoration(shape = shape, drawInterior = false),
         enabled = enabled,
         colors = liquidGlassMaterialCardColors(containerColor = containerColor),
         shape = shape
     ) {
-        content()
+        if (isRainInterfaceStyle()) {
+            Column(Modifier.fillMaxWidth().rainCardInterior(shape)) { content() }
+        } else {
+            content()
+        }
     }
 }
 
@@ -53,14 +61,18 @@ fun TonalCard(
 ) {
     Card(
         modifier = modifier
-            .globalLiquidGlassSurface(shape = shape),
+            .globalLiquidGlassSurface(shape = shape).rainCardDecoration(shape = shape, drawInterior = false),
         colors = liquidGlassMaterialCardColors(containerColor = containerColor),
         shape = shape
     ) {
         if (backgroundContent == null) {
-            content()
+            if (isRainInterfaceStyle()) {
+                Column(Modifier.fillMaxWidth().rainCardInterior(shape)) { content() }
+            } else {
+                content()
+            }
         } else {
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.fillMaxWidth().rainCardInterior(shape)) {
                 backgroundContent()
                 content()
             }

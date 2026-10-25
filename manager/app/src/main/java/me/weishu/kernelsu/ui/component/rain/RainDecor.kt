@@ -1,471 +1,277 @@
 package me.weishu.kernelsu.ui.component.rain
 
-import android.animation.ValueAnimator
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.RoundedCornerShape
-import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
-import me.weishu.kernelsu.ui.InterfaceStyle
-import me.weishu.kernelsu.ui.LocalInterfaceStyle
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import kotlinx.coroutines.isActive
+import me.weishu.kernelsu.ui.component.rememberSystemAnimationsEnabled
+import me.weishu.kernelsu.ui.theme.LocalUiPassthroughSettings
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.util.InterfaceStyleTheme
-import me.weishu.kernelsu.ui.util.LocalInterfaceStyleTheme
-import me.weishu.kernelsu.ui.util.drawInterfaceStyleMotifs
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import kotlin.math.PI
-import kotlin.math.sin
 import kotlin.random.Random
 
 @Composable
 @ReadOnlyComposable
-fun isRainInterfaceStyle(): Boolean = LocalInterfaceStyle.current == InterfaceStyle.Rain.value
+fun isRainInterfaceStyle(): Boolean = LocalRainSettings.current.active
 
-val LocalRainCardMotionEnabled = staticCompositionLocalOf { DEFAULT_RAIN_CARD_MOTION_ENABLED }
+val LocalRainSceneProgress = staticCompositionLocalOf<State<Float>> { mutableFloatStateOf(0.37f) }
 
-val LocalRainCardMotionProgress = staticCompositionLocalOf<State<Float>> {
-    mutableFloatStateOf(STATIC_CARD_MOTION_PROGRESS)
-}
-
-val LocalRainSceneProgress = staticCompositionLocalOf<State<Float>> {
-    mutableFloatStateOf(STATIC_PROGRESS)
-}
-
-@Composable
-fun rememberRainCardMotionProgress(enabled: Boolean): State<Float> {
-    val animationsEnabled = remember { ValueAnimator.areAnimatorsEnabled() }
-    if (!enabled || !animationsEnabled) {
-        return remember { mutableFloatStateOf(STATIC_CARD_MOTION_PROGRESS) }
-    }
-    val transition = rememberInfiniteTransition(label = "rainCardMotion")
-    return transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(CARD_MOTION_CYCLE_MILLIS, easing = LinearEasing)),
-        label = "rainCardMotionProgress",
-    )
-}
-
+/** Card droplets only animate when rain, motion and system animations all allow it. */
+val LocalRainCardMotionEnabled = staticCompositionLocalOf { false }
 @Composable
 fun rememberRainSceneProgress(
     enabled: Boolean,
     style: RainStyle,
     theme: InterfaceStyleTheme? = null,
+    settings: RainSettings = RainSettings(scene = style),
 ): State<Float> {
-    val animationsEnabled = remember { ValueAnimator.areAnimatorsEnabled() }
-    val clearOnCycle = theme?.scene?.clearOnCycle == true
-    if (!enabled || !animationsEnabled) {
-        return remember(style, clearOnCycle) {
-            mutableFloatStateOf(if (clearOnCycle) 1f else STATIC_PROGRESS)
+    return rememberRainProgress(enabled, RainSceneSpec.fromSettings(settings).cycleMillis)
+}
+
+@Composable
+private fun rememberRainProgress(enabled: Boolean, cycleMillis: Int): State<Float> {
+    var resumed by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(Unit) {
+        resumed = true
+        onPauseOrDispose { resumed = false }
+    }
+    val animations = rememberSystemAnimationsEnabled()
+    val progress = remember { RainSceneClock() }
+    val currentCycle by rememberUpdatedState(cycleMillis)
+    SideEffect { progress.running = enabled && resumed && animations }
+    LaunchedEffect(enabled, resumed, animations) {
+        if (enabled && resumed && animations) {
+            var previous = withFrameNanos { it }
+            while (isActive) {
+                withFrameNanos { now ->
+                    progress.advance((now - previous) / 1_000_000_000.0, currentCycle)
+                    previous = now
+                }
+            }
         }
     }
-    if (clearOnCycle) {
-        val clearing = remember(style, theme) { Animatable(0f) }
-        val clearingState = remember(clearing) { derivedStateOf { clearing.value } }
-        LaunchedEffect(clearing) {
-            clearing.snapTo(0f)
-            clearing.animateTo(
-                1f,
-                tween(theme.scene.cycleMillis, easing = FastOutSlowInEasing),
+    return progress
+}
+
+/** Ripple seeds are derived from drop positions, so impacts land where streaks fall. */
+private data class RainImpact(val x: Float, val baseline: Float, val phase: Float, val scale: Float)
+
+/** Far rain stays behind content; the root weather modifier owns the near layer. */
+@Composable
+fun RainBackdrop(modifier: Modifier = Modifier, overlayOnly: Boolean = false) {
+    val settings = LocalRainSettings.current
+    val covered = LocalRainCoveredByWallpaper.current
+    if (!settings.drawingEnabled(covered)) return
+    val palette = rainPalette(settings, isInDarkTheme())
+    val spec = remember(settings) { RainSceneSpec.fromSettings(settings) }
+    val progress = LocalRainSceneProgress.current
+    Box(modifier.fillMaxSize().drawWithCache {
+        val drops = rainParticles(rainViewportDropCount(spec.dropCount, size, density), settings.scene)
+        val streaks = drops.mapIndexed { index, drop -> rainStreakPaint(drop, index, spec, palette, false, this) }
+        val random = Random(settings.scene.value.hashCode() xor IMPACT_SEED)
+        // One impact per visible streak keeps the ripple field proportional to the rain.
+        val impacts = drops.map { drop ->
+            RainImpact(
+                x = drop.x,
+                baseline = 0.86f + random.nextFloat() * 0.12f,
+                phase = random.nextFloat(),
+                scale = 0.7f + random.nextFloat() * 0.6f,
             )
         }
-        return clearingState
-    }
-    val cycleMillis = RainSceneSpec.fromTheme(theme).cycleMillis
-    val transition = rememberInfiniteTransition(label = "rainScene")
-    return transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(cycleMillis, easing = LinearEasing), RepeatMode.Restart),
-        label = "rainSceneProgress",
-    )
-}
-
-@Composable
-fun RainBackdrop(modifier: Modifier = Modifier) {
-    if (!isRainInterfaceStyle()) return
-    val style = LocalRainStyle.current
-    val theme = LocalInterfaceStyleTheme.current
-    val dark = isInDarkTheme()
-    val palette = rainPalette(theme, style, dark)
-    val spec = remember(theme) { RainSceneSpec.fromTheme(theme) }
-    val drops = remember(theme, style) { createRainDrops(spec, style.value.hashCode()) }
-    val progress = LocalRainSceneProgress.current
-    Canvas(modifier.fillMaxSize()) {
-        if (size.width <= 1f || size.height <= 1f) return@Canvas
-        drawRect(Brush.verticalGradient(listOf(palette.backgroundTop, palette.backgroundBottom)))
-        drawClouds(palette, spec.rippleCount, style.value.hashCode())
-        theme?.let {
-            drawInterfaceStyleMotifs(
-                motifs = it.scene.motifs,
-                palette = if (dark || it.forceDark) it.darkPalette else it.lightPalette,
-                progress = progress.value,
-                alphaMultiplier = 0.52f,
-            )
+        val sky = Brush.verticalGradient(listOf(palette.backgroundTop, palette.backgroundBottom))
+        val clouds = if (overlayOnly) emptyList() else rainCloudPaints(size, palette, settings.scene)
+        onDrawBehind {
+            if (!overlayOnly) {
+                drawRect(sky)
+                drawRainClouds(clouds, progress.rainSeconds() / 30f)
+            }
+            val margin = rainTravelMarginDp(spec).dp.toPx()
+            val wind = rainWindAt(spec.windRatio, progress.rainSeconds())
+            drops.forEachIndexed { index, drop ->
+                if (settings.foregroundDrawingEnabled(covered) && rainFrontParticle(index)) return@forEachIndexed
+                val fieldProgress = rainFieldProgress(progress.value, index, size, density, margin)
+                val tip = rainParticleTip(drop, fieldProgress, size, wind, margin)
+                drawRainStreak(streaks[index], tip, wind)
+            }
+            if (settings.intensity > 0f) drawRainImpacts(impacts, palette, spec, progress.rainSeconds() / 14f)
         }
-        drawRainField(drops, spec, palette, progress.value, 0f, 0.58f, 0.40f)
-    }
+    })
 }
 
-@Composable
-fun RainForegroundOverlay(modifier: Modifier = Modifier) {
-    if (!isRainInterfaceStyle()) return
-    val style = LocalRainStyle.current
-    val theme = LocalInterfaceStyleTheme.current
-    val dark = isInDarkTheme()
-    val palette = rainPalette(theme, style, dark)
-    val spec = remember(theme) { RainSceneSpec.fromTheme(theme) }
-    val drops = remember(theme, style) { createRainDrops(spec, style.value.hashCode()) }
-    val ripples = remember(theme, style) { createRainRipples(spec, style.value.hashCode() xor RIPPLE_SEED) }
-    val progress = LocalRainSceneProgress.current
-    val animationsEnabled = remember { ValueAnimator.areAnimatorsEnabled() }
-    var lightningAlpha by remember(theme, dark) { mutableFloatStateOf(0f) }
+private const val IMPACT_SEED = 0x3C1F
 
-    LaunchedEffect(theme, dark, animationsEnabled) {
-        lightningAlpha = 0f
-        if (!isRainLightningEnabled(theme, dark, animationsEnabled)) return@LaunchedEffect
-        val random = Random(LIGHTNING_SEED)
-        while (true) {
-            delay(nextLightningDelayMillis(random))
-            lightningAlpha = if (random.nextBoolean()) 0.30f else 0.22f
-            delay(nextLightningFlashDurationMillis(random))
-            lightningAlpha = 0f
-        }
-    }
-
-    Canvas(modifier.fillMaxSize()) {
-        val rainAlpha = rainCycleAlpha(theme?.scene?.clearOnCycle == true, progress.value)
-        drawRainField(drops, spec, palette, progress.value, 0.52f, 1f, 0.76f * rainAlpha)
-        drawRipples(ripples, palette, progress.value, rainAlpha)
-        if (lightningAlpha > 0f) drawLightning(palette, lightningAlpha)
-    }
-}
-
-@Composable
-fun RainChromeOverlay(modifier: Modifier = Modifier) {
-    if (!isRainInterfaceStyle()) return
-    val style = LocalRainStyle.current
-    val palette = rainPalette(LocalInterfaceStyleTheme.current, style, isInDarkTheme())
-    val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val progress = LocalRainCardMotionProgress.current
-    Canvas(modifier.fillMaxSize()) {
-        val inset = 16.dp.toPx()
-        val y = topPadding.toPx() + 7.dp.toPx()
-        drawLine(palette.highlight.copy(alpha = 0.32f), Offset(inset, y), Offset(size.width - inset, y), 0.75.dp.toPx())
-        val x = inset + (size.width - inset * 2f) * progress.value
-        drawCircle(palette.rainAccent.copy(alpha = 0.72f), 1.25.dp.toPx(), Offset(x, y))
-    }
-}
-
-@Composable
-fun RainMotto(modifier: Modifier = Modifier) {
-    if (!isRainInterfaceStyle()) return
-    val style = LocalRainStyle.current
-    val theme = LocalInterfaceStyleTheme.current
-    val dark = isInDarkTheme()
-    val palette = rainPalette(theme, style, dark)
-    val shape = RoundedCornerShape(theme?.chrome?.cornerDp?.dp ?: 8.dp)
-    Box(
-        modifier = modifier
-            .height(22.dp)
-            .shadow(1.dp, shape, ambientColor = palette.shadow.copy(alpha = 0.14f))
-            .clip(shape)
-            .background(Brush.verticalGradient(listOf(palette.surfaceTop, palette.surfaceBottom)), shape)
-            .border(0.75.dp, palette.outline.copy(alpha = 0.48f), shape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringResource(style.mottoRes),
-            modifier = Modifier.padding(horizontal = 28.dp),
-            color = palette.content,
-            fontSize = 10.5.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+/**
+ * Expanding ground ring per streak. Alpha and radius key off the drop's own phase so the
+ * field never pulses in lockstep, which would read as a UI animation instead of weather.
+ */
+private fun DrawScope.drawRainImpacts(
+    impacts: List<RainImpact>,
+    palette: RainPalette,
+    spec: RainSceneSpec,
+    progress: Float,
+) {
+    val strength = if (spec.dropCount == 0) 0f else (spec.dropCount / 72f).coerceIn(0.15f, 1f)
+    impacts.forEach { impact ->
+        val phase = (progress * 2f + impact.phase) % 1f
+        val radius = (6f + phase * 22f * impact.scale).dp.toPx()
+        val fade = (1f - phase) * 0.16f * strength
+        if (fade <= 0.002f) return@forEach
+        drawOval(
+            palette.ripple.copy(alpha = fade),
+            Offset(size.width * impact.x - radius, size.height * impact.baseline - radius * 0.25f),
+            Size(radius * 2f, radius * 0.5f),
+            style = Stroke(0.6.dp.toPx()),
         )
     }
 }
 
 @Composable
-fun Modifier.rainMiuixCardSurface(
-    enabled: Boolean = true,
-    capHeight: Dp = 11.dp,
-): Modifier {
+fun Modifier.rainMiuixCardSurface(enabled: Boolean = true, capHeight: Dp = 13.dp, shape: Shape = RoundedCornerShape(16.dp)): Modifier {
     if (!enabled || !isRainInterfaceStyle()) return this
-    val style = LocalRainStyle.current
-    val theme = LocalInterfaceStyleTheme.current
-    val dark = isInDarkTheme()
-    val palette = rainPalette(theme, style, dark)
-    val shape = RoundedCornerShape(theme?.chrome?.cornerDp?.dp ?: 14.dp)
-    val motionProgress = LocalRainCardMotionProgress.current
-    val cardAlpha = theme?.chrome?.cardAlpha ?: 0.76f
-    val borderAlpha = theme?.chrome?.borderAlpha ?: 0.60f
-    return shadow(2.dp, shape, ambientColor = palette.shadow.copy(alpha = 0.20f))
-        .clip(shape)
-        .background(
-            Brush.verticalGradient(
-                listOf(palette.surfaceTop.copy(alpha = cardAlpha), palette.surfaceBottom.copy(alpha = cardAlpha)),
-            ),
-            shape,
-        )
-        .border(0.85.dp, palette.outline.copy(alpha = borderAlpha), shape)
-        .drawWithContent {
-            theme?.let {
-                drawInterfaceStyleMotifs(
-                    it.scene.motifs,
-                    if (dark || it.forceDark) it.darkPalette else it.lightPalette,
-                    motionProgress.value,
-                    0.12f,
-                )
-            }
-            drawContent()
-            val cap = rainCardDecorationHeight(capHeight.toPx(), size.width, size.height)
-            if (cap > 0f) {
-                drawLine(
-                    palette.rainAccent.copy(alpha = 0.45f),
-                    Offset(cap, cap * 0.45f),
-                    Offset(size.width - cap, cap * 0.45f),
-                    0.7.dp.toPx(),
-                )
+    val settings = LocalRainSettings.current
+    val palette = rainPalette(settings, isInDarkTheme())
+    val alpha = if (LocalUiPassthroughSettings.current.enabled) LocalUiPassthroughSettings.current.surfaceOpacity
+        else settings.surfaceOpacity
+    return clip(shape)
+        .background(palette.surfaceTop.copy(alpha = alpha), shape)
+        .rainCardDecoration(capHeight, shape = shape)
+}
+
+/** Decoration only, so Material cards keep their warning/error container colors. */
+@Composable
+fun Modifier.rainCardDecoration(
+    capHeight: Dp = 13.dp,
+    shape: Shape? = null,
+    drawInterior: Boolean = true,
+): Modifier {
+    val settings = LocalRainSettings.current
+    if (!settings.active) return this
+    val cardShape = shape ?: RoundedCornerShape(16.dp)
+    val linked = rainInteractionTarget(RainSurfaceKind.Card, shape = cardShape)
+    if (settings.decorationOpacity <= 0f) return linked
+    if (settings.cardSurface == RainDecoration.Off && settings.cardBorder == RainCardBorder.Off &&
+        (!drawInterior || settings.cardInterior == RainCardInterior.Off)) return linked
+    val palette = rainPalette(settings, isInDarkTheme())
+    val progress = LocalRainSceneProgress.current
+    val motionEnabled = LocalRainCardMotionEnabled.current && progress.rainMotionAllowed()
+    val seed = rememberRainOrnamentSeed()
+    val edge = settings.edgeStrength(RainSurfaceKind.Card) * rainWetness(settings.intensity)
+    val interior = settings.interiorStrength() * rainWetness(settings.intensity)
+    val thunderAllowed = motionEnabled && settings.drawingEnabled(LocalRainCoveredByWallpaper.current)
+    return linked.clip(cardShape)
+        .drawWithCache {
+            val paints = rainCardPaints(size, this, layoutDirection, palette, cardShape)
+            val height = rainCardDecorationHeight(capHeight.toPx(), size.width, size.height)
+            val edgePaints = rainSurfacePaints(size, this, palette, height, seed = seed)
+            onDrawWithContent {
+                val seconds = if (motionEnabled) progress.rainSeconds() else 0f
+                if (drawInterior) drawRainCardInterior(settings.cardInterior, palette, interior, paints, seconds, seed)
+                drawContent()
+                val thunder = rainThunderPulse(settings, seconds, thunderAllowed)
+                drawRainCardFrame(settings.cardBorder, palette, edge * (0.85f + thunder * 0.15f), paints)
+                if (height > 0f) drawRainSurfaceDecoration(settings.cardSurface, palette, seconds, edge, edgePaints)
             }
         }
 }
 
 @Composable
-fun rainMiuixCardColors(color: Color) = if (isRainInterfaceStyle()) {
-    CardDefaults.defaultColors(color = rainCardContentLayerColor(color))
-} else {
-    CardDefaults.defaultColors(color = color)
-}
+fun rainMiuixCardColors(color: Color) = CardDefaults.defaultColors(
+    color = if (isRainInterfaceStyle()) Color.Transparent else color,
+)
 
-internal fun rainCardContentLayerColor(baseColor: Color): Color = baseColor.copy(alpha = baseColor.alpha * 0.14f)
-
-internal fun rainCardDecorationHeight(requestedHeight: Float, width: Float, height: Float): Float {
-    if (requestedHeight <= 0f || width < 72f || height < 48f) return 0f
-    return minOf(requestedHeight, height * 0.19f)
-}
+internal fun rainCardDecorationHeight(requestedHeight: Float, width: Float, height: Float): Float =
+    if (requestedHeight <= 0f || width < 72f || height < 48f) 0f else minOf(requestedHeight, height * 0.19f)
 
 @Composable
-fun rainNavigationContainerColor(): Color {
-    val theme = LocalInterfaceStyleTheme.current
-    val palette = rainPalette(theme, LocalRainStyle.current, isInDarkTheme())
-    return palette.surfaceBottom.copy(alpha = theme?.chrome?.navigationAlpha ?: 0.62f)
-}
+fun rainNavigationContainerColor(): Color = rainPalette(LocalRainSettings.current, isInDarkTheme())
+    .surfaceBottom.copy(alpha = LocalRainSettings.current.navigationOpacity)
 
 @Composable
 fun Modifier.rainNavigationSurface(shape: Shape, paintBackground: Boolean = true): Modifier {
     if (!isRainInterfaceStyle()) return this
-    val theme = LocalInterfaceStyleTheme.current
-    val palette = rainPalette(theme, LocalRainStyle.current, isInDarkTheme())
-    return clip(shape)
-        .then(if (paintBackground) Modifier.background(rainNavigationContainerColor(), shape) else Modifier)
-        .border(0.8.dp, palette.outline.copy(alpha = theme?.chrome?.borderAlpha ?: 0.58f), shape)
+    return clip(shape).then(if (paintBackground) Modifier.background(rainNavigationContainerColor(), shape) else Modifier)
+        .rainChromeDecoration(RainChromeArea.Navigation, shape = shape)
 }
 
 @Composable
 fun Modifier.rainNavigationIndicator(
-    shape: Shape,
-    paintBackground: Boolean = true,
-    interactionKey: Any? = Unit,
+    shape: Shape, paintBackground: Boolean = true, interactionKey: Any? = Unit,
+    selected: Boolean = true,
 ): Modifier {
     if (!isRainInterfaceStyle()) return this
-    val palette = rainPalette(LocalInterfaceStyleTheme.current, LocalRainStyle.current, isInDarkTheme())
-    val animationsEnabled = remember { ValueAnimator.areAnimatorsEnabled() }
-    val rippleProgress = remember { Animatable(if (animationsEnabled) 0f else 1f) }
-    LaunchedEffect(interactionKey, animationsEnabled) {
-        if (animationsEnabled) {
-            rippleProgress.snapTo(0f)
-            rippleProgress.animateTo(1f, tween(420, easing = FastOutSlowInEasing))
-        } else {
-            rippleProgress.snapTo(1f)
-        }
-    }
-    return clip(shape)
-        .then(if (paintBackground) Modifier.background(palette.ripple.copy(alpha = 0.14f), shape) else Modifier)
-        .border(0.8.dp, palette.rainAccent.copy(alpha = 0.52f), shape)
-        .drawWithContent {
-            drawContent()
-            if (rippleProgress.value < 1f) {
-                val radius = size.maxDimension * (0.22f + rippleProgress.value * 0.84f)
-                drawOval(
-                    palette.rainAccent.copy(alpha = (1f - rippleProgress.value) * 0.34f),
-                    Offset(size.width / 2f - radius, size.height / 2f - radius * 0.42f),
-                    Size(radius * 2f, radius * 0.84f),
-                    style = Stroke(0.9.dp.toPx()),
-                )
+    val settings = LocalRainSettings.current
+    val palette = rainPalette(settings, isInDarkTheme())
+    val progress = LocalRainSceneProgress.current
+    val motion = LocalRainCardMotionEnabled.current && progress.rainMotionAllowed()
+    // One shared clock, no animation job for any navigation item.
+    val selectedAt = remember(interactionKey, selected) { if (selected) progress.rainSeconds() else Float.NEGATIVE_INFINITY }
+    if (!selected) return this
+    val strength = settings.edgeStrength(RainSurfaceKind.Navigation)
+    return then(if (paintBackground) Modifier.clip(shape).background(palette.ripple.copy(alpha = 0.12f), shape) else Modifier)
+        .then(if (paintBackground && strength > 0f && settings.navigationDecoration != RainDecoration.Off)
+            Modifier.border(0.7.dp, palette.outline.copy(alpha = 0.3f * strength), shape) else Modifier)
+        .drawWithCache {
+            val maxRadius = minOf(size.width, size.height) * 0.65f
+            // Clip the water only. A whole navigation item may also contain a long label.
+            val rippleClip = when (val outline = shape.createOutline(size, layoutDirection, this)) {
+                is Outline.Rectangle -> Path().apply { addRect(outline.rect) }
+                is Outline.Rounded -> Path().apply { addRoundRect(outline.roundRect) }
+                is Outline.Generic -> outline.path
+            }
+            onDrawWithContent {
+                drawContent()
+                val pulse = if (motion && settings.navigationDecoration != RainDecoration.Off)
+                    rainSelectionPulse(progress.rainSeconds() - selectedAt) else 0f
+                if (pulse > 0f && strength > 0f) {
+                    val radius = (0.18f + 0.82f * (1f - pulse)) * maxRadius
+                    clipPath(rippleClip) {
+                        drawCircle(palette.ripple.copy(alpha = pulse * strength * 0.55f), radius, center,
+                            style = Stroke(1.25.dp.toPx()))
+                        drawCircle(palette.highlight.copy(alpha = pulse * strength * 0.55f), radius * 0.8f, center,
+                            style = Stroke(0.7.dp.toPx()))
+                    }
+                }
             }
         }
 }
 
 @Composable
-fun rainTopBarContainerColor(): Color {
-    val theme = LocalInterfaceStyleTheme.current
-    val palette = rainPalette(theme, LocalRainStyle.current, isInDarkTheme())
-    return palette.surfaceBottom.copy(alpha = theme?.chrome?.topBarAlpha ?: 0.58f)
-}
+@ReadOnlyComposable
+fun rainTopBarContainerColor(): Color = rainPalette(LocalRainSettings.current, isInDarkTheme())
+    .surfaceBottom.copy(alpha = LocalRainSettings.current.topBarOpacity)
 
 @Composable
-fun rainTopBarContentColor(): Color =
-    rainPalette(LocalInterfaceStyleTheme.current, LocalRainStyle.current, isInDarkTheme()).content
-
-private data class RainDrop(
-    val x: Float,
-    val y: Float,
-    val phase: Float,
-    val speed: Float,
-    val lengthDp: Float,
-    val strokeDp: Float,
-    val alpha: Float,
-    val depth: Float,
-)
-
-private data class RainRipple(val x: Float, val y: Float, val phase: Float, val radiusDp: Float, val alpha: Float)
-
-private fun createRainDrops(spec: RainSceneSpec, seed: Int): List<RainDrop> {
-    val random = Random(seed)
-    return List(spec.dropCount) {
-        RainDrop(
-            x = random.nextFloat(),
-            y = random.nextFloat(),
-            phase = random.nextFloat(),
-            speed = random.nextFloatRange(0.72f, 1.38f),
-            lengthDp = random.nextFloatRange(spec.minLengthDp, spec.maxLengthDp),
-            strokeDp = random.nextFloatRange(spec.minStrokeDp, spec.maxStrokeDp),
-            alpha = random.nextFloatRange(spec.minAlpha, spec.maxAlpha),
-            depth = random.nextFloat(),
-        )
-    }
-}
-
-private fun createRainRipples(spec: RainSceneSpec, seed: Int): List<RainRipple> {
-    val random = Random(seed)
-    return List(spec.rippleCount) {
-        RainRipple(
-            x = random.nextFloatRange(0.08f, 0.92f),
-            y = random.nextFloatRange(0.62f, 0.98f),
-            phase = random.nextFloat(),
-            radiusDp = random.nextFloatRange(9f, 24f),
-            alpha = random.nextFloatRange(0.18f, 0.46f),
-        )
-    }
-}
-
-private fun DrawScope.drawClouds(palette: RainPalette, count: Int, seed: Int) {
-    val random = Random(seed xor CLOUD_SEED)
-    repeat(count.coerceIn(2, 20)) {
-        val width = size.width * random.nextFloatRange(0.16f, 0.38f)
-        val height = width * random.nextFloatRange(0.16f, 0.28f)
-        drawOval(
-            palette.cloud.copy(alpha = random.nextFloatRange(0.06f, 0.16f)),
-            Offset(size.width * random.nextFloatRange(-0.10f, 0.92f), size.height * random.nextFloatRange(0.05f, 0.46f)),
-            Size(width, height),
-        )
-    }
-}
-
-private fun DrawScope.drawRainField(
-    drops: List<RainDrop>,
-    spec: RainSceneSpec,
-    palette: RainPalette,
-    progress: Float,
-    minimumDepth: Float,
-    maximumDepth: Float,
-    alphaMultiplier: Float,
-) {
-    drops.asSequence().filter { it.depth in minimumDepth..maximumDepth }.forEach { drop ->
-        val local = (drop.y + progress * drop.speed + drop.phase) % 1.18f
-        val start = Offset(drop.x * size.width, local * size.height - size.height * 0.09f)
-        val length = drop.lengthDp.dp.toPx() * (0.72f + drop.depth * 0.46f)
-        drawLine(
-            palette.rain.copy(alpha = (drop.alpha * alphaMultiplier).coerceIn(0f, 1f)),
-            start,
-            start + Offset(spec.windRatio * length, length),
-            drop.strokeDp.dp.toPx(),
-            StrokeCap.Round,
-        )
-    }
-}
-
-private fun DrawScope.drawRipples(
-    ripples: List<RainRipple>,
-    palette: RainPalette,
-    progress: Float,
-    alphaMultiplier: Float,
-) {
-    ripples.forEach { ripple ->
-        val local = (progress + ripple.phase) % 1f
-        val radius = ripple.radiusDp.dp.toPx() * (0.35f + local)
-        drawOval(
-            palette.ripple.copy(alpha = ripple.alpha * (1f - local) * alphaMultiplier),
-            Offset(ripple.x * size.width - radius, ripple.y * size.height - radius * 0.30f),
-            Size(radius * 2f, radius * 0.60f),
-            style = Stroke(0.75.dp.toPx()),
-        )
-    }
-}
-
-private fun DrawScope.drawLightning(palette: RainPalette, alpha: Float) {
-    drawRect(palette.highlight.copy(alpha = alpha * 0.40f))
-    val path = Path().apply {
-        moveTo(size.width * 0.62f, 0f)
-        lineTo(size.width * 0.54f, size.height * 0.18f)
-        lineTo(size.width * 0.60f, size.height * 0.18f)
-        lineTo(size.width * 0.48f, size.height * 0.39f)
-    }
-    drawPath(path, palette.highlight.copy(alpha = alpha), style = Stroke(1.2.dp.toPx()))
-}
-
-private fun Random.nextFloatRange(start: Float, end: Float): Float = start + nextFloat() * (end - start)
-
-private const val STATIC_PROGRESS = 0.37f
-private const val STATIC_CARD_MOTION_PROGRESS = 0.34f
-private const val CARD_MOTION_CYCLE_MILLIS = 7_800
-private const val RIPPLE_SEED = 0x21A7
-private const val CLOUD_SEED = 0x17C3
-private const val LIGHTNING_SEED = 0x7A11
+@ReadOnlyComposable
+fun rainTopBarContentColor(): Color = rainPalette(LocalRainSettings.current, isInDarkTheme()).content

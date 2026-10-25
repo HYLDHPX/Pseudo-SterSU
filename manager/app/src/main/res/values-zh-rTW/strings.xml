@@ -583,7 +583,7 @@
     <string name="cloud_theme_creator_create_package">從目前主題產生雲端安全套件</string>
     <string name="cloud_theme_creator_export_package">匯出標準 .kstheme 投稿套件</string>
     <string name="cloud_theme_creator_package_exported">標準 .kstheme 投稿套件已匯出並驗證</string>
-    <string name="cloud_theme_creator_package_rules">檔案名稱和 MIME 類型不限；主題套件、圖片和影片單個最大 500 MiB，仍受裝置儲存空間和 GitHub Release 平台限制。</string>
+    <string name="cloud_theme_creator_package_rules">本機主題套件及媒體最大 500 MiB；商店改為儲存庫託管，上架時單個檔案最大 100 MiB，過大時請壓縮內嵌資源。</string>
     <string name="cloud_theme_creator_cloud_package_created">雲端安全主題套件已產生並通過驗證</string>
     <string name="cloud_theme_creator_package_meta">%1$s · 套件版本 v%2$d · %3$d 項資源</string>
     <string name="cloud_theme_creator_package_valid">主題套件驗證通過</string>
@@ -610,9 +610,9 @@
     <string name="cloud_theme_creator_cover_url">封面圖片網址</string>
     <string name="cloud_theme_creator_screenshot_urls">截圖網址</string>
     <string name="cloud_theme_creator_screenshot_urls_hint">每行一個 GitHub 圖片網址，最多 8 張</string>
-    <string name="cloud_theme_creator_remote_package">遠端發佈套件</string>
-    <string name="cloud_theme_creator_package_url">GitHub Release 主題套件網址</string>
-    <string name="cloud_theme_creator_package_url_hint">先匯出標準 .kstheme 檔案，再把完全相同的位元組上傳到自己帳號的公開 Release</string>
+    <string name="cloud_theme_creator_remote_package">遠端儲存庫主題套件</string>
+    <string name="cloud_theme_creator_package_url">GitHub 儲存庫 .kstheme 檔案直連</string>
+    <string name="cloud_theme_creator_package_url_hint">將驗證過的原檔案提交到自己帳號的公開儲存庫，貼上 raw.githubusercontent.com 檔案直連；相容舊版 Release 連結。</string>
     <string name="cloud_theme_creator_remote_unverified">遠端檔案尚未與本機主題套件進行一致性驗證。</string>
     <string name="cloud_theme_creator_remote_match">遠端檔案大小和 SHA-256 與本機主題套件完全一致。</string>
     <string name="cloud_theme_creator_verify_remote">驗證遠端主題套件</string>
@@ -704,4 +704,10 @@
     <string name="overflow_menu_wallpaper_pick">從圖庫選擇</string>
     <string name="overflow_menu_wallpaper_clear">恢復預設磨砂玻璃</string>
     <string name="overflow_menu_wallpaper_error">桌布儲存失敗，請選擇 32 MB 以內的有效圖片，並檢查儲存空間。</string>
+    <string name="susfs_implementation_info">變體：%1$s · 實作：%2$s</string>
+    <string name="susfs_implementation_builtin">核心內建</string>
+    <string name="susfs_implementation_lkm">可載入模組</string>
+    <string name="susfs_implementation_unknown">未知</string>
+    <string name="susfs_gki_lkm_detected">偵測到可載入的 SUSFS 實作。請使用獨立的 LKM SUSFS 管理頁面，此處不會套用 GKI 設定。</string>
+    <string name="susfs_runtime_evidence_note">已儲存設定與指令執行結果分別顯示。指令成功不代表已驗證執行中應用程式的隱藏效果；套用設定後請重新開啟目標應用程式。</string>
 </resources>

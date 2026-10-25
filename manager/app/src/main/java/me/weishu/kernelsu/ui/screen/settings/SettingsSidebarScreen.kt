@@ -127,7 +127,7 @@ internal fun SettingsSidebarScreen(
     onSetColorMode: (ColorMode) -> Unit,
 ) {
     val context = LocalContext.current
-    val sidebarStyle = uiState.uiMode == InterfaceStyle.SidebarWidget.value
+    val sidebarStyle = me.weishu.kernelsu.ui.LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
     val styleName = uiState.installedInterfaceStyles
         .firstOrNull { it.style.id == uiState.activeInterfaceStyleId && uiState.isInterfaceStyleActive(it.style) }
         ?.style?.name

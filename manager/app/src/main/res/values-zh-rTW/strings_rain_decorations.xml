@@ -1,0 +1,32 @@
+<resources>
+    <string name="rain_decorations">介面裝飾</string>
+    <string name="rain_decorations_note">各區域獨立設定，以柔和反光、薄水膜與細水紋呈現雨洗質感，保留文字、圖片與控制項原有透明度。</string>
+    <string name="rain_decoration_card">卡片頂部裝飾</string>
+    <string name="rain_decoration_card_border">卡片邊框樣式</string>
+    <string name="rain_decoration_card_interior">卡片內部樣式</string>
+    <string name="rain_card_border_outline">水潤描邊</string>
+    <string name="rain_card_border_double">晶透反光</string>
+    <string name="rain_card_border_dashed">雨痕邊緣</string>
+    <string name="rain_card_interior_mist">霧面柔光</string>
+    <string name="rain_card_interior_streaks">水流細紋</string>
+    <string name="rain_decoration_top_bar">頂部列裝飾</string>
+    <string name="rain_decoration_navigation">導覽列裝飾</string>
+    <string name="rain_decoration_sidebar">側邊欄裝飾</string>
+    <string name="rain_decoration_opacity">裝飾濃度</string>
+    <string name="rain_decoration_ripples">水紋</string>
+    <string name="rain_decoration_streams">雨絲</string>
+    <string name="rain_decoration_none">無裝飾</string>
+    <string name="rain_interaction_title">雨層與連動</string>
+    <string name="rain_through_ui">雨滴穿過介面</string>
+    <string name="rain_foreground_opacity">前景雨滴濃度</string>
+    <string name="rain_surface_interaction">卡片與側欄雨滴連動</string>
+    <string name="rain_thunder">雷雨場景遠雷微光</string>
+    <string name="rain_interaction_note">近景雨滴經過介面，在卡片與側欄的實際交會處泛起細小漣漪。雷光僅在雷雨場景中緩慢局部亮起。效果跟隨動畫與桌布疊雨開關，不攔截觸控。</string>
+    <string name="rain_card_edge_strength">卡片邊緣強度</string>
+    <string name="rain_card_interior_strength">卡片內部強度</string>
+    <string name="rain_top_bar_strength">頂部列裝飾強度</string>
+    <string name="rain_navigation_strength">導覽列裝飾強度</string>
+    <string name="rain_sidebar_strength">側邊欄裝飾強度</string>
+    <string name="rain_thunder_interval">雷光間隔（秒）</string>
+    <string name="rain_region_strength_note">各區域強度與裝飾總強度疊加。文字、圖示和圖片維持原有不透明度。</string>
+</resources>

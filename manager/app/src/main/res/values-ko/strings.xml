@@ -1629,7 +1629,7 @@
     <string name="cloud_theme_creator_create_package">현재 테마에서 클라우드 안전 패키지 생성</string>
     <string name="cloud_theme_creator_export_package">표준 .kstheme 패키지 내보내기</string>
     <string name="cloud_theme_creator_package_exported">표준 .kstheme 패키지를 내보내고 확인했습니다.</string>
-    <string name="cloud_theme_creator_package_rules">파일 이름과 MIME 유형은 제한하지 않습니다. 테마 패키지, 이미지, 동영상은 각각 최대 500 MiB이며 기기 저장 공간과 GitHub Release 제한은 계속 적용됩니다.</string>
+    <string name="cloud_theme_creator_package_rules">로컬 파일은 최대 500 MiB입니다. 스토어 저장소에 게시하는 파일은 각각 100 MiB 이하여야 합니다.</string>
     <string name="cloud_theme_creator_cloud_package_created">클라우드 안전 테마 패키지 생성 및 검증</string>
     <string name="cloud_theme_creator_package_meta">%1$s · 패키지 v%2$d · %3$d 리소스</string>
     <string name="cloud_theme_creator_package_valid">테마 패키지 유효성 검사가 통과되었습니다.</string>
@@ -1656,9 +1656,9 @@
     <string name="cloud_theme_creator_cover_url">표지 이미지 URL</string>
     <string name="cloud_theme_creator_screenshot_urls">스크린샷 URL</string>
     <string name="cloud_theme_creator_screenshot_urls_hint">한 줄에 하나의 GitHub 호스팅 이미지 URL, 최대 8개</string>
-    <string name="cloud_theme_creator_remote_package">원격 릴리스 패키지</string>
-    <string name="cloud_theme_creator_package_url">GitHub 릴리스 .kstheme URL</string>
-    <string name="cloud_theme_creator_package_url_hint">표준 .kstheme 파일을 내보낸 다음 정확한 바이트를 GitHub 계정의 공개 릴리스에 업로드하세요.</string>
+    <string name="cloud_theme_creator_remote_package">원격 저장소 테마 패키지</string>
+    <string name="cloud_theme_creator_package_url">GitHub 저장소 .kstheme 직접 URL</string>
+    <string name="cloud_theme_creator_package_url_hint">검증된 원본을 본인 계정의 공개 저장소에 저장하고 raw.githubusercontent.com URL을 붙여 넣으세요. 기존 Release URL도 지원합니다.</string>
     <string name="cloud_theme_creator_remote_unverified">원격 바이트가 선택한 로컬 패키지와 일치하지 않습니다.</string>
     <string name="cloud_theme_creator_remote_match">원격 크기 및 SHA-256이 선택한 로컬 패키지와 정확히 일치합니다.</string>
     <string name="cloud_theme_creator_verify_remote">원격 패키지 확인</string>

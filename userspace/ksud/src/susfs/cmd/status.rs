@@ -18,7 +18,9 @@ pub fn get_susfs_version() -> String {
         susfs_version: [0; SUSFS_MAX_VERSION_BUFSIZE],
         err: ERR_CMD_NOT_SUPPORTED,
     };
-    let _ = send(CMD_SUSFS_SHOW_VERSION, &mut cmd, "show_version");
+    if send(CMD_SUSFS_SHOW_VERSION, &mut cmd, "show_version").is_err() {
+        return "unsupport".to_string();
+    }
 
     let ver = cstr_buf_to_string(&cmd.susfs_version);
     if ver.starts_with('v') {
@@ -39,11 +41,15 @@ pub fn get_susfs_features() -> String {
         enabled_features: [0; SUSFS_ENABLED_FEATURES_SIZE],
         err: ERR_CMD_NOT_SUPPORTED,
     };
-    let _ = send(
+    if send(
         CMD_SUSFS_SHOW_ENABLED_FEATURES,
         &mut cmd,
         "show_enabled_features",
-    );
+    )
+    .is_err()
+    {
+        return String::new();
+    }
     cstr_buf_to_string(&cmd.enabled_features)
 }
 
@@ -53,6 +59,60 @@ pub fn get_susfs_variant() -> String {
         susfs_variant: [0; SUSFS_MAX_VARIANT_BUFSIZE],
         err: ERR_CMD_NOT_SUPPORTED,
     };
-    let _ = send(CMD_SUSFS_SHOW_VARIANT, &mut cmd, "show_variant");
+    if send(CMD_SUSFS_SHOW_VARIANT, &mut cmd, "show_variant").is_err() {
+        return String::new();
+    }
     cstr_buf_to_string(&cmd.susfs_variant)
+}
+
+/// Identify built-in / LKM SUSFS using kernel ABI markers, not module names.
+/// Matches SukiSU-Ultra's implementation query while retaining our separate
+/// LKM configuration and command path.
+pub fn get_susfs_implementation() -> &'static str {
+    if !get_susfs_status() {
+        return "unsupported";
+    }
+    implementation_from_info(&get_susfs_variant(), &get_susfs_features())
+}
+
+fn implementation_from_info(variant: &str, features: &str) -> &'static str {
+    let variant = variant.trim().to_ascii_uppercase().replace('_', "-");
+    if variant.ends_with("-LKM")
+        || features
+            .lines()
+            .any(|line| line.trim() == "SUSFS_LKM_MODULES")
+    {
+        "lkm"
+    } else {
+        "builtin"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::implementation_from_info;
+
+    #[test]
+    fn recognizes_lkm_abi_markers() {
+        for variant in ["GKI-LKM", " gki_lkm\n", "NON-GKI-LKM"] {
+            assert_eq!(implementation_from_info(variant, ""), "lkm");
+        }
+        assert_eq!(
+            implementation_from_info("GKI", "CONFIG_KSU_SUSFS_SUS_PATH\n SUSFS_LKM_MODULES \n"),
+            "lkm"
+        );
+    }
+
+    #[test]
+    fn defaults_to_builtin_without_exact_lkm_marker() {
+        for variant in ["GKI", "NON-GKI", "", "GKI-LKM-extra"] {
+            assert_eq!(
+                implementation_from_info(
+                    variant,
+                    "CONFIG_KSU_SUSFS_SUS_PATH\nNOT_SUSFS_LKM_MODULES"
+                ),
+                "builtin"
+            );
+        }
+    }
 }

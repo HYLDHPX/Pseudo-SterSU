@@ -226,13 +226,13 @@ Reproducible builds use the branch-specific commits recorded in
 
 | SUSFS branch | Pinned commit |
 | --- | --- |
-| `gki-android12-5.10` | `e466df60670eab2847ea76940be2f8a125c8adc9` |
-| `gki-android13-5.10` | `805e7e853bf49df671c9efed772a5e744ae6fa9e` |
-| `gki-android13-5.15` | `01b08bf995c22c25f6361539d6b89435504528d9` |
-| `gki-android14-5.15` | `a96b41434e401565158b8eb19a4fe8855143ce99` |
-| `gki-android14-6.1` | `596ec8fcdcb5a6ee366494304333c7fdc76d8862` |
-| `gki-android15-6.6` | `72997d308cf0d55003ad4695ebde130ef9fc5201` |
-| `gki-android16-6.12` | `55e16cb62127057f36a16e6a3068217ba5dade31` |
+| `gki-android12-5.10` | `f3b5aecf53ff8b3296603071b91383f6be6c7cbb` |
+| `gki-android13-5.10` | `04a9d713106191ba98be680bd7ad9547ab1de964` |
+| `gki-android13-5.15` | `e565931d19256fd821ada01b35263506e7c7a364` |
+| `gki-android14-5.15` | `b3c7f19b71b5d46c541094906e46e7c3edfcecc1` |
+| `gki-android14-6.1` | `273ae364c5b7c92ceb15634c9f075b6fc0501048` |
+| `gki-android15-6.6` | `9d9464f191b2d846590ac4d1b52e123df135c401` |
+| `gki-android16-6.12` | `c8f64e41e3dea2cd44754d7472d3cd0bc0b40784` |
 
 The upstream repository carries the GNU GPL version 3 license text. Preserve
 its copyright and license notices and provide the complete corresponding
@@ -245,6 +245,19 @@ SUSFS source patches are enabled only for built-in AArch64 GKI builds with
 `CONFIG_KSU_SUSFS=y`. LKM builds continue to use ApkeSU's existing dynamic-hook
 implementation. Android 17 / Linux 6.18 is intentionally excluded because the
 upstream repository does not publish a matching GKI source patch.
+
+The 2026-10-25 GKI SUSFS compatibility update also references
+[SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra), main revision
+`72eea67e2307cb9d257a4bbd8dd6e64f10724bc5` and built-in branch revision
+`ce75122bec7423e0f1fa06e3e9a174085c5231ab`. The ABI implementation detection
+is adapted from `873b5c06dacc2293b53f170f126b00cf2abf72bb`; Manager operation
+handling references `2d2f3ed186977bccf885d15a118155e9c9f849d8` and
+`242dbc4d86f926e43b5dadce710390506e4a12a7`. The direct-input callback guard
+adapts the safe-mode fix from `5a2bb7e5813002ccaabe02fa864cfb2dde6b5109`
+to SterSU's existing GKI source-hook implementation. SukiSU-Ultra publishes
+GPL version 3 license text; this attribution does not replace file-level
+kernel SPDX terms or the project's license split. See
+`docs/SUKISU_GKI_SUSFS_SYNC.md` for applied changes and preserved boundaries.
 
 8. Aster UI design reference
 ----------------------------
@@ -297,3 +310,29 @@ This attribution identifies upstream source; it does not imply affiliation or
 endorsement. Distributors of the LKM must preserve applicable notices and
 provide complete corresponding source, including modifications and build
 scripts, for the exact distributed binary.
+
+10. Waline theme comments client
+--------------------------------
+
+The theme-store comment system uses [Waline](https://github.com/walinejs/waline).
+Official documentation: https://waline.js.org/.
+
+The Manager bundles the unmodified `@waline/client` 3.16.1 JavaScript and CSS
+under `manager/app/src/main/assets/theme-comments/vendor/`. These client
+assets are MIT-licensed. The original notice identifies
+`Copyright (C) 2021 - PRESENT by Mr.Hope<mister-hope@outlook.com>`; its complete
+copyright and permission text is retained in that directory's `LICENSE`.
+The client attribution remains available in the comment UI.
+
+SterSU-specific code implements Android WebView hosting, per-theme discussion
+identifiers, appearance and wallpaper synchronization, scoped local sessions,
+and email account/profile forms. These integration files are separate from
+the vendored client assets and retain their applicable project licenses.
+Comment storage and authentication are provided by the configured Waline
+service; this client notice does not license that service or change any
+upstream server license. Waline does not endorse or officially maintain this
+SterSU integration.
+
+Pinned client resource hashes, npm package integrity, and deployment scope
+are documented in `docs/WALINE_THEME_COMMENTS.md`. Preserve the client license
+and attribution when redistributing its assets.

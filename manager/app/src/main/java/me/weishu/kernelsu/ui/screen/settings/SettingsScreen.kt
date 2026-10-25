@@ -11,6 +11,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.weishu.kernelsu.ui.InterfaceStyle
+import me.weishu.kernelsu.ui.LocalInterfaceStyle
 import me.weishu.kernelsu.ui.navigation3.Navigator
 import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.util.INTERFACE_STYLE_RESULT_KEY
@@ -44,7 +45,7 @@ fun SettingPager(
     val onOpenCategory: (SettingsCategory) -> Unit = { category ->
         navigator.push(Route.SettingsCategory(category.routeValue))
     }
-    if (usesDeviceSettingsHome(uiState.uiMode) && pageMode.value == SettingsPageMode.Categories) {
+    if (usesDeviceSettingsHome(LocalInterfaceStyle.current) && pageMode.value == SettingsPageMode.Categories) {
         SettingsSidebarScreen(
             uiState = uiState,
             navigator = navigator,

@@ -2,8 +2,6 @@
 <resources>
     <string name="interface_style_rain">빗속 유리</string>
     <string name="settings_rain_style">비의 세기</string>
-    <string name="settings_rain_card_motion">비 카드 애니메이션</string>
-    <string name="settings_rain_card_motion_summary">카드 내용은 움직이지 않고 가장자리의 물방울, 응결, 은은한 유리 광택을 움직입니다.</string>
     <string name="rain_style_light">가벼운 비</string>
     <string name="rain_style_light_summary">옅은 푸른 유리 위에 부드러운 안개, 드문 빗줄기와 잔잔한 물결을 표현합니다.</string>
     <string name="rain_style_medium">보통 비</string>

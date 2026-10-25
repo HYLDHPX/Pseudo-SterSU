@@ -9,6 +9,13 @@ import me.weishu.kernelsu.ui.component.pixel.PIXEL_STYLE_KEY
 import me.weishu.kernelsu.ui.component.pixel.PixelStyle
 import me.weishu.kernelsu.ui.component.rain.RAIN_STYLE_KEY
 import me.weishu.kernelsu.ui.component.rain.RainStyle
+import me.weishu.kernelsu.ui.component.rain.RainLayout
+import me.weishu.kernelsu.ui.component.rain.RainSettings
+import me.weishu.kernelsu.ui.component.rain.SharedRainConfiguration
+import me.weishu.kernelsu.ui.component.rain.exportRainConfiguration
+import me.weishu.kernelsu.ui.component.rain.importRainConfiguration
+import me.weishu.kernelsu.ui.component.rain.putRainConfiguration
+import me.weishu.kernelsu.ui.component.rain.readRainSettings
 import me.weishu.kernelsu.ui.component.snow.SEASON_STYLE_KEY
 import me.weishu.kernelsu.ui.component.snow.SeasonStyle
 import org.json.JSONObject
@@ -17,6 +24,7 @@ internal data class ThemeStoreInterfaceSelection(
     val mode: String,
     val variant: String?,
     val archive: SharedInterfaceStyleArchive? = null,
+    val rain: SharedRainConfiguration? = null,
 ) {
     val engine: String get() = if (mode == InterfaceStyle.Delta.value) InterfaceStyle.Alpha.value else mode
 }
@@ -29,12 +37,13 @@ internal fun exportThemeStoreInterfaceSelection(
     val mode = InterfaceStyle.normalizeValue(prefs.getString("ui_mode", UiMode.DEFAULT_VALUE))
     val variant = when (mode) {
         InterfaceStyle.Snow.value -> SeasonStyle.fromValue(prefs.getString(SEASON_STYLE_KEY, null)).value
-        InterfaceStyle.Rain.value -> RainStyle.fromValue(prefs.getString(RAIN_STYLE_KEY, null)).value
+        InterfaceStyle.Rain.value -> readRainSettings(prefs).scene.value
         InterfaceStyle.Pixel.value -> PixelStyle.fromValue(prefs.getString(PIXEL_STYLE_KEY, null)).value
         else -> null
     }
     val selection = ThemeStoreInterfaceSelection(mode, variant)
     return JSONObject().put("mode", mode).put("variant", variant).apply {
+        if (mode == InterfaceStyle.Rain.value) put("rain", exportRainConfiguration(prefs))
         if (InterfaceStyle.builtInEntries.none { it.value == mode }) {
             val preferredId = if (mode == InterfaceStyle.Delta.value) "alpha-delta"
                 else prefs.getString(ACTIVE_INTERFACE_STYLE_ID_KEY, null)
@@ -49,7 +58,7 @@ internal fun exportThemeStoreInterfaceSelection(
 }
 
 internal fun validateThemeStoreInterfaceSelection(json: JSONObject) {
-    require(json.keys().asSequence().all { it in setOf("mode", "variant", "package") }) {
+    require(json.keys().asSequence().all { it in setOf("mode", "variant", "package", "rain") }) {
         "Unknown interface style setting"
     }
     val mode = json.getString("mode")
@@ -62,9 +71,17 @@ internal fun validateThemeStoreInterfaceSelection(json: JSONObject) {
         else -> variant == null
     }
     require(validVariant) { "Invalid interface style variant" }
+    if (json.has("rain")) {
+        require(mode == InterfaceStyle.Rain.value) { "Rain settings require the rain renderer" }
+        val rain = importRainConfiguration(json.getJSONObject("rain"))
+        require(rain.profiles.getValue(rain.layout).scene.value == variant) { "Rain scene does not match the active profile" }
+    }
     val builtIn = InterfaceStyle.builtInEntries.any { it.value == mode }
     val owner = json.optJSONObject("package")
-    require(if (builtIn) !json.has("package") else owner != null) { "Interface style package is missing or unexpected" }
+    // Themes exported while Rain was built in have no embedded package. Keep
+    // their settings readable; applying Rain still requires an installed style.
+    val legacyRain = mode == InterfaceStyle.Rain.value && !json.has("package")
+    require(if (builtIn) !json.has("package") else owner != null || legacyRain) { "Interface style package is missing or unexpected" }
     owner?.let {
         require(it.keys().asSequence().all { key -> key in setOf("id", "asset", "catalogAsset", "signatureAsset") } &&
             it.opt("id") is String && it.opt("asset") is JSONObject &&
@@ -88,9 +105,10 @@ internal fun importThemeStoreInterfaceSelection(
             signature = if (it.has("signatureAsset")) asset(it, "signatureAsset", 4L * 1024) else null,
         )
     }
-    return ThemeStoreInterfaceSelection(mode, variant, archive).also { selection ->
+    val rain = json.optJSONObject("rain")?.let(::importRainConfiguration)
+    return ThemeStoreInterfaceSelection(mode, variant, archive, rain).also { selection ->
         if (archive != null) {
-            require(archive.style.engine == selection.engine && archive.style.variant == selection.variant &&
+            require(archive.style.engine == selection.engine && archive.style.supportsVariant(selection.variant) &&
                 (mode != InterfaceStyle.Delta.value || archive.style.id == "alpha-delta")) {
                 "Shared interface style does not match the selected renderer"
             }
@@ -102,6 +120,12 @@ internal fun SharedPreferences.Editor.putThemeStoreInterfaceSelection(selection:
     putString("ui_mode", selection.mode)
     val styleId = selection.archive?.style?.id
     if (styleId == null) remove(ACTIVE_INTERFACE_STYLE_ID_KEY) else putString(ACTIVE_INTERFACE_STYLE_ID_KEY, styleId)
+    if (selection.mode == InterfaceStyle.Rain.value) {
+        putRainConfiguration(selection.rain ?: SharedRainConfiguration(
+            RainLayout.Sidebar,
+            RainLayout.entries.associateWith { RainSettings(layout = it, scene = RainStyle.fromValue(selection.variant)) },
+        ))
+    }
     val variant = selection.variant ?: return
     val key = when (selection.mode) {
         InterfaceStyle.Snow.value -> SEASON_STYLE_KEY

@@ -7,7 +7,10 @@ import java.io.File
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.security.GeneralSecurityException
 import java.security.PrivateKey
+import java.security.ProviderException
+import java.security.SignatureException
 import java.security.cert.X509Certificate
 import java.util.zip.CRC32
 import java.util.zip.ZipEntry
@@ -124,11 +127,36 @@ internal fun writeLauncherArchive(template: InputStream, output: File, name: Str
 }
 
 internal fun signLauncherArchive(unsigned: File, output: File, key: PrivateKey, certificate: X509Certificate) {
-    val signer = ApkSigner.SignerConfig.Builder("launcher", key, listOf(certificate)).build()
-    ApkSigner.Builder(listOf(signer)).setInputApk(unsigned).setOutputApk(output)
-        .setMinSdkVersion(31).setV1SigningEnabled(false).setV2SigningEnabled(true)
-        .setV3SigningEnabled(false).setV4SigningEnabled(false).build().sign()
+    require(unsigned.canonicalFile != output.canonicalFile)
+    try {
+        try {
+            val signer = ApkSigner.SignerConfig.Builder("launcher", key, listOf(certificate)).build()
+            ApkSigner.Builder(listOf(signer)).setInputApk(unsigned).setOutputApk(output)
+                .setMinSdkVersion(31).setV1SigningEnabled(false).setV2SigningEnabled(true)
+                .setV3SigningEnabled(false).setV4SigningEnabled(false).build().sign()
+            verifyLauncherArchive(output, certificate)
+        } catch (first: Exception) {
+            if (first !is GeneralSecurityException && first !is ProviderException) throw first
+            // JCA does not try another provider if the chosen one fails after initSign.
+            // Retry the same device key explicitly; never replace or export that key.
+            try {
+                signLauncherWithDeviceProviders(unsigned, output, key, certificate)
+                verifyLauncherArchive(output, certificate)
+            } catch (failure: Exception) {
+                failure.addSuppressed(first)
+                throw failure
+            }
+        }
+    } catch (failure: Exception) {
+        output.delete()
+        throw failure
+    }
+}
+
+private fun verifyLauncherArchive(output: File, certificate: X509Certificate) {
     val verified = ApkVerifier.Builder(output).setMinCheckedPlatformVersion(31).build().verify()
-    check(verified.isVerified && verified.isVerifiedUsingV2Scheme && verified.signerCertificates.size == 1)
-    check(verified.signerCertificates.single().encoded.contentEquals(certificate.encoded))
+    if (!verified.isVerified || !verified.isVerifiedUsingV2Scheme || verified.signerCertificates.size != 1 ||
+        !verified.signerCertificates.single().encoded.contentEquals(certificate.encoded)) {
+        throw SignatureException("Generated launcher APK failed v2 verification: ${verified.errors}")
+    }
 }

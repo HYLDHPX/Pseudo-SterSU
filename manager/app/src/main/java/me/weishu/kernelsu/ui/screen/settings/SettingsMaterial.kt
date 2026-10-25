@@ -95,6 +95,7 @@ fun SettingPagerMaterial(
     actions: SettingsScreenActions,
     bottomInnerPadding: Dp,
 ) {
+    val navigator = me.weishu.kernelsu.ui.navigation3.LocalNavigator.current
     val scrollBehavior = rememberExpressivePageScrollBehavior()
     val snackBarHost = remember { SnackbarHostState() }
     val showUninstallDialog = rememberSaveable { mutableStateOf(false) }
@@ -157,6 +158,16 @@ fun SettingPagerMaterial(
                                 },
                             )
                         },
+                        if (uiState.uiMode == InterfaceStyle.Rain.value) {
+                            {
+                                MaterialSettingsLink(
+                                    title = stringResource(R.string.rain_design_title),
+                                    summary = stringResource(R.string.rain_design_summary),
+                                    icon = Icons.Rounded.Tune,
+                                    onClick = { navigator.push(me.weishu.kernelsu.ui.navigation3.Route.RainDesign) },
+                                )
+                            }
+                        } else null,
                         {
                             SegmentedSwitchItem(
                                 icon = Icons.Filled.Palette,

@@ -1630,7 +1630,7 @@ Mode</string>
     <string name="cloud_theme_creator_create_package">Créer un package sécurisé pour le cloud à partir du thème actuel</string>
     <string name="cloud_theme_creator_export_package">Exporter le package .kstheme standard</string>
     <string name="cloud_theme_creator_package_exported">Package .kstheme standard exporté et vérifié</string>
-    <string name="cloud_theme_creator_package_rules">Le nom de fichier et le type MIME ne sont pas restreints. Les paquets de thème, images et vidéos peuvent atteindre 500 Mio chacun ; les limites du stockage et de GitHub Release s’appliquent toujours.</string>
+    <string name="cloud_theme_creator_package_rules">Les fichiers locaux peuvent atteindre 500 Mio. Pour publier dans le dépôt de la boutique, chaque fichier doit faire au maximum 100 Mio.</string>
     <string name="cloud_theme_creator_cloud_package_created">Package de thèmes sécurisé pour le cloud créé et validé</string>
     <string name="cloud_theme_creator_package_meta">%1$s · package v%2$d · %3$d ressources</string>
     <string name="cloud_theme_creator_package_valid">Validation du package de thème réussie</string>
@@ -1657,9 +1657,9 @@ Mode</string>
     <string name="cloud_theme_creator_cover_url">URL de l\&apos;image de couverture</string>
     <string name="cloud_theme_creator_screenshot_urls">URL de capture d\&apos;écran</string>
     <string name="cloud_theme_creator_screenshot_urls_hint">Une URL d\&apos;image hébergée sur GitHub par ligne, jusqu\&apos;à huit</string>
-    <string name="cloud_theme_creator_remote_package">Package de version à distance</string>
-    <string name="cloud_theme_creator_package_url">URL de la version .kstheme de GitHub</string>
-    <string name="cloud_theme_creator_package_url_hint">Exportez le fichier .kstheme standard, puis téléchargez ces octets exacts dans une version publique sous votre compte GitHub</string>
+    <string name="cloud_theme_creator_remote_package">Paquet distant du dépôt</string>
+    <string name="cloud_theme_creator_package_url">URL directe GitHub du fichier .kstheme</string>
+    <string name="cloud_theme_creator_package_url_hint">Placez le fichier vérifié dans un dépôt public de votre compte et collez son URL raw.githubusercontent.com. Les anciens liens Release restent acceptés.</string>
     <string name="cloud_theme_creator_remote_unverified">Les octets distants n\&apos;ont pas été mis en correspondance avec le package local sélectionné.</string>
     <string name="cloud_theme_creator_remote_match">La taille distante et SHA-256 correspondent exactement au package local sélectionné.</string>
     <string name="cloud_theme_creator_verify_remote">Vérifier le package distant</string>

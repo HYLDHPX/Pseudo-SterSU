@@ -1630,7 +1630,7 @@
     <string name="cloud_theme_creator_create_package">Crear paquete seguro en la nube a partir del tema actual</string>
     <string name="cloud_theme_creator_export_package">Exportar paquete estándar .kstheme</string>
     <string name="cloud_theme_creator_package_exported">Paquete .kstheme estándar exportado y verificado</string>
-    <string name="cloud_theme_creator_package_rules">El nombre de archivo y el tipo MIME no están restringidos. Los paquetes de temas, las imágenes y los vídeos pueden ocupar hasta 500 MiB cada uno; siguen aplicándose los límites del almacenamiento y de GitHub Release.</string>
+    <string name="cloud_theme_creator_package_rules">La importación local admite hasta 500 MiB. Para publicar en el repositorio de la tienda, cada archivo debe ocupar como máximo 100 MiB.</string>
     <string name="cloud_theme_creator_cloud_package_created">Paquete temático seguro en la nube creado y validado</string>
     <string name="cloud_theme_creator_package_meta">%1$s · paquete v%2$d · %3$d recursos</string>
     <string name="cloud_theme_creator_package_valid">Se pasó la validación del paquete temático</string>
@@ -1657,9 +1657,9 @@
     <string name="cloud_theme_creator_cover_url">URL de la imagen de portada</string>
     <string name="cloud_theme_creator_screenshot_urls">URL de captura de pantalla</string>
     <string name="cloud_theme_creator_screenshot_urls_hint">Una URL de imagen alojada en GitHub por línea, hasta ocho</string>
-    <string name="cloud_theme_creator_remote_package">Paquete de liberación remota</string>
-    <string name="cloud_theme_creator_package_url">Lanzamiento de GitHub .kstheme URL</string>
-    <string name="cloud_theme_creator_package_url_hint">Exporte el archivo .kstheme estándar y luego cargue esos bytes exactos en una versión pública en su cuenta de GitHub.</string>
+    <string name="cloud_theme_creator_remote_package">Paquete remoto del repositorio</string>
+    <string name="cloud_theme_creator_package_url">URL directa de .kstheme en GitHub</string>
+    <string name="cloud_theme_creator_package_url_hint">Sube el archivo verificado a un repositorio público de tu cuenta y pega su URL raw.githubusercontent.com. También se aceptan enlaces antiguos de Releases.</string>
     <string name="cloud_theme_creator_remote_unverified">Los bytes remotos no coinciden con el paquete local seleccionado.</string>
     <string name="cloud_theme_creator_remote_match">El tamaño remoto y SHA-256 coinciden exactamente con el paquete local seleccionado.</string>
     <string name="cloud_theme_creator_verify_remote">Verificar paquete remoto</string>

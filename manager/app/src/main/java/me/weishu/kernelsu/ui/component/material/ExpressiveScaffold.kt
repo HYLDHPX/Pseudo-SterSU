@@ -22,16 +22,30 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import me.weishu.kernelsu.ui.component.rain.RainChromeArea
+import me.weishu.kernelsu.ui.component.rain.rainChromeDecoration
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
+import me.weishu.kernelsu.ui.LocalUiMode
+import me.weishu.kernelsu.ui.UiMode
+import me.weishu.kernelsu.ui.theme.LocalEnableBlur
+import me.weishu.kernelsu.ui.theme.LocalImmersiveBackgroundActive
+import me.weishu.kernelsu.ui.theme.LocalUiPassthroughSettings
 import me.weishu.kernelsu.ui.theme.SidebarUiTokens
 import me.weishu.kernelsu.ui.theme.immersivePageColor
 import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.theme.immersiveScrolledTopBarColor
+import me.weishu.kernelsu.ui.util.BlurredBar
+import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+
+internal val LocalMaterialBarBlurActive = staticCompositionLocalOf { false }
 
 @Composable
 fun ExpressiveScaffold(
@@ -48,16 +62,26 @@ fun ExpressiveScaffold(
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val sidebar = LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
+    val backdrop = rememberBlurBackdrop(
+        LocalUiMode.current == UiMode.Material && LocalEnableBlur.current &&
+            !LocalImmersiveBackgroundActive.current && !LocalUiPassthroughSettings.current.enabled,
+    )
     Scaffold(
         modifier = modifier,
         topBar = {
-            if (sidebar) {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-                    Box(Modifier.widthIn(max = contentMaxWidth).fillMaxWidth()) {
+            CompositionLocalProvider(LocalMaterialBarBlurActive provides (backdrop != null)) {
+                BlurredBar(backdrop) {
+                    if (sidebar) {
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                            Box(Modifier.widthIn(max = contentMaxWidth).fillMaxWidth()) {
+                                topBar()
+                            }
+                        }
+                    } else {
                         topBar()
                     }
                 }
-            } else topBar()
+            }
         },
         bottomBar = bottomBar,
         snackbarHost = snackbarHost,
@@ -69,7 +93,10 @@ fun ExpressiveScaffold(
         contentColor = contentColor,
         contentWindowInsets = contentWindowInsets,
         content = { padding ->
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            Box(
+                Modifier.fillMaxSize().then(if (backdrop != null) Modifier.layerBackdrop(backdrop) else Modifier),
+                contentAlignment = Alignment.TopCenter,
+            ) {
                 Box(Modifier.widthIn(max = contentMaxWidth).fillMaxSize()) {
                     content(padding)
                 }
@@ -85,8 +112,8 @@ fun expressiveTopAppBarColors(
 ): TopAppBarColors {
     val sidebar = LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
     return TopAppBarDefaults.topAppBarColors(
-        containerColor = immersiveTopBarColor(if (sidebar) MaterialTheme.colorScheme.surface else containerColor),
-        scrolledContainerColor = immersiveScrolledTopBarColor(if (sidebar) MaterialTheme.colorScheme.surface else scrolledContainerColor),
+        containerColor = if (LocalMaterialBarBlurActive.current) Color.Transparent else immersiveTopBarColor(if (sidebar) MaterialTheme.colorScheme.surface else containerColor),
+        scrolledContainerColor = if (LocalMaterialBarBlurActive.current) Color.Transparent else immersiveScrolledTopBarColor(if (sidebar) MaterialTheme.colorScheme.surface else scrolledContainerColor),
     )
 }
 
@@ -100,16 +127,22 @@ fun ExpressiveTopAppBar(
     windowInsets: WindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
+    val decoration = Modifier.rainChromeDecoration(RainChromeArea.TopBar)
+    val barColors = if (LocalMaterialBarBlurActive.current) {
+        colors.copy(containerColor = Color.Transparent, scrolledContainerColor = Color.Transparent)
+    } else colors
     if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value || me.weishu.kernelsu.ui.util.currentAppWindowSize().compactNavigation) {
         TopAppBar(
+            modifier = decoration,
             title = title, navigationIcon = navigationIcon,
             actions = { me.weishu.kernelsu.ui.component.AdaptiveTopBarActions(actions) },
-            colors = colors, windowInsets = windowInsets, scrollBehavior = scrollBehavior,
+            colors = barColors, windowInsets = windowInsets, scrollBehavior = scrollBehavior,
         )
     } else {
         LargeFlexibleTopAppBar(
+            modifier = decoration,
             title = title, navigationIcon = navigationIcon, actions = actions,
-            colors = colors, windowInsets = windowInsets, scrollBehavior = scrollBehavior,
+            colors = barColors, windowInsets = windowInsets, scrollBehavior = scrollBehavior,
         )
     }
 }

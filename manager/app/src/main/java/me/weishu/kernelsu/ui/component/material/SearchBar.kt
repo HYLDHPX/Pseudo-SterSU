@@ -94,7 +94,9 @@ fun InlineSearchAppBar(
     val defaultTopBarContainerColor = if (useWallpaperSurface) {
         Color.Transparent
     } else MaterialTheme.colorScheme.surface
-    val topBarContainerColor = immersiveTopBarColor(defaultTopBarContainerColor)
+    val topBarContainerColor = if (LocalMaterialBarBlurActive.current) {
+        Color.Transparent
+    } else immersiveTopBarColor(defaultTopBarContainerColor)
     val searchContainerColor = if (useWallpaperSurface) {
         immersiveSurfaceColor(MaterialTheme.colorScheme.surfaceContainerLow)
     } else MaterialTheme.colorScheme.surfaceContainerHigh

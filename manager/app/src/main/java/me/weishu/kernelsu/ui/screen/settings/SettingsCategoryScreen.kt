@@ -182,7 +182,6 @@ fun SettingsCategoryScreen(routeValue: String) {
                 },
                 onSetMiuixClassicHomeLayout = viewModel::setMiuixClassicHomeLayoutEnabled,
                 onSetSeasonCardMotion = viewModel::setSeasonCardMotionEnabled,
-                onSetRainCardMotion = viewModel::setRainCardMotionEnabled,
                 onSetDayNightMode = viewModel::setDayNightMode,
                 onSetPixelCardMotion = viewModel::setPixelCardMotionEnabled,
                 highlightedInterfaceStyleId = highlightedInterfaceStyleId,
@@ -329,7 +328,6 @@ private fun AppearanceSettingsContent(
     onSetAlphaDeltaMode: (Boolean) -> Unit,
     onSetMiuixClassicHomeLayout: (Boolean) -> Unit,
     onSetSeasonCardMotion: (Boolean) -> Unit,
-    onSetRainCardMotion: (Boolean) -> Unit,
     onSetDayNightMode: (Boolean) -> Unit,
     onSetPixelCardMotion: (Boolean) -> Unit,
     highlightedInterfaceStyleId: String?,
@@ -408,12 +406,11 @@ private fun AppearanceSettingsContent(
         }
         if (uiState.uiMode == InterfaceStyle.Rain.value) {
             SettingsDivider()
-            SettingsSwitchRow(
-                title = stringResource(R.string.settings_rain_card_motion),
-                summary = stringResource(R.string.settings_rain_card_motion_summary),
-                icon = Icons.Rounded.AutoFixHigh,
-                checked = uiState.rainCardMotionEnabled,
-                onCheckedChange = onSetRainCardMotion,
+            SettingsActionRow(
+                title = stringResource(R.string.rain_design_title),
+                summary = stringResource(R.string.rain_design_summary),
+                icon = Icons.Rounded.Tune,
+                onClick = { onOpen(Route.RainDesign) },
             )
         }
         if (uiState.uiMode == InterfaceStyle.Pixel.value) {

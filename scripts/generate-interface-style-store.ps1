@@ -340,7 +340,8 @@ $styles = @(
     [ordered]@{ id='pixel-jiangnan-watertown'; name='江南水乡 / Jiangnan watertown'; summary='像素风：江南水乡'; engine='pixel'; variant='jiangnan_watertown'; accent=4283987311L },
     [ordered]@{ id='sidebar-widget'; name='侧栏组件'; summary='黑白液态玻璃侧栏，支持左右切换、日夜主题、自定义天气 API、时钟、闹钟、图片和导航排序，适配平板；完整功能需支持新版侧栏的管理器。'; engine='sidebar_widget'; variant=$null; accent=4279637526L },
     [ordered]@{ id='skrootpro'; name='SKRoot 风格'; summary='紫色强调的 SKRoot 风格界面，支持浅色与深色模式。'; engine='skrootpro'; variant=$null; accent=4285137140L },
-    [ordered]@{ id='alpha-delta'; name='Alpha / Delta 融合'; summary='下载后可在界面风格设置中切换 Alpha 与 Delta 两种布局。'; engine='alpha'; variant=$null; accent=4278246821L }
+    [ordered]@{ id='alpha-delta'; name='Alpha / Delta 融合'; summary='下载后可在界面风格设置中切换 Alpha 与 Delta 两种布局。'; engine='alpha'; variant=$null; accent=4278246821L },
+    [ordered]@{ id='rain-environment'; name='雨境 / Rain'; summary='重构雨境：包含 miuix、Material、miuix（美化版）三种布局与五种天气场景，可独立定制卡片、顶部栏、导航栏和侧栏装饰，支持雨滴穿透、表面联动、日夜主题及声音；完整功能需 SterSU 3.3.3 或更新版本。'; engine='rain'; variant='light_rain'; accent=4284384422L }
 )
 
 $existingCatalog = $null
@@ -391,6 +392,7 @@ $catalogStyles = foreach ($style in $styles) {
     $packageFileName = switch ($style.id) {
         'sidebar-widget' { 'sidebar-widget-glass-20261003.ksstyle' }
         'liquid-glass' { 'liquid-glass-clear-20261009.ksstyle' }
+        'rain-environment' { 'rain-environment-20261025.ksstyle' }
         default { "$($style.id).ksstyle" }
     }
     $packagePath = Join-Path $packageDirectory $packageFileName

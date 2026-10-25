@@ -31,6 +31,14 @@ To use weather data, read and accept the disclosure in Settings. Merely selectin
 - **Xiaomi Weather**: reads the device's local weather provider without requesting location permission. If the provider is unavailable, the widget shows an unavailable state. See the [Xiaomi Weather interface notice](./docs/XIAOMI_WEATHER_PROVIDER.md).
 - **Open-Meteo**: sends user-entered coordinates to a third-party weather service, which can also see the network IP address. The optional display name remains on the device. See the [Open-Meteo interface notice](./docs/OPEN_METEO_SIDEBAR.md) for terms and attribution.
 
+## Theme comments attribution
+
+Theme-store comments use the open-source [Waline](https://github.com/walinejs/waline) comment system; its official documentation is at [waline.js.org](https://waline.js.org/). The Manager bundles the JavaScript and CSS from `@waline/client` **3.16.1**, distributed under the **MIT** license with its original copyright, license text, and client attribution retained.
+
+SterSU implements the Android WebView integration, per-theme discussion identifiers, light/dark appearance and background synchronization, and email sign-in, registration, and profile settings under Store > My. The configured Waline service processes comments and account data. SterSU is an independent integration with no official affiliation or endorsement. The client's MIT license does not change the separate licenses of SterSU or the Waline server.
+
+See the [theme comments guide](./docs/WALINE_THEME_COMMENTS.md) for provenance, asset hashes, and deployment details, and the bundled [Waline client LICENSE](./manager/app/src/main/assets/theme-comments/vendor/LICENSE). Thanks to the Waline authors and contributors.
+
 ## Licensing and sources
 
 SterSU retains the upstream licensing boundaries. File-level notices take precedence:

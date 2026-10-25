@@ -12,6 +12,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import me.weishu.kernelsu.ui.util.currentAppWindowSize
+import me.weishu.kernelsu.ui.component.rain.RainChromeArea
+import me.weishu.kernelsu.ui.component.rain.rainChromeDecoration
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
@@ -38,9 +40,13 @@ fun AdaptiveTopAppBar(
     actionIconPadding: Dp = TopAppBarDefaults.ActionIconPadding,
     bottomContent: @Composable () -> Unit = {},
 ) {
+    val effectiveColor = if (me.weishu.kernelsu.ui.component.rain.isRainInterfaceStyle()) {
+        me.weishu.kernelsu.ui.theme.immersiveTopBarColor(color)
+    } else color
+    val decoratedModifier = modifier.rainChromeDecoration(RainChromeArea.TopBar)
     if (currentAppWindowSize().compactNavigation) {
         SmallTopAppBar(
-            title = title, modifier = modifier, color = color, titleColor = titleColor,
+            title = title, modifier = decoratedModifier, color = effectiveColor, titleColor = titleColor,
             subtitle = subtitle, subtitleColor = subtitleColor,
             navigationIcon = navigationIcon, actions = { AdaptiveTopBarActions(actions) },
             scrollBehavior = scrollBehavior, defaultWindowInsetsPadding = defaultWindowInsetsPadding,
@@ -49,7 +55,7 @@ fun AdaptiveTopAppBar(
         )
     } else {
         MiuixTopAppBar(
-            title = title, modifier = modifier, color = color, titleColor = titleColor,
+            title = title, modifier = decoratedModifier, color = effectiveColor, titleColor = titleColor,
             largeTitle = largeTitle, largeTitleColor = largeTitleColor,
             subtitle = subtitle, subtitleColor = subtitleColor,
             navigationIcon = navigationIcon, actions = actions, scrollBehavior = scrollBehavior,

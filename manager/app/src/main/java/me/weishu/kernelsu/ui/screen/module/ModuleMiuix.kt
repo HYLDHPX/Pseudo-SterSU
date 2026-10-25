@@ -70,6 +70,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -431,24 +432,36 @@ fun ModulePagerMiuix(
             )
         },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
-    ) { innerPadding ->
-        if (uiState.magiskInstalled) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    stringResource(R.string.module_magisk_conflict),
-                    textAlign = TextAlign.Center,
-                )
+    ) { scaffoldPadding ->
+        val bodyLayoutDirection = LocalLayoutDirection.current
+        val innerPadding = PaddingValues(
+            start = scaffoldPadding.calculateStartPadding(bodyLayoutDirection),
+            end = scaffoldPadding.calculateEndPadding(bodyLayoutDirection),
+            bottom = scaffoldPadding.calculateBottomPadding(),
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(top = scaffoldPadding.calculateTopPadding())
+                .clipToBounds(),
+        ) {
+            if (uiState.magiskInstalled) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        stringResource(R.string.module_magisk_conflict),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                return@Scaffold
             }
-            return@Scaffold
-        }
-        val layoutDirection = LocalLayoutDirection.current
-        val isSearching = searchStatus.searchText.isNotBlank()
-        val visibleModules = if (isSearching) uiState.searchResults else modules
+            val layoutDirection = LocalLayoutDirection.current
+            val isSearching = searchStatus.searchText.isNotBlank()
+            val visibleModules = if (isSearching) uiState.searchResults else modules
             val pullToRefreshState = rememberPullToRefreshState()
             val refreshTexts = listOf(
                 stringResource(R.string.refresh_pulling),
@@ -554,6 +567,7 @@ fun ModulePagerMiuix(
                     }
                 }
             }
+        }
     }
     ModuleShortcutDialog(
         show = showShortcutDialog.value,

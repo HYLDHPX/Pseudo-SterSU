@@ -77,9 +77,9 @@ class MainLayoutTest {
     }
 
     @Test
-    fun hiddenOrFixedNavigationKeepsScaffoldPadding() {
+    fun hiddenNavigationStillReservesTheSystemGestureArea() {
         assertEquals(
-            0.dp,
+            24.dp,
             resolveMainContentBottomPadding(
                 scaffoldPadding = 0.dp,
                 systemNavigationPadding = 24.dp,
@@ -88,9 +88,40 @@ class MainLayoutTest {
             ),
         )
         assertEquals(
+            48.dp,
+            resolveMainContentBottomPadding(
+                scaffoldPadding = 12.dp,
+                systemNavigationPadding = 48.dp,
+                floatingBarEnabled = true,
+                navigationBarVisible = false,
+            ),
+        )
+        assertEquals(
+            0.dp,
+            resolveMainContentBottomPadding(
+                scaffoldPadding = 0.dp,
+                systemNavigationPadding = 0.dp,
+                floatingBarEnabled = true,
+                navigationBarVisible = false,
+            ),
+        )
+    }
+
+    @Test
+    fun fixedNavigationKeepsTheLargerMeasuredOrSystemPadding() {
+        assertEquals(
             72.dp,
             resolveMainContentBottomPadding(
                 scaffoldPadding = 72.dp,
+                systemNavigationPadding = 24.dp,
+                floatingBarEnabled = false,
+                navigationBarVisible = true,
+            ),
+        )
+        assertEquals(
+            24.dp,
+            resolveMainContentBottomPadding(
+                scaffoldPadding = 0.dp,
                 systemNavigationPadding = 24.dp,
                 floatingBarEnabled = false,
                 navigationBarVisible = true,

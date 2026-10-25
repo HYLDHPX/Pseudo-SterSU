@@ -1,6 +1,7 @@
 package me.weishu.kernelsu.ui.screen.colorpalette
 
 import android.annotation.SuppressLint
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -49,12 +50,25 @@ import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.Brightness7
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.BlurOn
+import androidx.compose.material.icons.rounded.CallToAction
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DesignServices
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FontDownload
 import androidx.compose.material.icons.rounded.Pin
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Style
+import androidx.compose.material.icons.rounded.SyncAlt
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.IconButton
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import me.weishu.kernelsu.ui.component.material.ExpressiveTopAppBar as LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
@@ -65,13 +79,16 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
@@ -90,11 +107,15 @@ import me.weishu.kernelsu.ui.component.material.ExpressiveScaffold
 import me.weishu.kernelsu.ui.component.material.ExpressiveToggleButton
 import me.weishu.kernelsu.ui.component.material.SegmentedColumn
 import me.weishu.kernelsu.ui.component.material.SegmentedDropdownItem
+import me.weishu.kernelsu.ui.component.material.SegmentedListItem
 import me.weishu.kernelsu.ui.component.material.SegmentedSwitchItem
 import me.weishu.kernelsu.ui.component.material.TonalCard
 import me.weishu.kernelsu.ui.component.material.TopBarBackButton
 import me.weishu.kernelsu.ui.component.material.expressiveTopAppBarColors
 import me.weishu.kernelsu.ui.theme.ColorMode
+import me.weishu.kernelsu.ui.theme.ThemeAppearanceDefaults
+import me.weishu.kernelsu.ui.theme.ThemePreset
+import me.weishu.kernelsu.ui.theme.ThemeSyncStrategy
 import me.weishu.kernelsu.ui.theme.keyColorOptions
 import me.weishu.kernelsu.ui.theme.rememberKernelSUColorScheme
 import top.yukonga.miuix.kmp.basic.Slider
@@ -108,11 +129,14 @@ fun ColorPaletteScreenMaterial(
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val uiState = state.uiState
-    val currentColorMode = state.currentColorMode
+    val currentColorMode = ColorMode.fromValue(state.currentColorMode.toNonMonetMode())
     val currentKeyColor = uiState.keyColor
     val colorStyle = state.currentPaletteStyle
     val colorSpec = state.currentColorSpec
     val haptic = LocalHapticFeedback.current
+    val supportsBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    var showSavePresetDialog by rememberSaveable { mutableStateOf(false) }
+    var renamePresetId by rememberSaveable { mutableStateOf<String?>(null) }
 
     ExpressiveScaffold(
         topBar = {
@@ -149,6 +173,36 @@ fun ColorPaletteScreenMaterial(
             )
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            SegmentedColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
+                item {
+                    val currentPreset = ThemePreset.fromValue(uiState.themePreset)
+                    val compatiblePresets = ThemePreset.workshopPresets.filter { it.isCompatibleWith(uiState.uiMode) }
+                    val presets = if (currentPreset == ThemePreset.CUSTOM) {
+                        listOf(ThemePreset.CUSTOM) + compatiblePresets
+                    } else compatiblePresets
+                    SegmentedDropdownItem(
+                        icon = Icons.Rounded.Style,
+                        title = stringResource(R.string.theme_workshop),
+                        summary = stringResource(R.string.theme_workshop_summary),
+                        items = presets.map { stringResource(it.titleRes) },
+                        selectedIndex = presets.indexOf(currentPreset).coerceAtLeast(0),
+                        onItemSelected = { index ->
+                            if (presets[index] != ThemePreset.CUSTOM) actions.onApplyThemePreset(presets[index])
+                        },
+                    )
+                }
+                item {
+                    val currentAccent = MaterialTheme.colorScheme.primary.toArgb()
+                    SegmentedSwitchItem(
+                        icon = Icons.Rounded.Wallpaper,
+                        title = stringResource(R.string.settings_material_wallpaper_color),
+                        summary = stringResource(R.string.settings_material_wallpaper_color_summary),
+                        checked = currentKeyColor == 0,
+                        onCheckedChange = { enabled -> actions.onSetKeyColor(if (enabled) 0 else currentAccent) },
+                    )
+                }
+            }
 
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
@@ -194,7 +248,7 @@ fun ColorPaletteScreenMaterial(
                     listOf(ColorMode.SYSTEM) to stringResource(R.string.settings_theme_mode_system),
                     listOf(ColorMode.LIGHT) to stringResource(R.string.settings_theme_mode_light),
                     listOf(ColorMode.DARK) to stringResource(R.string.settings_theme_mode_dark),
-                    listOf(ColorMode.DARK_AMOLED) to stringResource(R.string.settings_theme_mode_dark)
+                    listOf(ColorMode.DARK_AMOLED) to stringResource(R.string.settings_theme_mode_amoled)
                 )
 
                 options.chunked(if (me.weishu.kernelsu.ui.util.currentAppWindowSize().narrow) 2 else 4).forEach { rowOptions ->
@@ -265,9 +319,68 @@ fun ColorPaletteScreenMaterial(
                     )
                 )
 
+                ThemeSliderMaterial(
+                    title = stringResource(R.string.settings_monet_surface_opacity),
+                    summary = stringResource(R.string.settings_monet_surface_opacity_summary),
+                    icon = Icons.Rounded.WaterDrop,
+                    value = uiState.monetSurfaceOpacity,
+                    valueRange = ThemeAppearanceDefaults.MIN_MONET_SURFACE_OPACITY..
+                        ThemeAppearanceDefaults.MAX_MONET_SURFACE_OPACITY,
+                    keyPoints = listOf(0.45f, 0.6f, 0.75f, 0.9f, 1f),
+                    onValueChangeFinished = actions.onSetMonetSurfaceOpacity,
+                )
+
+                SegmentedColumn(modifier = Modifier.padding(top = 4.dp)) {
+                    item(visible = supportsBlur) {
+                        SegmentedSwitchItem(
+                            icon = Icons.Rounded.BlurOn,
+                            title = stringResource(R.string.settings_enable_blur),
+                            summary = stringResource(R.string.settings_enable_blur_summary),
+                            checked = uiState.enableBlur,
+                            onCheckedChange = actions.onSetEnableBlur,
+                        )
+                    }
+                    item {
+                        SegmentedSwitchItem(
+                            icon = Icons.Rounded.CallToAction,
+                            title = stringResource(R.string.settings_floating_bottom_bar),
+                            summary = stringResource(R.string.settings_floating_bottom_bar_summary),
+                            checked = uiState.enableFloatingBottomBar,
+                            onCheckedChange = actions.onSetEnableFloatingBottomBar,
+                        )
+                    }
+                    item(visible = supportsBlur && uiState.enableFloatingBottomBar) {
+                        SegmentedSwitchItem(
+                            icon = Icons.Rounded.WaterDrop,
+                            title = stringResource(R.string.settings_enable_glass),
+                            summary = stringResource(R.string.settings_enable_glass_summary),
+                            checked = uiState.enableFloatingBottomBarBlur,
+                            onCheckedChange = actions.onSetEnableFloatingBottomBarBlur,
+                        )
+                    }
+                }
+
                 SegmentedColumn(
                     modifier = Modifier.padding(top = 4.dp),
                     content = listOf(
+                        {
+                            SegmentedSwitchItem(
+                                icon = Icons.Rounded.Timer,
+                                title = stringResource(R.string.settings_auto_hide_navigation_bar),
+                                summary = stringResource(R.string.settings_auto_hide_navigation_bar_summary),
+                                checked = uiState.autoHideNavigationBar,
+                                onCheckedChange = actions.onSetAutoHideNavigationBar,
+                            )
+                        },
+                        {
+                            SegmentedSwitchItem(
+                                icon = Icons.Rounded.SwapVert,
+                                title = stringResource(R.string.settings_scroll_hide_navigation_bar),
+                                summary = stringResource(R.string.settings_scroll_hide_navigation_bar_summary),
+                                checked = uiState.scrollHideNavigationBar,
+                                onCheckedChange = actions.onSetScrollHideNavigationBar,
+                            )
+                        },
                         {
                             SegmentedSwitchItem(
                                 icon = Icons.Rounded.Timer,
@@ -344,9 +457,170 @@ fun ColorPaletteScreenMaterial(
                         )
                     }
                 }
+
+                ThemeSliderMaterial(
+                    title = stringResource(R.string.settings_font_scale),
+                    summary = stringResource(R.string.settings_font_scale_summary),
+                    icon = Icons.Rounded.FontDownload,
+                    value = uiState.fontScale,
+                    valueRange = 0.85f..1.2f,
+                    keyPoints = listOf(0.85f, 1f, 1.1f, 1.2f),
+                    onValueChangeFinished = actions.onSetFontScale,
+                )
+
+                if (supportsBlur) {
+                    ThemeSliderMaterial(
+                        title = stringResource(R.string.settings_blur_intensity),
+                        summary = stringResource(R.string.settings_blur_intensity_summary),
+                        icon = Icons.Rounded.BlurOn,
+                        value = uiState.blurIntensity,
+                        valueRange = 0.5f..1.5f,
+                        keyPoints = listOf(0.5f, 1f, 1.25f, 1.5f),
+                        onValueChangeFinished = actions.onSetBlurIntensity,
+                    )
+                }
+
+                SegmentedColumn(
+                    modifier = Modifier.padding(top = 4.dp),
+                    title = stringResource(R.string.theme_custom_presets),
+                ) {
+                    item {
+                        SegmentedListItem(
+                            onClick = { showSavePresetDialog = true },
+                            leadingContent = { Icon(Icons.Rounded.Save, contentDescription = null) },
+                            headlineContent = { Text(stringResource(R.string.theme_custom_preset_save)) },
+                            supportingContent = { Text(stringResource(R.string.theme_custom_preset_save_summary)) },
+                        )
+                    }
+                    uiState.customThemePresets.forEach { preset ->
+                        item(key = preset.id) {
+                            SegmentedListItem(
+                                onClick = { actions.onApplyCustomThemePreset(preset.id) },
+                                leadingContent = { Icon(Icons.Rounded.Tune, contentDescription = null) },
+                                headlineContent = { Text(preset.name) },
+                                supportingContent = { Text(stringResource(R.string.theme_custom_preset_item_summary)) },
+                                trailingContent = {
+                                    Row {
+                                        IconButton(onClick = { renamePresetId = preset.id }) {
+                                            Icon(Icons.Rounded.Edit, stringResource(R.string.theme_custom_preset_rename))
+                                        }
+                                        IconButton(onClick = { actions.onDeleteCustomThemePreset(preset.id) }) {
+                                            Icon(Icons.Rounded.Delete, stringResource(R.string.theme_custom_preset_delete))
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    item {
+                        SegmentedDropdownItem(
+                            icon = Icons.Rounded.SyncAlt,
+                            title = stringResource(R.string.theme_sync_strategy),
+                            summary = stringResource(R.string.theme_sync_strategy_summary),
+                            items = listOf(
+                                stringResource(R.string.theme_sync_shared),
+                                stringResource(R.string.theme_sync_per_style),
+                            ),
+                            selectedIndex = if (uiState.themeSyncStrategy == ThemeSyncStrategy.SHARED) 0 else 1,
+                            onItemSelected = { index ->
+                                actions.onSetThemeSyncStrategy(
+                                    if (index == 0) ThemeSyncStrategy.SHARED else ThemeSyncStrategy.PER_STYLE,
+                                )
+                            },
+                        )
+                    }
+                    item {
+                        SegmentedListItem(
+                            onClick = actions.onResetThemeToDefault,
+                            leadingContent = { Icon(Icons.Rounded.RestartAlt, contentDescription = null) },
+                            headlineContent = { Text(stringResource(R.string.theme_reset_default)) },
+                            supportingContent = { Text(stringResource(R.string.theme_reset_default_summary)) },
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp + navBars.calculateBottomPadding() + captionBar.calculateBottomPadding()))
+        }
+    }
+
+    ThemePresetNameDialog(
+        show = showSavePresetDialog,
+        title = stringResource(R.string.theme_custom_preset_save),
+        onDismissRequest = { showSavePresetDialog = false },
+        onConfirm = actions.onSaveCustomThemePreset,
+    )
+    uiState.customThemePresets.firstOrNull { it.id == renamePresetId }?.let { preset ->
+        ThemePresetNameDialog(
+            show = true,
+            title = stringResource(R.string.theme_custom_preset_rename),
+            initialName = preset.name,
+            onDismissRequest = { renamePresetId = null },
+            onConfirm = { name -> actions.onRenameCustomThemePreset(preset.id, name) },
+        )
+    }
+}
+
+@Composable
+private fun ThemeSliderMaterial(
+    title: String,
+    summary: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    keyPoints: List<Float>,
+    onValueChangeFinished: (Float) -> Unit,
+) {
+    var sliderValue by remember(value) { mutableFloatStateOf(value) }
+    TonalCard(modifier = Modifier.padding(top = 4.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        summary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    "${(sliderValue * 100).roundToInt()}%",
+                    modifier = Modifier.padding(start = 12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Slider(
+                value = sliderValue,
+                onValueChange = { sliderValue = it },
+                onValueChangeFinished = { onValueChangeFinished(sliderValue) },
+                valueRange = valueRange,
+                showKeyPoints = true,
+                keyPoints = keyPoints,
+                magnetThreshold = 0.01f,
+                hapticEffect = SliderDefaults.SliderHapticEffect.Step,
+                colors = SliderDefaults.sliderColors(
+                    foregroundColor = MaterialTheme.colorScheme.primary,
+                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    thumbColor = MaterialTheme.colorScheme.onPrimary,
+                    keyPointColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    keyPointForegroundColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .semantics { contentDescription = title },
+            )
         }
     }
 }

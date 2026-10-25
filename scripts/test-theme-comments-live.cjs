@@ -15,6 +15,7 @@ const assets = path.join(root, 'manager/app/src/main/assets/theme-comments');
 const output = path.join(root, 'out/theme-comments-live');
 const mimeTypes = {
   'index.html': 'text/html', 'comments.js': 'text/javascript', 'comments.css': 'text/css',
+  'auth.js': 'text/javascript', 'account-session.js': 'text/javascript', 'network.js': 'text/javascript',
   'vendor/waline.js': 'text/javascript', 'vendor/waline.css': 'text/css',
 };
 
@@ -62,6 +63,8 @@ const mimeTypes = {
       await page.locator('#waline:not([hidden]) .wl-editor').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#connection').evaluate(node => node.hidden), true);
       assert.equal(await page.locator('html').getAttribute('data-theme'), dark ? 'dark' : 'light');
+      assert.equal(await page.locator('#account-editor').isHidden(), true);
+      assert.equal(await page.locator('#account-login').count(), 0);
       const editor = page.locator('.wl-editor');
       await editor.fill('Local unsent draft');
       await page.evaluate(next => window.stersuComments.setDarkMode(next), !dark);
@@ -69,17 +72,22 @@ const mimeTypes = {
       await page.evaluate(next => window.stersuComments.setDarkMode(next), dark);
       assert.equal(await page.locator('html').getAttribute('data-theme'), dark ? 'dark' : 'light');
       await page.screenshot({ path: path.join(output, `${kind}-${dark ? 'dark' : 'light'}.png`), fullPage: true });
-      results.push(`${kind}: live HTTP 200, valid JSON, visible editor, theme switching retains unsent draft`);
+      results.push(`${kind}: live HTTP 200, valid JSON, visible editor, login managed in My, theme switching retains unsent draft`);
     };
     await open('theme', false);
     await open('style', true);
+    await page.goto(`${origin}/comments/index.html?${new URLSearchParams({ server, mode: 'account', lang: 'zh-CN' })}`);
+    await page.locator('#email-submit:not(:disabled)').waitFor();
+    assert.equal(await page.locator('#email-panel').isVisible(), true);
+    await page.screenshot({ path: path.join(output, 'email-account.png'), fullPage: true });
+    results.push('Account form loads from bundled assets without contacting an OAuth page or submitting credentials');
     assert.deepEqual(errors, []);
-    assert.ok(requests.length >= 4);
+    assert.ok(requests.length >= 2);
     assert.ok(requests.every(request => request.method === 'GET'));
     const report = {
       server, environment: { node: process.version, platform: process.platform, browser: browser.version() },
       passed: results, remoteRequests: requests, errors,
-      notTested: ['submit', 'reply', 'like', 'moderation', 'database persistence', 'Android device'],
+      notTested: ['real account sign-in', 'submit', 'reply', 'like', 'moderation', 'database persistence', 'Android device'],
     };
     fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2));
     console.log(JSON.stringify(report, null, 2));

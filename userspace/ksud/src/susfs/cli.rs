@@ -40,7 +40,7 @@ pub fn run(args: &[String]) -> Result<()> {
         command.as_str()
     };
     match query {
-        "status" | "version" | "variant" | "enabled_features" | "features"
+        "status" | "version" | "variant" | "implementation" | "enabled_features" | "features"
             if command == "show" || args.len() == 1 =>
         {
             match query {
@@ -55,6 +55,7 @@ pub fn run(args: &[String]) -> Result<()> {
                     ensure!(!variant.is_empty(), "SUSFS variant unavailable");
                     println!("{variant}");
                 }
+                "implementation" => println!("{}", status::get_susfs_implementation()),
                 _ => {
                     let features = status::get_susfs_features();
                     ensure!(!features.is_empty(), "SUSFS features unavailable");

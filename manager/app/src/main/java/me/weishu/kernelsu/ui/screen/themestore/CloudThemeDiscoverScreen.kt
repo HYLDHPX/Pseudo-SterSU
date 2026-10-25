@@ -555,7 +555,7 @@ internal fun CloudThemeRemoteImage(
                 bitmap = loadedBitmap.asImageBitmap(),
                 contentDescription = contentDescription,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Fit,
             )
         } else {
             Icon(

@@ -216,8 +216,10 @@ enum class ThemePreset(
             SNOW -> InterfaceStyle.Snow.value
             RAIN -> InterfaceStyle.Rain.value
             PIXEL -> InterfaceStyle.Pixel.value
-            PREMIUM_GLOSS -> InterfaceStyle.Miuix.value
-            GEEK_DARK, CLEAN_TOOL, DYNAMIC_COLOR -> InterfaceStyle.Miuix.value
+            PREMIUM_GLOSS, GEEK_DARK, CLEAN_TOOL, DYNAMIC_COLOR -> when (currentUiMode) {
+                InterfaceStyle.Material.value, InterfaceStyle.SidebarWidget.value -> currentUiMode
+                else -> InterfaceStyle.Miuix.value
+            }
         }
     }
 

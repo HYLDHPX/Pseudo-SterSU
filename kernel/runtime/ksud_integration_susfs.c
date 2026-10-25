@@ -522,6 +522,10 @@ void ksu_stop_input_hook_runtime(void)
 
 int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *value)
 {
+    /* Direct vendor call sites must also honor the end of boot detection. */
+    if (!static_branch_likely(&ksu_is_input_hook_enabled))
+        return 0;
+
     if (*type == EV_KEY && *code == KEY_VOLUMEDOWN) {
         int val = *value;
         pr_info("KEY_VOLUMEDOWN val: %d\n", val);

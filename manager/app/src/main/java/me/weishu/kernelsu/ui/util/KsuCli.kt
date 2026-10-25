@@ -245,6 +245,8 @@ data class ToolCommandResult(
     val timedOut: Boolean = false,
 )
 
+enum class SusfsImplementation { Unknown, Builtin, Lkm }
+
 data class SusfsCapabilities(
     val version: String = "",
     val features: Set<String> = emptySet(),
@@ -260,6 +262,8 @@ data class SusfsCapabilities(
     val supportsLogging: Boolean = false,
     val supportsAvcLogSpoofing: Boolean = false,
     val supportsHideSusMounts: Boolean = false,
+    val variant: String = "",
+    val implementation: SusfsImplementation = SusfsImplementation.Unknown,
 )
 
 data class SusfsOpenRedirectEntry(
@@ -2036,6 +2040,7 @@ internal fun parseSusfsConfigOutput(
             issues = if (statusMatchesConfig) issues else emptyList(),
         ),
         error = when {
+            capabilities.implementation == SusfsImplementation.Lkm -> "lkm_implementation_detected"
             value("__TOOL__=").isBlank() -> "tool_unavailable"
             !capabilities.supportsAddSusPath -> "path_feature_unavailable"
             else -> ""
@@ -2140,35 +2145,47 @@ internal fun buildSusfsCapabilities(
     versionText: String,
     featureText: String,
     featureProbeSucceeded: Boolean,
+    variantText: String = "",
 ): SusfsCapabilities {
     val version = parseSusfsVersion(versionText)
     val features = parseSusfsFeatureNames(featureText)
+    val normalizedVariant = variantText.trim().uppercase(java.util.Locale.ROOT).replace('_', '-')
+    val implementation = when {
+        !toolAvailable -> SusfsImplementation.Unknown
+        normalizedVariant.endsWith("-LKM") ||
+            featureText.split(Regex("\\s+")).any { it == "SUSFS_LKM_MODULES" } -> SusfsImplementation.Lkm
+        version == null -> SusfsImplementation.Unknown
+        else -> SusfsImplementation.Builtin
+    }
+    val gkiAvailable = toolAvailable && implementation != SusfsImplementation.Lkm
     val effectiveFeatureProbe = featureProbeSucceeded && features.isNotEmpty()
     fun has(feature: String): Boolean = feature in features
     return SusfsCapabilities(
         version = versionText.trim(),
         features = features,
         featureProbeAvailable = effectiveFeatureProbe,
-        supportsAddSusPath = toolAvailable && (!effectiveFeatureProbe || has(SUSFS_PATH_FEATURE)),
+        supportsAddSusPath = gkiAvailable && (!effectiveFeatureProbe || has(SUSFS_PATH_FEATURE)),
         // add_sus_path_loop is part of the SUS_PATH capability in SUSFS v2.x.
-        supportsPathLoop = has(SUSFS_PATH_FEATURE) ||
-            (!effectiveFeatureProbe && version?.atLeast(1, 5, 9) == true),
-        supportsTryUmount = has(SUSFS_MOUNT_FEATURE) ||
-            (!effectiveFeatureProbe && version?.atLeast(1, 5, 3) == true),
-        supportsKstat = has(SUSFS_KSTAT_FEATURE) ||
-            (!effectiveFeatureProbe && version?.atLeast(2, 0, 0) == true),
-        supportsOpenRedirect = has(SUSFS_OPEN_REDIRECT_FEATURE),
-        supportsSusMap = has(SUSFS_MAP_FEATURE),
-        supportsUnameSpoof = has(SUSFS_UNAME_FEATURE) ||
-            (!effectiveFeatureProbe && version?.atLeast(1, 5, 0) == true),
-        supportsCmdlineSpoof = has(SUSFS_CMDLINE_FEATURE) ||
-            (!effectiveFeatureProbe && version?.atLeast(1, 5, 4) == true),
-        supportsLogging = has(SUSFS_LOG_FEATURE) ||
-            (!effectiveFeatureProbe && version?.atLeast(1, 5, 0) == true),
+        supportsPathLoop = gkiAvailable && (has(SUSFS_PATH_FEATURE) ||
+            (!effectiveFeatureProbe && version?.atLeast(1, 5, 9) == true)),
+        supportsTryUmount = gkiAvailable && (has(SUSFS_MOUNT_FEATURE) ||
+            (!effectiveFeatureProbe && version?.atLeast(1, 5, 3) == true)),
+        supportsKstat = gkiAvailable && (has(SUSFS_KSTAT_FEATURE) ||
+            (!effectiveFeatureProbe && version?.atLeast(2, 0, 0) == true)),
+        supportsOpenRedirect = gkiAvailable && has(SUSFS_OPEN_REDIRECT_FEATURE),
+        supportsSusMap = gkiAvailable && has(SUSFS_MAP_FEATURE),
+        supportsUnameSpoof = gkiAvailable && (has(SUSFS_UNAME_FEATURE) ||
+            (!effectiveFeatureProbe && version?.atLeast(1, 5, 0) == true)),
+        supportsCmdlineSpoof = gkiAvailable && (has(SUSFS_CMDLINE_FEATURE) ||
+            (!effectiveFeatureProbe && version?.atLeast(1, 5, 4) == true)),
+        supportsLogging = gkiAvailable && (has(SUSFS_LOG_FEATURE) ||
+            (!effectiveFeatureProbe && version?.atLeast(1, 5, 0) == true)),
         // These commands are runtime ABI operations and are version gated.
-        supportsAvcLogSpoofing = version?.atLeast(1, 5, 10) == true,
-        supportsHideSusMounts = has(SUSFS_MOUNT_FEATURE) ||
-            (!effectiveFeatureProbe && version?.atLeast(1, 5, 7) == true),
+        supportsAvcLogSpoofing = gkiAvailable && version?.atLeast(1, 5, 10) == true,
+        supportsHideSusMounts = gkiAvailable && (has(SUSFS_MOUNT_FEATURE) ||
+            (!effectiveFeatureProbe && version?.atLeast(1, 5, 7) == true)),
+        variant = variantText.trim(),
+        implementation = implementation,
     )
 }
 
@@ -2266,17 +2283,18 @@ suspend fun getSusfsPathConfig(): SusfsPathConfigState = withContext(Dispatchers
         appendLine("features=''")
         appendLine("feature_output=''")
         appendLine("feature_probe=0")
+        appendLine("variant=''")
         appendLine("if [ -n \"${'$'}tool\" ]; then")
         appendLine("  version=\"${'$'}(\"${'$'}tool\" show version 2>/dev/null | sed -n '1p')\"")
-        appendLine("  if feature_output=\"${'$'}(\"${'$'}tool\" show enabled_features 2>/dev/null)\" && printf '%s' \"${'$'}feature_output\" | grep -q 'CONFIG_KSU_SUSFS_'; then")
-        appendLine("    feature_probe=1")
+        appendLine("  variant=\"${'$'}(\"${'$'}tool\" show variant 2>/dev/null | sed -n '1p')\"")
+        appendLine("  if feature_output=\"${'$'}(\"${'$'}tool\" show enabled_features 2>/dev/null)\"; then")
         appendLine("    features=\"${'$'}(printf '%s' \"${'$'}feature_output\" | tr '\\n' ' ')\"")
-        appendLine("  else")
-        appendLine("    features=''")
+        appendLine("    if printf '%s' \"${'$'}feature_output\" | grep -q 'CONFIG_KSU_SUSFS_'; then feature_probe=1; fi")
         appendLine("  fi")
         appendLine("fi")
         appendLine("printf '__VERSION__=%s\\n' \"${'$'}version\"")
         appendLine("printf '__FEATURE_PROBE__=%s\\n' \"${'$'}feature_probe\"")
+        appendLine("printf '__VARIANT__=%s\\n' \"${'$'}variant\"")
         appendLine("printf '__FEATURES__=%s\\n' \"${'$'}features\"")
         appendLine("for setting in enabled logging avc_log_spoofing hide_sus_mnts_for_non_su_procs uname_release uname_version cmdline_or_bootconfig generation requires_reboot; do")
         appendLine("  setting_value=")
@@ -2306,6 +2324,7 @@ suspend fun getSusfsPathConfig(): SusfsPathConfigState = withContext(Dispatchers
             getRootShell().newJob().add(command).to(stdout, stderr).exec()
         }
     }.getOrElse { error ->
+        if (error is CancellationException) throw error
         KsuCli.reset()
         return@withContext SusfsPathConfigState(error = error.message.orEmpty().ifBlank { "shell_failed" })
     }
@@ -2340,11 +2359,16 @@ suspend fun getSusfsPathConfig(): SusfsPathConfigState = withContext(Dispatchers
     val featureProbeSucceeded = stdout.firstOrNull { it.startsWith("__FEATURE_PROBE__=") }
         ?.substringAfter('=')
         ?.trim() == "1"
+    val variantText = stdout.firstOrNull { it.startsWith("__VARIANT__=") }
+        ?.substringAfter('=')
+        ?.trim()
+        .orEmpty()
     val capabilities = buildSusfsCapabilities(
         toolAvailable = toolPath.isNotBlank(),
         versionText = toolVersion,
         featureText = featureText,
         featureProbeSucceeded = featureProbeSucceeded,
+        variantText = variantText,
     )
     parseSusfsConfigOutput(stdout, capabilities).copy(
         available = capabilities.supportsAddSusPath,
@@ -2652,6 +2676,7 @@ suspend fun saveAndApplySusfsConfig(config: SusfsPathConfigState): SusfsPathAppl
             getRootShell().newJob().add(command).to(stdout, stderr).exec()
         }
     }.getOrElse { error ->
+        if (error is CancellationException) throw error
         executionError = error.message.orEmpty().ifBlank { "shell_failed" }
         null
     }

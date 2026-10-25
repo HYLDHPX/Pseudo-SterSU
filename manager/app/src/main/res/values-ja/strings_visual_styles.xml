@@ -2,8 +2,6 @@
 <resources>
     <string name="interface_style_rain">雨景ガラス</string>
     <string name="settings_rain_style">雨の強さ</string>
-    <string name="settings_rain_card_motion">雨カードのアニメーション</string>
-    <string name="settings_rain_card_motion_summary">カードの内容を動かさず、縁の雨粒、結露、控えめなガラスの光沢を動かします。</string>
     <string name="rain_style_light">小雨</string>
     <string name="rain_style_light_summary">淡い青色のガラスに、柔らかな霧、まばらな雨筋、静かな波紋を描きます。</string>
     <string name="rain_style_medium">中雨</string>

@@ -13,6 +13,7 @@ val LocalImmersiveBackgroundActive = staticCompositionLocalOf { false }
 fun immersiveTopBarColor(defaultColor: Color): Color {
     val passthrough = LocalUiPassthroughSettings.current
     if (passthrough.enabled) return uiBackgroundWithOpacity(defaultColor, passthrough.topBarOpacity, MaterialTheme.colorScheme.surface)
+    if (me.weishu.kernelsu.ui.component.rain.isRainInterfaceStyle()) return me.weishu.kernelsu.ui.component.rain.rainTopBarContainerColor()
     return if (LocalImmersiveBackgroundActive.current) Color.Transparent else defaultColor
 }
 
@@ -31,6 +32,8 @@ fun immersiveSurfaceColor(
 ): Color {
     val passthrough = LocalUiPassthroughSettings.current
     if (passthrough.enabled) return uiBackgroundWithOpacity(defaultColor, passthrough.surfaceOpacity, MaterialTheme.colorScheme.surface)
+    val rain = me.weishu.kernelsu.ui.component.rain.LocalRainSettings.current
+    if (rain.active) return uiBackgroundWithOpacity(defaultColor, rain.surfaceOpacity, MaterialTheme.colorScheme.surface)
     if (!LocalImmersiveBackgroundActive.current) return defaultColor
     return defaultColor.copy(alpha = if (isInDarkTheme()) darkAlpha else lightAlpha)
 }

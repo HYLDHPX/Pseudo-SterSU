@@ -79,12 +79,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.skrootpro.skrootproSp
+import me.weishu.kernelsu.ui.component.material.SegmentedColumn
+import me.weishu.kernelsu.ui.component.material.SegmentedRadioItem
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.screen.settings.ManagerNameDialog
 import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
 import me.weishu.kernelsu.ui.theme.immersivePageColor
 import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.util.CustomWallpaperCrop
+import me.weishu.kernelsu.ui.util.CustomLauncherMode
+import me.weishu.kernelsu.ui.util.ManagerIconShortcutResult
+import me.weishu.kernelsu.ui.util.requestManagerIconShortcut
 import me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight
 import me.weishu.kernelsu.ui.util.LauncherIconOption
 import me.weishu.kernelsu.ui.util.InstalledLauncher
@@ -123,8 +128,14 @@ fun LauncherIconScreen() {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedIndex = LauncherIconOption.selectedIndex(uiState.launcherIcon)
     val scope = rememberCoroutineScope()
-    var customIconUri by remember { mutableStateOf<String?>(null) }
-    var showCustomIconCrop by remember { mutableStateOf(false) }
+    val preferences = remember(context) { context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE) }
+    var customLauncherMode by remember {
+        mutableStateOf(CustomLauncherMode.fromValue(preferences.getString(CustomLauncherMode.PREF_KEY, null)))
+    }
+    var customIconMode by rememberSaveable { mutableStateOf(CustomLauncherMode.Installed.value) }
+    var customIconUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var showCustomIconCrop by rememberSaveable { mutableStateOf(false) }
+    var selectingCustomIcon by rememberSaveable { mutableStateOf(false) }
     var showManagerNameDialog by remember { mutableStateOf(false) }
     var launcherStatus by remember { mutableStateOf(InstalledLauncherStatus(false, false, false)) }
     var preparing by remember { mutableStateOf(false) }
@@ -190,12 +201,22 @@ fun LauncherIconScreen() {
     val customIconPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
+        selectingCustomIcon = false
         uri ?: return@rememberLauncherForActivityResult
         customIconUri = uri.toString()
         showCustomIconCrop = true
     }
     val pickCustomIcon = dropUnlessResumed {
-        customIconPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        if (!preparing && !selectingCustomIcon && !showCustomIconCrop && pendingInstallPath == null) {
+            customIconMode = customLauncherMode.value
+            selectingCustomIcon = true
+            runCatching {
+                customIconPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }.onFailure {
+                selectingCustomIcon = false
+                showError(it)
+            }
+        }
     }
     LauncherIconScreenMiuix(
         selectedIndex = if (launcherStatus.hidden) -1 else selectedIndex,
@@ -208,6 +229,15 @@ fun LauncherIconScreen() {
             refreshEntry()
         },
         onPickCustomIcon = pickCustomIcon,
+        customLauncherMode = customLauncherMode,
+        customIconBusy = preparing || selectingCustomIcon || showCustomIconCrop || pendingInstallPath != null,
+        onCustomLauncherModeChange = { mode ->
+            if (preferences.edit().putString(CustomLauncherMode.PREF_KEY, mode.value).commit()) {
+                customLauncherMode = mode
+            } else {
+                Toast.makeText(context, customIconFailedMessage, Toast.LENGTH_LONG).show()
+            }
+        },
         preparing = preparing,
         launcherStatus = launcherStatus,
         onVerifyAndHide = { showHideConfirmation = true },
@@ -225,30 +255,46 @@ fun LauncherIconScreen() {
         onCropChange = createEntry@{ crop ->
             if (preparing) return@createEntry
             val uri = customIconUri ?: return@createEntry
+            val creationMode = CustomLauncherMode.fromValue(customIconMode)
             preparing = true
             showCustomIconCrop = false
             scope.launch {
                 try {
                     val managerName = uiState.customManagerName.ifBlank { defaultManagerName }
-                    val (file, previousUpdateTime) = withContext(Dispatchers.IO) {
-                        val previousUpdateTime = InstalledLauncher.status(context).lastUpdateTime
-                        val bitmap = checkNotNull(loadCustomImageBitmap(context, uri, maxSide = 512, crop = crop)) {
+                    val bitmap = withContext(Dispatchers.IO) {
+                        checkNotNull(loadCustomImageBitmap(context, uri, maxSide = 512, crop = crop)) {
                             customIconFailedMessage
                         }
-                        val file = try {
-                            InstalledLauncher.create(context, bitmap, managerName)
-                        } finally {
-                            bitmap.recycle()
-                        }
-                        file to previousUpdateTime
                     }
-                    pendingInstallPath = file.absolutePath
-                    pendingInstallPreviousUpdateTime = previousUpdateTime
-                    if (context.packageManager.canRequestPackageInstalls()) {
-                        installLauncher.launch(InstalledLauncher.installationIntent(context, file))
-                    } else {
-                        installPermissionLauncher.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                            "package:${context.packageName}".toUri()))
+                    try {
+                        if (creationMode == CustomLauncherMode.Shortcut) {
+                            val result = withContext(Dispatchers.IO) {
+                                requestManagerIconShortcut(context, bitmap, managerName)
+                            }
+                            val message = when (result) {
+                                ManagerIconShortcutResult.Requested -> R.string.launcher_shortcut_requested
+                                ManagerIconShortcutResult.Updated -> R.string.settings_app_icon_custom_updated
+                                ManagerIconShortcutResult.Unsupported -> R.string.module_shortcut_not_supported
+                                ManagerIconShortcutResult.Failed -> R.string.launcher_shortcut_failed
+                            }
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            refreshEntry()
+                        } else {
+                            val (file, previousUpdateTime) = withContext(Dispatchers.IO) {
+                                val previousUpdateTime = InstalledLauncher.status(context).lastUpdateTime
+                                InstalledLauncher.create(context, bitmap, managerName) to previousUpdateTime
+                            }
+                            pendingInstallPath = file.absolutePath
+                            pendingInstallPreviousUpdateTime = previousUpdateTime
+                            if (context.packageManager.canRequestPackageInstalls()) {
+                                installLauncher.launch(InstalledLauncher.installationIntent(context, file))
+                            } else {
+                                installPermissionLauncher.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                    "package:${context.packageName}".toUri()))
+                            }
+                        }
+                    } finally {
+                        bitmap.recycle()
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
@@ -314,6 +360,9 @@ private fun LauncherIconScreenMiuix(
     onEditManagerName: () -> Unit,
     onSelect: (Int) -> Unit,
     onPickCustomIcon: () -> Unit,
+    customLauncherMode: CustomLauncherMode,
+    customIconBusy: Boolean,
+    onCustomLauncherModeChange: (CustomLauncherMode) -> Unit,
     preparing: Boolean,
     launcherStatus: InstalledLauncherStatus,
     onVerifyAndHide: () -> Unit,
@@ -347,6 +396,9 @@ private fun LauncherIconScreenMiuix(
             onEditManagerName = onEditManagerName,
             onSelect = onSelect,
             onPickCustomIcon = onPickCustomIcon,
+            customLauncherMode = customLauncherMode,
+            customIconBusy = customIconBusy,
+            onCustomLauncherModeChange = onCustomLauncherModeChange,
             preparing = preparing,
             launcherStatus = launcherStatus,
             onVerifyAndHide = onVerifyAndHide,
@@ -365,6 +417,9 @@ private fun LauncherIconPickerContent(
     onEditManagerName: () -> Unit,
     onSelect: (Int) -> Unit,
     onPickCustomIcon: () -> Unit,
+    customLauncherMode: CustomLauncherMode,
+    customIconBusy: Boolean,
+    onCustomLauncherModeChange: (CustomLauncherMode) -> Unit,
     preparing: Boolean,
     launcherStatus: InstalledLauncherStatus,
     onVerifyAndHide: () -> Unit,
@@ -419,22 +474,49 @@ private fun LauncherIconPickerContent(
 
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LauncherIconCustomCard(onClick = onPickCustomIcon, preparing = preparing)
-                val statusText = when {
-                    launcherStatus.hidden -> R.string.launcher_install_hidden
-                    launcherStatus.trusted -> R.string.launcher_install_ready
-                    launcherStatus.installed -> R.string.launcher_install_conflict
-                    else -> R.string.launcher_install_not_ready
+                SegmentedColumn(title = stringResource(R.string.launcher_custom_mode)) {
+                    item {
+                        SegmentedRadioItem(
+                            title = stringResource(R.string.launcher_mode_installed),
+                            summary = stringResource(R.string.launcher_mode_installed_summary),
+                            selected = customLauncherMode == CustomLauncherMode.Installed,
+                            enabled = !customIconBusy,
+                            onClick = { onCustomLauncherModeChange(CustomLauncherMode.Installed) },
+                        )
+                    }
+                    item {
+                        SegmentedRadioItem(
+                            title = stringResource(R.string.launcher_mode_shortcut),
+                            summary = stringResource(R.string.launcher_mode_shortcut_summary),
+                            selected = customLauncherMode == CustomLauncherMode.Shortcut,
+                            enabled = !customIconBusy,
+                            onClick = { onCustomLauncherModeChange(CustomLauncherMode.Shortcut) },
+                        )
+                    }
                 }
-                Text(stringResource(statusText), color = LauncherIdentityColors.Muted,
-                    modifier = Modifier.padding(horizontal = 4.dp), style = MaterialTheme.typography.bodySmall)
-                if (launcherStatus.trusted && !launcherStatus.hidden) {
-                    TextButton(onClick = onVerifyAndHide, enabled = !preparing) {
-                        Text(stringResource(R.string.launcher_install_hide))
+                LauncherIconCustomCard(
+                    onClick = onPickCustomIcon,
+                    preparing = preparing,
+                    enabled = !customIconBusy,
+                    mode = customLauncherMode,
+                )
+                if (customLauncherMode == CustomLauncherMode.Installed) {
+                    val statusText = when {
+                        launcherStatus.hidden -> R.string.launcher_install_hidden
+                        launcherStatus.trusted -> R.string.launcher_install_ready
+                        launcherStatus.installed -> R.string.launcher_install_conflict
+                        else -> R.string.launcher_install_not_ready
+                    }
+                    Text(stringResource(statusText), color = LauncherIdentityColors.Muted,
+                        modifier = Modifier.padding(horizontal = 4.dp), style = MaterialTheme.typography.bodySmall)
+                    if (launcherStatus.trusted && !launcherStatus.hidden) {
+                        TextButton(onClick = onVerifyAndHide, enabled = !customIconBusy) {
+                            Text(stringResource(R.string.launcher_install_hide))
+                        }
                     }
                 }
                 if (launcherStatus.hidden) {
-                    TextButton(onClick = onRestoreEntry) {
+                    TextButton(onClick = onRestoreEntry, enabled = !customIconBusy) {
                         Text(stringResource(R.string.launcher_install_restore))
                     }
                 }
@@ -478,7 +560,11 @@ private fun LauncherIconPickerContent(
                     }
                 }
                 Text(
-                    text = stringResource(R.string.launcher_install_help),
+                    text = stringResource(if (customLauncherMode == CustomLauncherMode.Installed) {
+                        R.string.launcher_install_help
+                    } else {
+                        R.string.launcher_shortcut_help
+                    }),
                     color = LauncherIdentityColors.Muted,
                     fontSize = skrootproSp(12.5f, maxScale = 1f),
                     modifier = Modifier.padding(horizontal = 4.dp),
@@ -498,14 +584,19 @@ internal fun launcherIconColumnCount(width: Dp): Int = when {
 }
 
 @Composable
-private fun LauncherIconCustomCard(onClick: () -> Unit, preparing: Boolean) {
+private fun LauncherIconCustomCard(
+    onClick: () -> Unit,
+    preparing: Boolean,
+    enabled: Boolean,
+    mode: CustomLauncherMode,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(LauncherIdentityColors.Surface)
             .border(1.dp, LauncherIdentityColors.Border, RoundedCornerShape(18.dp))
-            .clickable(enabled = !preparing, onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -526,13 +617,22 @@ private fun LauncherIconCustomCard(onClick: () -> Unit, preparing: Boolean) {
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                text = stringResource(R.string.launcher_install_title),
+                text = stringResource(if (mode == CustomLauncherMode.Installed) {
+                    R.string.launcher_install_title
+                } else {
+                    R.string.settings_app_icon_custom
+                }),
                 color = LauncherIdentityColors.Ink,
                 fontSize = skrootproSp(16f, maxScale = 1f),
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = stringResource(if (preparing) R.string.launcher_install_preparing else R.string.launcher_install_summary),
+                text = stringResource(when {
+                    preparing && mode == CustomLauncherMode.Installed -> R.string.launcher_install_preparing
+                    preparing -> R.string.launcher_shortcut_preparing
+                    mode == CustomLauncherMode.Installed -> R.string.launcher_install_summary
+                    else -> R.string.launcher_shortcut_summary
+                }),
                 color = LauncherIdentityColors.Muted,
                 fontSize = skrootproSp(13f, maxScale = 1f),
             )

@@ -2,8 +2,6 @@
 <resources>
     <string name="interface_style_rain">Cristal lluvioso</string>
     <string name="settings_rain_style">Intensidad de la lluvia</string>
-    <string name="settings_rain_card_motion">Tarjetas de lluvia animadas</string>
-    <string name="settings_rain_card_motion_summary">Anima las gotas de los bordes, la condensación y un brillo sutil del cristal sin mover el contenido de las tarjetas.</string>
     <string name="rain_style_light">Lluvia ligera</string>
     <string name="rain_style_light_summary">Niebla suave, líneas de lluvia dispersas y ondas tranquilas sobre cristal azul pálido.</string>
     <string name="rain_style_medium">Lluvia constante</string>

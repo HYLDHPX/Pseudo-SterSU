@@ -32,6 +32,10 @@ import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.RoundedCornerShape
+import me.weishu.kernelsu.ui.component.rain.rainNavigationIndicator
+import me.weishu.kernelsu.ui.component.rain.RainChromeArea
+import me.weishu.kernelsu.ui.component.rain.rainChromeDecoration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -60,7 +64,7 @@ fun NavigationRailMaterial(
     val expanded = state.targetValue == WideNavigationRailValue.Expanded
 
     WideNavigationRail(
-        modifier = modifier.fillMaxHeight(),
+        modifier = modifier.fillMaxHeight().rainChromeDecoration(RainChromeArea.Navigation, vertical = true),
         state = state,
         colors = WideNavigationRailDefaults.colors().copy(
             containerColor = uiPassthroughNavigationColor(MaterialTheme.colorScheme.surfaceContainer),
@@ -92,6 +96,7 @@ fun NavigationRailMaterial(
             val selected = mainPagerState.selectedPage == index
             val label = customIcons.labelFor(destination, stringResource(destination.label))
             WideNavigationRailItem(
+                modifier = Modifier.rainNavigationIndicator(RoundedCornerShape(24.dp), paintBackground = false, interactionKey = destination, selected = selected),
                 railExpanded = expanded,
                 selected = selected,
                 onClick = {

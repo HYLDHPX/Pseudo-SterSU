@@ -19,6 +19,8 @@ import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.LocalInterfaceStyle
 import me.weishu.kernelsu.ui.component.pixel.LocalPixelStyle
 import me.weishu.kernelsu.ui.component.rain.LocalRainStyle
+import me.weishu.kernelsu.ui.component.rain.LocalRainSettings
+import me.weishu.kernelsu.ui.component.rain.withRainAppearance
 import me.weishu.kernelsu.ui.component.rain.rainPalette
 import me.weishu.kernelsu.ui.util.AppFontState
 import me.weishu.kernelsu.ui.util.LocalInterfaceStyleTheme
@@ -42,8 +44,8 @@ fun MiuixKernelSUTheme(
     val context = LocalContext.current
     val systemDarkTheme = isSystemInDarkTheme()
     val isLiquidGlass = LocalInterfaceStyle.current == InterfaceStyle.LiquidGlass.value
-    val isRainStyle = LocalInterfaceStyle.current == InterfaceStyle.Rain.value
-    val rainStyle = LocalRainStyle.current
+    val rainSettings = LocalRainSettings.current
+    val isRainStyle = rainSettings.active
     val interfaceTheme = LocalInterfaceStyleTheme.current
     val forceInterfaceDark = isInterfaceForcedDark(
         interfaceStyle = LocalInterfaceStyle.current,
@@ -65,10 +67,10 @@ fun MiuixKernelSUTheme(
         appSettings = appSettings,
         forceDark = forceInterfaceDark,
     )
-    val rainColors = remember(isRainStyle, rainStyle, darkTheme, interfaceTheme) {
-        if (isRainStyle) rainPalette(interfaceTheme, rainStyle, darkTheme) else null
+    val rainColors = remember(isRainStyle, rainSettings, darkTheme) {
+        if (isRainStyle) rainPalette(rainSettings, darkTheme) else null
     }
-    val effectiveMaterialColorScheme = remember(materialColorScheme, rainColors, darkTheme) {
+    val effectiveMaterialColorScheme = remember(materialColorScheme, rainColors, darkTheme, rainSettings) {
         when {
             rainColors != null -> {
                 val secondaryText = if (darkTheme) Color(0xFFB8C6CE) else Color(0xFF435D68)
@@ -82,7 +84,7 @@ fun MiuixKernelSUTheme(
 
             else -> materialColorScheme
         }
-    }
+    }.withRainAppearance(rainSettings, darkTheme)
     val appFontFamily = remember(appFontState) {
         resolveAppFontFamily(context, appFontState)
     }
@@ -135,6 +137,7 @@ fun MiuixKernelSUTheme(
             }
         },
         keyColor = when {
+            isRainStyle -> Color((if (darkTheme) rainSettings.darkAccent else rainSettings.lightAccent) ?: rainSettings.scene.keyColor)
             isLiquidGlass && interfaceTheme != null -> Color(interfaceTheme.accent)
             isLiquidGlass -> Color(0xFF58758A)
             appSettings.keyColor == 0 -> null
@@ -155,13 +158,14 @@ fun MiuixKernelSUTheme(
                 appSettings.colorMode,
                 appSettings.monetSurfaceOpacity,
                 rainColors,
+                rainSettings,
                 darkTheme,
             ) {
                 val base = if (appSettings.colorMode.isMonet) {
                     baseMiuixColors.withMonetSurfaceOpacity(appSettings.monetSurfaceOpacity)
                 } else {
                     baseMiuixColors
-                }
+                }.withRainAppearance(rainSettings, darkTheme)
                 when {
                     rainColors != null -> base.withRainTextColors(
                         content = rainColors.content,
@@ -224,8 +228,11 @@ private fun rememberAppColorScheme(
     val systemDarkTheme = isSystemInDarkTheme()
     val darkTheme = forceDark || appSettings.colorMode.isDark ||
         (appSettings.colorMode.isSystem && systemDarkTheme)
+    val rain = LocalRainSettings.current
+    val selectedKeyColor = if (rain.active) (if (darkTheme) rain.darkAccent else rain.lightAccent) ?: rain.scene.keyColor
+        else appSettings.keyColor
 
-    val baseScheme = if (appSettings.keyColor == 0) {
+    val baseScheme = if (selectedKeyColor == 0) {
         val baseScheme = if (darkTheme) {
             dynamicDarkColorScheme(context)
         } else {
@@ -246,7 +253,7 @@ private fun rememberAppColorScheme(
         )
     } else {
         rememberDynamicColorScheme(
-            seedColor = Color(appSettings.keyColor),
+            seedColor = Color(selectedKeyColor),
             isDark = darkTheme,
             isAmoled = appSettings.colorMode.isAmoled,
             style = appSettings.paletteStyle,
@@ -260,23 +267,6 @@ private fun rememberAppColorScheme(
             baseScheme
         }
     }
-}
-
-private fun ColorScheme.withMonetSurfaceOpacity(opacity: Float): ColorScheme {
-    val safeOpacity = sanitizeMonetSurfaceOpacity(opacity)
-    if (safeOpacity >= 1f) return this
-    fun Color.withOpacity() = copy(alpha = safeOpacity)
-    return copy(
-        surface = surface.withOpacity(),
-        surfaceDim = surfaceDim.withOpacity(),
-        surfaceBright = surfaceBright.withOpacity(),
-        surfaceContainerLowest = surfaceContainerLowest.withOpacity(),
-        surfaceContainerLow = surfaceContainerLow.withOpacity(),
-        surfaceContainer = surfaceContainer.withOpacity(),
-        surfaceContainerHigh = surfaceContainerHigh.withOpacity(),
-        surfaceContainerHighest = surfaceContainerHighest.withOpacity(),
-        surfaceVariant = surfaceVariant.withOpacity(),
-    )
 }
 
 private fun Colors.withMonetSurfaceOpacity(opacity: Float): Colors {

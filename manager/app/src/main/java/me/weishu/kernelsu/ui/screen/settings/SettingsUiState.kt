@@ -19,12 +19,12 @@ import me.weishu.kernelsu.ui.component.SwitchStyle
 import me.weishu.kernelsu.ui.component.snow.SeasonStyle
 import me.weishu.kernelsu.ui.component.snow.DEFAULT_SEASON_CARD_MOTION_ENABLED
 import me.weishu.kernelsu.ui.component.rain.RainStyle
-import me.weishu.kernelsu.ui.component.rain.DEFAULT_RAIN_CARD_MOTION_ENABLED
 import me.weishu.kernelsu.ui.component.pixel.PixelStyle
 import me.weishu.kernelsu.ui.component.pixel.DEFAULT_PIXEL_CARD_MOTION_ENABLED
 import me.weishu.kernelsu.ui.util.CustomNavigationIconSet
 import me.weishu.kernelsu.ui.util.InstalledInterfaceStyle
 import me.weishu.kernelsu.ui.util.InterfaceStylePackage
+import me.weishu.kernelsu.ui.util.supportsVariant
 import me.weishu.kernelsu.ui.util.CustomPageBackgroundSet
 import me.weishu.kernelsu.ui.util.CustomPageBackgroundTarget
 import me.weishu.kernelsu.ui.util.CustomWallpaperCrop
@@ -79,7 +79,6 @@ data class SettingsUiState(
     val seasonStyle: String = SeasonStyle.DEFAULT_VALUE,
     val seasonCardMotionEnabled: Boolean = DEFAULT_SEASON_CARD_MOTION_ENABLED,
     val rainStyle: String = RainStyle.DEFAULT_VALUE,
-    val rainCardMotionEnabled: Boolean = DEFAULT_RAIN_CARD_MOTION_ENABLED,
     val pixelStyle: String = PixelStyle.DEFAULT_VALUE,
     val pixelCardMotionEnabled: Boolean = DEFAULT_PIXEL_CARD_MOTION_ENABLED,
     val globalSnowEnabled: Boolean = false,
@@ -191,7 +190,7 @@ internal fun SettingsUiState.isInterfaceStyleActive(style: InterfaceStylePackage
             uiMode == InterfaceStyle.Delta.value)) return false
     return when (style.engine) {
         InterfaceStyle.Snow.value -> style.variant == seasonStyle
-        InterfaceStyle.Rain.value -> style.variant == rainStyle
+        InterfaceStyle.Rain.value -> style.supportsVariant(rainStyle)
         InterfaceStyle.Pixel.value -> style.variant == pixelStyle
         else -> true
     }
@@ -228,7 +227,6 @@ data class SettingsScreenActions(
     val onSetDayNightMode: (Boolean) -> Unit,
     val onSetSwitchStyleIndex: (Int) -> Unit,
     val onSetSeasonCardMotionEnabled: (Boolean) -> Unit,
-    val onSetRainCardMotionEnabled: (Boolean) -> Unit,
     val onSetPixelCardMotionEnabled: (Boolean) -> Unit,
     val onSetGlobalSnowEnabled: (Boolean) -> Unit,
     val onSetGlobalSnowEffectIndex: (Int) -> Unit,

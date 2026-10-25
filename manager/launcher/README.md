@@ -6,6 +6,16 @@ then signs it with a separate, non-exportable AndroidKeyStore RSA key. It does
 not contain a Manager signing key, root access, network permission, or secrets.
 APK signing and verification use Google's Apache-2.0 licensed `apksig` library.
 
+If a device's default JCA signer fails after initialization, Manager retries
+the available signing providers with the same non-exportable key and certificate.
+The V2-only compatibility path reuses apksig's chunked digests and signing-block
+encoders; it does not change global provider order, export a private key, replace
+the signing identity, or disable verification. Every completed entry must pass
+APK V2 verification and match the original certificate before installation.
+Failed attempts remove the partial output and leave the current icon unchanged.
+The full exception chain is recorded under the `InstalledLauncher` log tag;
+the screen shows a localized retry/shortcut hint instead of only `Signer #1 failed`.
+
 The system installer asks the user to install the resulting entry. No launcher
 alias is disabled by generating an APK, requesting permission, cancelling the
 installer, or merely detecting an installed package. A separate user action

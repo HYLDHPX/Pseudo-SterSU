@@ -18,7 +18,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import me.weishu.kernelsu.ui.component.rain.rainNavigationIndicator
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import me.weishu.kernelsu.ui.component.rain.LocalRainSettings
+import me.weishu.kernelsu.ui.component.rain.RainChromeArea
+import me.weishu.kernelsu.ui.component.rain.rainChromeDecoration
+import me.weishu.kernelsu.ui.component.rain.isRainInterfaceStyle
+import me.weishu.kernelsu.ui.component.rain.rainPalette
+import me.weishu.kernelsu.ui.theme.isInDarkTheme
+import me.weishu.kernelsu.ui.theme.LocalUiPassthroughSettings
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -53,12 +63,12 @@ fun NavigationRailMiuix(
 ) {
     val mainState = LocalMainPagerState.current
     val customIcons = LocalCustomNavigationIcons.current
-    val railColor = uiPassthroughNavigationColor(when {
+    val railColor = rainAwareRailColor(uiPassthroughNavigationColor(when {
         isPixelInterfaceStyle() -> pixelNavigationContainerColor()
         blurBackdrop != null -> Color.Transparent
         isSnowInterfaceStyle() -> seasonNavigationContainerColor()
         else -> MiuixTheme.colorScheme.surface
-    })
+    }))
 
     BlurredBar(blurBackdrop, blurActive = !isPixelInterfaceStyle()) {
         if (customIcons.hasCustomization) {
@@ -90,7 +100,10 @@ fun NavigationRailMiuix(
                             mainState.animateToPage(index)
                         },
                         badge = navigationBadgeFor(destinations[index], navigationBadge),
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(vertical = 4.dp).rainNavigationIndicator(
+                            CircleShape, paintBackground = false, interactionKey = destinations[index],
+                            selected = mainState.selectedPage == index,
+                        )
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
@@ -109,12 +122,12 @@ private fun MiuixCustomNavigationRail(
     onSelected: (Int) -> Unit,
 ) {
     val customIcons = LocalCustomNavigationIcons.current
-    val railColor = uiPassthroughNavigationColor(when {
+    val railColor = rainAwareRailColor(uiPassthroughNavigationColor(when {
         isPixelInterfaceStyle() -> pixelNavigationContainerColor()
         blurBackdrop != null -> Color.Transparent
         isSnowInterfaceStyle() -> seasonNavigationContainerColor()
         else -> MiuixTheme.colorScheme.surface
-    })
+    }))
     Column(
         modifier = modifier
             .fillMaxHeight()
@@ -174,6 +187,8 @@ private fun ColumnScope.MiuixCustomNavigationRailItem(
                 .then(
                     if (selected && isSnowStyle) {
                         Modifier.seasonNavigationIndicator(itemShape)
+                    } else if (selected && isRainInterfaceStyle()) {
+                        Modifier.rainNavigationIndicator(itemShape, interactionKey = destination)
                     } else {
                         Modifier.background(
                             if (selected) {
@@ -221,8 +236,28 @@ private fun ColumnScope.MiuixCustomNavigationRailItem(
 private fun Modifier.navigationRailDecoration(): Modifier {
     val shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp)
     return when {
+        isRainInterfaceStyle() -> {
+            val rain = LocalRainSettings.current
+            val color = rainPalette(rain, isInDarkTheme()).outline.copy(alpha = 0.25f)
+            val divider = if (rain.sidebarDivider) drawBehind {
+                drawLine(color, Offset(size.width, 0f), Offset(size.width, size.height), 1.dp.toPx())
+            } else this
+            divider.rainChromeDecoration(
+                if (rain.miuixSidebar) RainChromeArea.Sidebar else RainChromeArea.Navigation,
+                vertical = true,
+            )
+        }
         isPixelInterfaceStyle() -> pixelNavigationSurface(shape)
         isSnowInterfaceStyle() -> seasonNavigationSurface(shape, paintBackground = false)
         else -> this
     }
+}
+
+@Composable
+private fun rainAwareRailColor(fallback: Color): Color {
+    val rain = LocalRainSettings.current
+    if (!rain.active || LocalUiPassthroughSettings.current.enabled) return fallback
+    return rainPalette(rain, isInDarkTheme()).surfaceBottom.copy(
+        alpha = if (rain.miuixSidebar) rain.sidebarOpacity else rain.navigationOpacity,
+    )
 }

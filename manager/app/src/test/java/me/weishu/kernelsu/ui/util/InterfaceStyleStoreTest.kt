@@ -60,7 +60,8 @@ class InterfaceStyleStoreTest {
     fun onlyOptionalStylesAppearInMergedStoreCatalog() {
         val assets = File("src/main/assets/interface-style")
         val signedCatalog = parseInterfaceStyleCatalog(File(assets, "catalog-v2.json").readText())
-        assertEquals(21, signedCatalog.styles.size)
+        assertEquals(22, signedCatalog.styles.size)
+        assertTrue(signedCatalog.styles.any { it.id == "rain-environment" })
         assertTrue(signedCatalog.styles.any { it.id == "skrootpro" })
         assertTrue(signedCatalog.styles.any { it.id == "alpha-delta" })
         val retiredIds = setOf(

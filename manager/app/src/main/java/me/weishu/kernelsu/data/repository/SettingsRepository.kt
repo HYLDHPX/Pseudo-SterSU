@@ -68,7 +68,6 @@ interface SettingsRepository {
     var seasonStyle: String
     var seasonCardMotionEnabled: Boolean
     var rainStyle: String
-    var rainCardMotionEnabled: Boolean
     var pixelStyle: String
     var pixelCardMotionEnabled: Boolean
     var globalSnowEnabled: Boolean

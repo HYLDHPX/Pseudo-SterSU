@@ -96,6 +96,10 @@ sealed interface Route : NavKey, Parcelable {
 
     @Parcelize
     @Serializable
+    data object RainDesign : Route
+
+    @Parcelize
+    @Serializable
     data object Backgrounds : Route
 
     @Parcelize
@@ -217,6 +221,10 @@ sealed interface Route : NavKey, Parcelable {
     @Parcelize
     @Serializable
     data object ThemeStoreMy : Route
+
+    @Parcelize
+    @Serializable
+    data object ThemeCommentAccount : Route
 
     @Parcelize
     @Serializable

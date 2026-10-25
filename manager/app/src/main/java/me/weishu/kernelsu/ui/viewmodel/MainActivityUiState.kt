@@ -12,7 +12,6 @@ import me.weishu.kernelsu.ui.component.custom.CustomSwitchStyle
 import me.weishu.kernelsu.ui.component.snow.SeasonStyle
 import me.weishu.kernelsu.ui.component.snow.DEFAULT_SEASON_CARD_MOTION_ENABLED
 import me.weishu.kernelsu.ui.component.rain.RainStyle
-import me.weishu.kernelsu.ui.component.rain.DEFAULT_RAIN_CARD_MOTION_ENABLED
 import me.weishu.kernelsu.ui.component.pixel.PixelStyle
 import me.weishu.kernelsu.ui.component.pixel.DEFAULT_PIXEL_CARD_MOTION_ENABLED
 import me.weishu.kernelsu.ui.theme.AppSettings
@@ -45,7 +44,6 @@ data class MainActivityUiState(
     val seasonStyle: String = SeasonStyle.DEFAULT_VALUE,
     val seasonCardMotionEnabled: Boolean = DEFAULT_SEASON_CARD_MOTION_ENABLED,
     val rainStyle: String = RainStyle.DEFAULT_VALUE,
-    val rainCardMotionEnabled: Boolean = DEFAULT_RAIN_CARD_MOTION_ENABLED,
     val pixelStyle: String = PixelStyle.DEFAULT_VALUE,
     val pixelCardMotionEnabled: Boolean = DEFAULT_PIXEL_CARD_MOTION_ENABLED,
     val globalSnowEnabled: Boolean = false,

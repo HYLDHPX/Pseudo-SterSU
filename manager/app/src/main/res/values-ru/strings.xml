@@ -1634,7 +1634,7 @@
     <string name="cloud_theme_creator_create_package">Создать облачный пакет из текущей темы.</string>
     <string name="cloud_theme_creator_export_package">Экспорт стандартного пакета .kstheme</string>
     <string name="cloud_theme_creator_package_exported">Стандартный пакет .kstheme экспортирован и проверен.</string>
-    <string name="cloud_theme_creator_package_rules">Имя файла и тип MIME не ограничены. Пакет темы, изображение или видео может иметь размер до 500 МиБ; ограничения хранилища устройства и GitHub Release по-прежнему действуют.</string>
+    <string name="cloud_theme_creator_package_rules">Локальные файлы могут занимать до 500 МиБ. Для публикации в репозитории магазина каждый файл должен быть не больше 100 МиБ.</string>
     <string name="cloud_theme_creator_cloud_package_created">Пакет облачной темы создан и проверен.</string>
     <string name="cloud_theme_creator_package_meta">%1$s · пакет v%2$d · %3$d ресурсы</string>
     <string name="cloud_theme_creator_package_valid">Проверка пакета темы пройдена</string>
@@ -1661,9 +1661,9 @@
     <string name="cloud_theme_creator_cover_url">URL-адрес обложки</string>
     <string name="cloud_theme_creator_screenshot_urls">URL-адреса скриншотов</string>
     <string name="cloud_theme_creator_screenshot_urls_hint">Один URL-адрес изображения, размещенного на GitHub, на строку, до восьми</string>
-    <string name="cloud_theme_creator_remote_package">Пакет удаленного выпуска</string>
-    <string name="cloud_theme_creator_package_url">URL-адрес .kstheme релиза GitHub</string>
-    <string name="cloud_theme_creator_package_url_hint">Экспортируйте стандартный файл .kstheme, а затем загрузите именно эти байты в общедоступный выпуск под своей учетной записью GitHub.</string>
+    <string name="cloud_theme_creator_remote_package">Пакет из удалённого репозитория</string>
+    <string name="cloud_theme_creator_package_url">Прямая ссылка GitHub на .kstheme</string>
+    <string name="cloud_theme_creator_package_url_hint">Сохраните проверенный файл в публичном репозитории своего аккаунта и вставьте ссылку raw.githubusercontent.com. Старые ссылки Release также поддерживаются.</string>
     <string name="cloud_theme_creator_remote_unverified">Удаленные байты не сопоставлены с выбранным локальным пакетом.</string>
     <string name="cloud_theme_creator_remote_match">Размер удаленного пакета и SHA-256 точно соответствуют выбранному локальному пакету.</string>
     <string name="cloud_theme_creator_verify_remote">Проверка удаленного пакета</string>

@@ -66,6 +66,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import me.weishu.kernelsu.ui.component.rain.rainNavigationIndicator
+import me.weishu.kernelsu.ui.component.rain.RainChromeArea
+import me.weishu.kernelsu.ui.component.rain.rainChromeDecoration
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -149,6 +152,7 @@ fun SidebarWidgetRail(
     val configuration = LocalConfiguration.current
     val tablet = configuration.smallestScreenWidthDp >= 600
     val dark = isInDarkTheme()
+    val rain = me.weishu.kernelsu.ui.component.rain.LocalRainSettings.current
     val mainPagerState = LocalMainPagerState.current
     val customIcons = LocalCustomNavigationIcons.current
     val config = rememberSidebarWidgetConfig()
@@ -211,7 +215,8 @@ fun SidebarWidgetRail(
                     if (badge != null) {
                         Badge(
                             containerColor = contentColor,
-                            contentColor = sidebarColors(config.palettes.palette(config.material, dark)).background,
+                            contentColor = if (rain.active) me.weishu.kernelsu.ui.component.rain.rainPalette(rain, dark).surfaceTop
+                                else sidebarColors(config.palettes.palette(config.material, dark)).background,
                         ) {
                             Text(badge.count.toString())
                         }
@@ -251,16 +256,24 @@ internal fun SidebarRailLayout(
     },
     navigation: @Composable ColumnScope.() -> Unit,
 ) {
-    val colors = sidebarColors(config.palettes.palette(config.material, dark))
+    val rain = me.weishu.kernelsu.ui.component.rain.LocalRainSettings.current
+    val rainPalette = me.weishu.kernelsu.ui.component.rain.rainPalette(rain, dark)
+    val colors = if (rain.active) SidebarColors(
+        background = rainPalette.surfaceTop, backgroundEnd = rainPalette.surfaceBottom,
+        selection = rainPalette.outline.copy(alpha = 0.15f), content = rainPalette.content,
+        divider = rainPalette.outline.copy(alpha = 0.25f),
+    ) else sidebarColors(config.palettes.palette(config.material, dark))
+    val showDividers = if (rain.active) rain.sidebarDivider else config.showDividers
+    val material = if (rain.active) SidebarMaterial.Flat else config.material
     val backdrop = LocalSidebarGlassBackdrop.current
     val mode = sidebarGlassMode(
-        config.material, Build.VERSION.SDK_INT,
+        material, Build.VERSION.SDK_INT,
         LocalView.current.isHardwareAccelerated && !LocalInspectionMode.current, backdrop != null,
     )
     val contentColor = colors.content
     val animations = rememberSystemAnimationsEnabled() && !LocalInspectionMode.current
-    val appearance = remember(colors, animations, config.material) {
-        SidebarAppearance(colors, animations, config.material)
+    val appearance = remember(colors, animations, material) {
+        SidebarAppearance(colors, animations, material)
     }
     val railWidth = (if (tablet) 96.dp else 72.dp) * LocalDensity.current.fontScale.coerceIn(1f, 1.2f)
     CompositionLocalProvider(
@@ -271,11 +284,12 @@ internal fun SidebarRailLayout(
             modifier = modifier
                 .clip(SidebarPaneShape)
                 .sidebarMaterialSurface(
-                    colors, config.material, mode, backdrop,
+                    colors, material, mode, backdrop,
                     edgeOnRight = config.side == SidebarSide.Left,
-                    opacity = config.backgroundOpacity,
-                    showDividers = config.showDividers,
+                    opacity = if (rain.active) rain.sidebarOpacity else config.backgroundOpacity,
+                    showDividers = showDividers,
                 )
+                .rainChromeDecoration(RainChromeArea.Sidebar, edgeOnRight = config.side == SidebarSide.Left)
                 .windowInsetsPadding(windowInsets)
                 .padding(vertical = 12.dp)
                 .width(railWidth)
@@ -315,7 +329,7 @@ internal fun SidebarRailLayout(
                                 Spacer(Modifier.height(12.dp))
                                 SidebarHeaderWidget(config, modifier = Modifier.weight(1f).padding(horizontal = 6.dp), compact = !tablet)
                             }
-                            if (config.showDividers) HorizontalDivider(thickness = 0.5.dp, color = contentColor.copy(alpha = 0.22f))
+                            if (showDividers) HorizontalDivider(thickness = 0.5.dp, color = contentColor.copy(alpha = 0.22f))
                             Column(
                                 modifier = Modifier.weight(1f).fillMaxWidth().selectableGroup(),
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -331,7 +345,7 @@ internal fun SidebarRailLayout(
                 }
             }
             Spacer(Modifier.height(16.dp))
-            if (config.showDividers) HorizontalDivider(thickness = 0.5.dp, color = contentColor.copy(alpha = 0.22f))
+            if (showDividers) HorizontalDivider(thickness = 0.5.dp, color = contentColor.copy(alpha = 0.22f))
             Box(
                 modifier = Modifier.fillMaxWidth().height(76.dp),
                 contentAlignment = Alignment.Center,
@@ -411,6 +425,7 @@ internal fun SidebarRailItem(
                         .matchParentSize()
                         .clip(CircleShape)
                         .sidebarSelectionSurface(appearance.colors, appearance.material, selection.coerceAtLeast(0.1f))
+                        .rainNavigationIndicator(CircleShape, paintBackground = false, interactionKey = label, selected = selected)
                         .then(
                             if (focused) Modifier.border(1.5.dp, appearance.colors.content, CircleShape)
                             else Modifier

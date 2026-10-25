@@ -1,6 +1,7 @@
 package me.weishu.kernelsu.ui.component.miuix.animation
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.MutatorMutex
 import androidx.compose.runtime.snapshotFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.android.awaitFrame
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -132,16 +134,16 @@ class DampedDragAnimation(
         }
     }
 
-    fun animateToValue(value: Float) {
-        animationScope.launch {
-            mutatorMutex.mutate {
-                press()
+    suspend fun animateToValue(value: Float, animationSpec: AnimationSpec<Float> = valueAnimationSpec) {
+        mutatorMutex.mutate {
+            // Keep selection work in the caller's job so a newer destination
+            // cancels it immediately. Press deformation belongs to real drags.
+            coroutineScope {
                 val targetValue = value.coerceIn(valueRange)
-                launch { valueAnimation.animateTo(targetValue, valueAnimationSpec) }
+                launch { valueAnimation.animateTo(targetValue, animationSpec) }
                 if (velocity != 0f) {
                     launch { velocityAnimation.animateTo(0f, velocityAnimationSpec) }
                 }
-                release()
             }
         }
     }

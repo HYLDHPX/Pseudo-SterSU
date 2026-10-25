@@ -69,13 +69,13 @@ fun SettingsOverviewScreen(
     onOpenCategory: (SettingsCategory) -> Unit,
     onPageModeChange: (SettingsPageMode) -> Unit,
 ) {
-    val sidebar = uiState.uiMode == InterfaceStyle.SidebarWidget.value
+    val sidebar = me.weishu.kernelsu.ui.LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value
     val scrollBehavior = if (sidebar) {
         TopAppBarDefaults.pinnedScrollBehavior()
     } else {
         TopAppBarDefaults.enterAlwaysScrollBehavior()
     }
-    val cardShape = when (uiState.uiMode) {
+    val cardShape = when (me.weishu.kernelsu.ui.LocalInterfaceStyle.current) {
         InterfaceStyle.Pixel.value -> RoundedCornerShape(6.dp)
         InterfaceStyle.Skrootpro.value -> RoundedCornerShape(12.dp)
         else -> RoundedCornerShape(16.dp)

@@ -61,7 +61,7 @@ private fun ModulePagerContent(
     val viewModel = viewModel<ModuleViewModel>()
     val scope = rememberCoroutineScope()
     val rawUiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var wallpaperEditorRequest by remember { mutableStateOf<Route.ModuleWallpaperEditor?>(null) }
+    var wallpaperEditorRequest by rememberSaveable { mutableStateOf<Route.ModuleWallpaperEditor?>(null) }
 
     val webUILauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()

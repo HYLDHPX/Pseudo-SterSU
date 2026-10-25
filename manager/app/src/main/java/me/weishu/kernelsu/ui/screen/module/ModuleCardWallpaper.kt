@@ -266,6 +266,15 @@ internal data class ModuleCardWallpaperState(
         get() = entries.size > 1
 }
 
+internal fun activeModuleWallpaperVariant(
+    darkTheme: Boolean,
+    snapshot: ModuleCardWallpaperSnapshot,
+): ModuleWallpaperVariant = if (darkTheme && snapshot.nightEntries.isNotEmpty()) {
+    ModuleWallpaperVariant.Night
+} else {
+    ModuleWallpaperVariant.Day
+}
+
 @Composable
 internal fun rememberModuleCardWallpaperState(
     moduleId: String,
@@ -279,11 +288,7 @@ internal fun rememberModuleCardWallpaperState(
     }
     var snapshot by remember(moduleId) { mutableStateOf(readModuleCardWallpaperSnapshot(prefs, moduleId)) }
     val requestedVariant = if (isInDarkTheme()) ModuleWallpaperVariant.Night else ModuleWallpaperVariant.Day
-    val variant = if (requestedVariant == ModuleWallpaperVariant.Night && snapshot.nightEntries.isEmpty()) {
-        ModuleWallpaperVariant.Day
-    } else {
-        requestedVariant
-    }
+    val variant = activeModuleWallpaperVariant(requestedVariant == ModuleWallpaperVariant.Night, snapshot)
     val collection = snapshot.collection(variant)
     var selectedIndex by remember(moduleId, variant) { mutableIntStateOf(collection.selectedIndex) }
 
@@ -295,9 +300,7 @@ internal fun rememberModuleCardWallpaperState(
                 scope.launch {
                     val refreshed = readModuleCardWallpaperSnapshot(prefs, moduleId)
                     snapshot = refreshed
-                    val activeVariant = if (
-                        requestedVariant == ModuleWallpaperVariant.Night && refreshed.nightEntries.isNotEmpty()
-                    ) ModuleWallpaperVariant.Night else ModuleWallpaperVariant.Day
+                    val activeVariant = activeModuleWallpaperVariant(requestedVariant == ModuleWallpaperVariant.Night, refreshed)
                     selectedIndex = refreshed.collection(activeVariant).selectedIndex
                 }
             }
@@ -309,13 +312,7 @@ internal fun rememberModuleCardWallpaperState(
     LifecycleResumeEffect(moduleId) {
         val refreshed = readModuleCardWallpaperSnapshot(context, moduleId)
         snapshot = refreshed
-        val refreshedCollection = refreshed.collection(
-            if (requestedVariant == ModuleWallpaperVariant.Night && refreshed.nightEntries.isNotEmpty()) {
-                ModuleWallpaperVariant.Night
-            } else {
-                ModuleWallpaperVariant.Day
-            }
-        )
+        val refreshedCollection = refreshed.collection(activeModuleWallpaperVariant(requestedVariant == ModuleWallpaperVariant.Night, refreshed))
         selectedIndex = refreshedCollection.selectedIndex
         onPauseOrDispose { }
     }
@@ -323,25 +320,15 @@ internal fun rememberModuleCardWallpaperState(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        val importVariant = variant
         scope.launch {
             val imported = withContext(Dispatchers.IO) {
-                importModuleWallpaperEntries(context, moduleId, variant, uris)
+                importAndSaveModuleWallpapers(context, moduleId, importVariant, uris, append = false, startCarousel = true)
             }
-            imported.onSuccess { nextEntries ->
-                val nextCollection = collection.copy(
-                    entries = nextEntries,
-                    carouselEnabled = nextEntries.size > 1,
-                    selectedIndex = 0,
-                )
-                val nextSnapshot = snapshot.withCollection(variant, nextCollection)
-                if (replaceModuleCardWallpaperSnapshot(context, moduleId, nextSnapshot)) {
-                    snapshot = nextSnapshot
-                    selectedIndex = 0
-                    currentOnWallpaperSelected()
-                } else {
-                    nextEntries.forEach { releaseCustomImageReference(context, it.uriString) }
-                    Toast.makeText(context, R.string.module_wallpaper_save_failed, Toast.LENGTH_SHORT).show()
-                }
+            imported.onSuccess { nextSnapshot ->
+                snapshot = nextSnapshot
+                selectedIndex = nextSnapshot.collection(variant).selectedIndex
+                currentOnWallpaperSelected()
             }.onFailure {
                 Toast.makeText(context, R.string.module_wallpaper_import_failed, Toast.LENGTH_SHORT).show()
             }
@@ -704,7 +691,7 @@ private fun readModuleCardWallpaperCrop(
     )
 }
 
-private fun readModuleCardWallpaperSnapshot(
+internal fun readModuleCardWallpaperSnapshot(
     prefs: SharedPreferences,
     moduleId: String,
 ): ModuleCardWallpaperSnapshot {
@@ -806,6 +793,40 @@ internal fun importModuleWallpaperEntries(
             )
         }
         imported
+    } catch (error: Throwable) {
+        imported.forEach { releaseCustomImageReference(context, it.uriString) }
+        throw error
+    }
+}
+
+internal class ModuleWallpaperLimitException : IllegalArgumentException("Too many module wallpapers")
+
+/** Copy and commit in the same IO operation, even if the editor leaves composition. */
+internal fun importAndSaveModuleWallpapers(
+    context: Context,
+    moduleId: String,
+    variant: ModuleWallpaperVariant,
+    uris: List<Uri>,
+    append: Boolean,
+    startCarousel: Boolean = false,
+): Result<ModuleCardWallpaperSnapshot> = runCatching {
+    val imported = importModuleWallpaperEntries(context, moduleId, variant, uris).getOrThrow()
+    try {
+        // Read after copying, not from the editor's pre-picker snapshot.
+        val latest = readModuleCardWallpaperSnapshot(context, moduleId)
+        val previous = latest.collection(variant)
+        val entries = if (append) previous.entries + imported else imported
+        if (entries.size > MODULE_CARD_WALLPAPER_MAX_COUNT) throw ModuleWallpaperLimitException()
+        val next = latest.withCollection(
+            variant,
+            previous.copy(
+                entries = entries,
+                carouselEnabled = entries.size > 1 && (startCarousel || previous.carouselEnabled),
+                selectedIndex = if (append) previous.entries.size else 0,
+            ),
+        )
+        check(replaceModuleCardWallpaperSnapshot(context, moduleId, next)) { "Unable to save module wallpaper" }
+        next
     } catch (error: Throwable) {
         imported.forEach { releaseCustomImageReference(context, it.uriString) }
         throw error
@@ -999,7 +1020,7 @@ internal fun uniqueModuleWallpaperStorageKey(base: String): String {
     return "${base}_${UUID.randomUUID()}"
 }
 
-private fun moduleWallpaperEntriesKey(moduleId: String): String {
+internal fun moduleWallpaperEntriesKey(moduleId: String): String {
     return "${MODULE_CARD_WALLPAPER_KEY_PREFIX}_${moduleId}_entries"
 }
 

@@ -1169,6 +1169,11 @@ private fun CreatorMediaCard(
                 icon = Icons.Rounded.Description,
                 title = stringResource(R.string.cloud_theme_creator_media_title),
             )
+            Text(
+                text = stringResource(R.string.cloud_theme_creator_media_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = cloudThemeMutedColor(),
+            )
             OutlinedTextField(
                 value = draft.coverUrl,
                 onValueChange = { onDraftChange(draft.copy(coverUrl = it.take(768))) },

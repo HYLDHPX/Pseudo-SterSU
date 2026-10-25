@@ -134,6 +134,7 @@ import me.weishu.kernelsu.ui.util.importThemeStorePackage
 import me.weishu.kernelsu.ui.util.InterfaceStyleCatalogRepository
 import me.weishu.kernelsu.ui.util.InterfaceStyleInstaller
 import me.weishu.kernelsu.ui.util.InterfaceStylePackage
+import me.weishu.kernelsu.ui.util.supportsVariant
 import me.weishu.kernelsu.ui.util.InterfaceStyleRegistry
 import me.weishu.kernelsu.ui.util.InstalledInterfaceStyle
 import me.weishu.kernelsu.ui.util.InterfaceStyleDownloadProgress
@@ -1151,7 +1152,7 @@ private fun InterfaceStyleStoreContent(
                 settingsRepository.uiMode == InterfaceStyle.Delta.value) &&
             when (style.engine) {
                 InterfaceStyle.Snow.value -> settingsRepository.seasonStyle == style.variant
-                InterfaceStyle.Rain.value -> settingsRepository.rainStyle == style.variant
+                InterfaceStyle.Rain.value -> style.supportsVariant(settingsRepository.rainStyle)
                 InterfaceStyle.Pixel.value -> settingsRepository.pixelStyle == style.variant
                 else -> true
             }

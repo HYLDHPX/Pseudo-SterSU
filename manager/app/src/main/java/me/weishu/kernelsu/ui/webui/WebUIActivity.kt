@@ -131,11 +131,14 @@ class WebUIActivity : ComponentActivity() {
             var activeStyleId by remember { mutableStateOf(settingsRepository.activeInterfaceStyleId) }
             var wallpaperState by remember { mutableStateOf(readWebUiWallpaperState(prefs)) }
             var visualEffectsState by remember { mutableStateOf(readWebUiVisualEffectsState(prefs)) }
-            val uiMode = remember(uiModeValue) {
-                UiMode.fromValue(uiModeValue)
-            }
+            val rainSettings = me.weishu.kernelsu.ui.component.rain.rememberRainSettings(uiModeValue == InterfaceStyle.Rain.value)
+            val layoutStyle = me.weishu.kernelsu.ui.component.rain.resolveRainLayoutStyle(uiModeValue, rainSettings)
+            val uiMode = UiMode.fromValue(layoutStyle)
             val localColorMode = appSettings.colorMode.value
-            val rainStyle = RainStyle.fromValue(visualEffectsState.rainStyle)
+            val rainStyle = rainSettings.scene
+            val rainProgress = me.weishu.kernelsu.ui.component.rain.rememberRainSceneProgress(
+                rainSettings.active && rainSettings.motion, rainStyle, settings = rainSettings,
+            )
             val pixelStyle = PixelStyle.fromValue(visualEffectsState.pixelStyle)
             val externalTheme = remember(uiModeValue, activeStyleId, visualEffectsState.rainStyle, visualEffectsState.pixelStyle) {
                 val variant = when (uiModeValue) {
@@ -143,7 +146,7 @@ class WebUIActivity : ComponentActivity() {
                     InterfaceStyle.Pixel.value -> visualEffectsState.pixelStyle
                     else -> null
                 }
-                interfaceStyleTheme(
+                if (uiModeValue == InterfaceStyle.Rain.value) null else interfaceStyleTheme(
                     context,
                     if (uiModeValue == InterfaceStyle.Delta.value) InterfaceStyle.Alpha.value else uiModeValue,
                     variant,
@@ -182,7 +185,9 @@ class WebUIActivity : ComponentActivity() {
 
             CompositionLocalProvider(
                 LocalUiMode provides uiMode,
-                LocalInterfaceStyle provides uiModeValue,
+                LocalInterfaceStyle provides layoutStyle,
+                me.weishu.kernelsu.ui.component.rain.LocalRainSettings provides rainSettings,
+                me.weishu.kernelsu.ui.component.rain.LocalRainSceneProgress provides rainProgress,
                 LocalInterfaceStyleTheme provides externalTheme,
                 LocalColorMode provides localColorMode,
                 LocalSwitchStyle provides SwitchStyle.fromValue(visualEffectsState.switchStyle),

@@ -43,6 +43,14 @@ data class InterfaceStylePackage(
     val accent: Long,
 )
 
+internal val InterfaceStylePackage.isRainCollection: Boolean
+    get() = engine == "rain" && id == "rain-environment"
+
+// The rebuilt Rain package includes every scene and layout. Its manifest variant
+// is the default, while the user's per-layout scene remains independently editable.
+internal fun InterfaceStylePackage.supportsVariant(selectedVariant: String?): Boolean =
+    variant == selectedVariant || isRainCollection && selectedVariant in ALLOWED_VARIANTS.getValue("rain")
+
 data class InstalledInterfaceStyle(
     val style: InterfaceStylePackage,
     val installedAt: Long,
@@ -342,7 +350,7 @@ class InterfaceStyleRegistry(context: Context) {
     @Synchronized
     fun theme(engine: String, variant: String?, preferredId: String? = null): InterfaceStyleTheme? {
         val installed = readState().firstOrNull {
-            it.style.engine == engine && it.style.variant == variant &&
+            it.style.engine == engine && it.style.supportsVariant(variant) &&
                 (preferredId == null || it.style.id == preferredId)
         } ?: return null
         val themeFile = resourceFile(installed.style.id, THEME_RESOURCE_PATH) ?: return null
@@ -533,7 +541,7 @@ internal fun readSharedInterfaceStyleArchive(
 ): SharedInterfaceStyleArchive {
     val registry = InterfaceStyleRegistry(context)
     val installed = registry.list().firstOrNull {
-        it.style.engine == engine && it.style.variant == variant &&
+        it.style.engine == engine && it.style.supportsVariant(variant) &&
             (preferredId == null || it.style.id == preferredId)
     } ?: error("The current interface style is not installed")
     val style = installed.style

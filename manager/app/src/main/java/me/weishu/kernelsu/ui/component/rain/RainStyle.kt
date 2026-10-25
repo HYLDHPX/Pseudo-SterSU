@@ -8,11 +8,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.util.InterfaceStyleTheme
-import kotlin.random.Random
+import kotlin.math.sqrt
 
 const val RAIN_STYLE_KEY = "rain_style"
-const val RAIN_CARD_MOTION_ENABLED_KEY = "rain_card_motion_enabled"
-const val DEFAULT_RAIN_CARD_MOTION_ENABLED = true
 
 enum class RainStyle(
     val value: String,
@@ -38,6 +36,20 @@ enum class RainStyle(
     }
 }
 
+/** Time-of-day band used when [RainSettings.atmosphere] is enabled. */
+enum class RainTimeOfDay(val value: String) {
+    Dawn("dawn"), Day("day"), Dusk("dusk"), Night("night");
+
+    companion object {
+        fun fromFloorMod(floorMod: Int): RainTimeOfDay = when {
+            floorMod in 5..8 -> Dawn
+            floorMod in 9..16 -> Day
+            floorMod in 17..19 -> Dusk
+            else -> Night
+        }
+    }
+}
+
 val LocalRainStyle = staticCompositionLocalOf { RainStyle.LightRain }
 
 @Immutable
@@ -55,6 +67,8 @@ data class RainPalette(
     val highlight: Color,
     val content: Color,
     val shadow: Color,
+    /** Second stop of the wet card edge; keeps glass and droplets distinguishable. */
+    val surfaceSheen: Color = surfaceBottom,
 )
 
 fun rainPalette(theme: InterfaceStyleTheme?, style: RainStyle, dark: Boolean): RainPalette {
@@ -82,19 +96,24 @@ fun rainPalette(theme: InterfaceStyleTheme?, style: RainStyle, dark: Boolean): R
 
 fun rainPalette(style: RainStyle, dark: Boolean): RainPalette = fallbackRainPalette(style, dark)
 
-private fun fallbackRainPalette(style: RainStyle, dark: Boolean): RainPalette {
-    val accent = Color(style.keyColor)
-    val backgroundTop = if (dark) lerp(Color(0xFF101820), accent, 0.28f) else lerp(Color.White, accent, 0.58f)
-    val backgroundBottom = if (dark) lerp(Color.Black, accent, 0.22f) else lerp(Color.White, accent, 0.35f)
-    val surfaceTop = if (dark) lerp(Color(0xFF172027), accent, 0.24f) else Color.White.copy(alpha = 0.76f)
-    val surfaceBottom = if (dark) lerp(Color(0xFF10171C), accent, 0.18f) else lerp(Color.White, accent, 0.14f).copy(alpha = 0.68f)
+/**
+ * The accent drives both UI and weather: custom day/night colors tint the rain streaks,
+ * not just the chrome around them.
+ */
+private fun fallbackRainPalette(style: RainStyle, dark: Boolean, accent: Color = Color(style.keyColor)): RainPalette {
+    val backgroundTop = if (dark) lerp(Color(0xFF172938), accent, 0.10f) else lerp(Color(0xFFB6C8D7), accent, 0.12f)
+    val backgroundBottom = if (dark) lerp(Color(0xFF0C1924), accent, 0.06f) else lerp(Color(0xFFD7E1E8), accent, 0.08f)
+    val surfaceTop = if (dark) lerp(Color(0xFF243A49), accent, 0.08f) else lerp(Color(0xFFF3F8FB), accent, 0.03f)
+    val surfaceBottom = if (dark) lerp(Color(0xFF192D3B), accent, 0.08f) else lerp(Color(0xFFDCE9F0), accent, 0.04f)
     val content = if (dark) Color(0xFFE8F2F7) else Color(0xFF172F39)
+    // Keep streaks visible against the backdrop: lighten on dark, darken on light.
+    val rain = if (dark) lerp(accent, Color(0xFFE4EFF7), 0.62f) else lerp(accent, Color(0xFF243645), 0.24f)
     return RainPalette(
         backgroundTop = backgroundTop,
         backgroundBottom = backgroundBottom,
         fog = lerp(backgroundBottom, content, if (dark) 0.28f else 0.18f),
-        cloud = lerp(backgroundTop, content, if (dark) 0.34f else 0.20f),
-        rain = if (dark) Color(0xFFD8F1FF) else Color.White,
+        cloud = if (dark) Color(0xFF748C9E) else lerp(Color(0xFF6F879A), accent, 0.16f),
+        rain = rain,
         rainAccent = lerp(accent, Color(0xFFBDF4EA), 0.55f),
         ripple = lerp(accent, content, 0.32f),
         surfaceTop = surfaceTop,
@@ -103,8 +122,14 @@ private fun fallbackRainPalette(style: RainStyle, dark: Boolean): RainPalette {
         highlight = if (dark) Color(0xFFF2FAFF) else Color.White,
         content = content,
         shadow = if (dark) Color.Black else lerp(accent, Color.Black, 0.58f),
+        surfaceSheen = lerp(surfaceTop, rain, if (dark) 0.16f else 0.10f),
     )
 }
+
+fun rainPalette(settings: RainSettings, dark: Boolean): RainPalette = fallbackRainPalette(
+    settings.scene, dark,
+    Color((if (dark) settings.darkAccent else settings.lightAccent) ?: settings.scene.keyColor),
+)
 
 internal data class RainSceneSpec(
     val dropCount: Int,
@@ -119,6 +144,43 @@ internal data class RainSceneSpec(
     val maxAlpha: Float,
 ) {
     companion object {
+        /** Per-scene base density; atmosphere scales this rather than replacing it. */
+        internal fun densityOf(scene: RainStyle): Float = when (scene) {
+            RainStyle.LightRain -> 1f
+            RainStyle.MediumRain -> 1.4f
+            RainStyle.HeavyRain -> 1.85f
+            RainStyle.Thunderstorm -> 1.75f
+            RainStyle.AfterRain -> 0.32f
+        }
+
+        fun fromSettings(settings: RainSettings): RainSceneSpec {
+            val safe = settings.normalized()
+            val form = safe.dropForm
+            val lengthScale = (safe.dropLength ?: 1f) * form.lengthScale
+            val baseMinLength = when (safe.scene) {
+                RainStyle.HeavyRain, RainStyle.Thunderstorm -> 44f
+                RainStyle.AfterRain -> 18f
+                else -> 32f
+            }
+            val minLength = (12f * lengthScale).coerceIn(2f, 48f)
+            val maxLength = (baseMinLength * lengthScale).coerceIn(minLength, 96f)
+            val strokeScale = form.strokeScale
+            val alphaScale = safe.dropOpacity ?: 1f
+            return RainSceneSpec(
+                (safe.quality.drops * densityOf(safe.scene) * sqrt(safe.intensity)).toInt().coerceIn(0, 80),
+                // Ripples follow the drop layout, so a denser scene earns more impacts.
+                if (safe.scene == RainStyle.AfterRain) 4 else 0,
+                (14_000 / safe.speed).toInt().coerceIn(7_000, 40_000),
+                minLength,
+                maxLength,
+                (0.55f * strokeScale).coerceIn(0.1f, 4f),
+                (1.15f * strokeScale).coerceIn(0.1f, 6f),
+                safe.wind,
+                (0.28f * alphaScale).coerceIn(0f, 1f),
+                (0.62f * alphaScale).coerceIn(0f, 1f),
+            )
+        }
+
         fun fromTheme(theme: InterfaceStyleTheme?): RainSceneSpec {
             val scene = theme?.takeIf { it.engine == "rain" }?.scene
             return if (scene != null) {
@@ -142,21 +204,4 @@ internal data class RainSceneSpec(
 }
 
 internal fun forceRainDarkTheme(style: RainStyle, theme: InterfaceStyleTheme? = null): Boolean =
-    theme?.takeIf { it.engine == "rain" && it.variant == style.value }?.forceDark == true
-
-internal fun isRainLightningEnabled(
-    theme: InterfaceStyleTheme?,
-    dark: Boolean,
-    animationsEnabled: Boolean,
-): Boolean = theme?.scene?.lightning == true && dark && animationsEnabled
-
-internal fun nextLightningDelayMillis(random: Random): Long = random.nextLong(3_000L, 8_001L)
-
-internal fun nextLightningFlashDurationMillis(random: Random): Long = random.nextLong(50L, 101L)
-
-internal fun rainCycleAlpha(clearOnCycle: Boolean, progress: Float): Float {
-    if (!clearOnCycle) return 1f
-    return (1f - progress.coerceIn(0f, 1f) * 0.82f).coerceAtLeast(0.18f)
-}
-
-internal const val AFTER_RAIN_CLEARING_DURATION_MILLIS = 14_000
+    style == RainStyle.HeavyRain || (theme?.takeIf { it.engine == "rain" && it.variant == style.value }?.forceDark == true)

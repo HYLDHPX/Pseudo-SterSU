@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -219,44 +220,60 @@ fun CustomWallpaperRoot(
     val isLiquidGlass = isLiquidGlassTheme()
     val surfaceColor = liquidGlassBackdropColor()
     val usePagerBackgrounds = pagerBackgrounds.isNotEmpty() && horizontalPagerPosition != null
+    val rainSettings = me.weishu.kernelsu.ui.component.rain.LocalRainSettings.current
+    val hasWallpaper = !uriString.isNullOrBlank() || !videoUriString.isNullOrBlank()
+    val rainProgress = me.weishu.kernelsu.ui.component.rain.rememberRainSceneProgress(
+        enabled = rainSettings.drawingEnabled(hasWallpaper) && rainSettings.motion,
+        style = rainSettings.scene, settings = rainSettings,
+    )
     // Retain pager interpolation while allowing embedded scroll containers to move the backdrop.
     val backgroundMotionModifier = Modifier.backgroundScrollFollowMotion(backgroundScrollFollowState)
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(surfaceColor),
+    CompositionLocalProvider(
+        me.weishu.kernelsu.ui.component.rain.LocalRainSceneProgress provides rainProgress,
+        me.weishu.kernelsu.ui.component.rain.LocalRainCoveredByWallpaper provides hasWallpaper,
     ) {
-        // Capture only wallpaper siblings, never content that draws from that capture.
-        Box(Modifier.fillMaxSize().then(backgroundLayerModifier)) {
-            if (usePagerBackgrounds) {
-                PagerAnchoredBackgroundLayers(
-                    backgrounds = pagerBackgrounds,
-                    pagerPosition = horizontalPagerPosition,
-                    isLiquidGlass = isLiquidGlass,
-                    modifier = backgroundMotionModifier,
-                )
-            } else {
-                CustomBackgroundMedia(
-                    imageUriString = uriString,
-                    videoUriString = videoUriString,
-                    videoDurationSeconds = videoDurationSeconds,
-                    videoFrameRate = videoFrameRate,
-                    opacity = if (isLiquidGlass) opacity.coerceAtMost(0.42f) else opacity,
-                    crop = crop,
-                    visualSettings = visualSettings,
-                    modifier = backgroundMotionModifier,
-                )
+        me.weishu.kernelsu.ui.component.rain.RainUiLayer(
+            modifier = Modifier.fillMaxSize().background(surfaceColor),
+        ) {
+            // Capture wallpaper siblings only. Foreground weather is drawn after the page.
+            Box(Modifier.fillMaxSize().then(backgroundLayerModifier)) {
+                if (rainSettings.active && !hasWallpaper) {
+                    me.weishu.kernelsu.ui.component.rain.RainBackdrop()
+                }
+                if (usePagerBackgrounds) {
+                    PagerAnchoredBackgroundLayers(
+                        backgrounds = pagerBackgrounds,
+                        pagerPosition = horizontalPagerPosition,
+                        isLiquidGlass = isLiquidGlass,
+                        modifier = backgroundMotionModifier,
+                    )
+                } else {
+                    CustomBackgroundMedia(
+                        imageUriString = uriString,
+                        videoUriString = videoUriString,
+                        videoDurationSeconds = videoDurationSeconds,
+                        videoFrameRate = videoFrameRate,
+                        opacity = if (isLiquidGlass) opacity.coerceAtMost(0.42f) else opacity,
+                        crop = crop,
+                        visualSettings = visualSettings,
+                        modifier = backgroundMotionModifier,
+                    )
+                }
+                if (rainSettings.active && hasWallpaper && rainSettings.wallpaperRain) {
+                    me.weishu.kernelsu.ui.component.rain.RainBackdrop(overlayOnly = true)
+                }
             }
-        }
-        val settings = uiPassthroughSettings ?: UiPassthroughSettings(
-            enabled = passthroughEnabled,
-            surfaceOpacity = 1f - sanitizeCustomWallpaperPassthroughOpacity(passthroughOpacity),
-        )
-        val hasMedia = !uriString.isNullOrBlank() || !videoUriString.isNullOrBlank() ||
-            pagerBackgrounds.any { it.hasMedia }
-        UiPassthroughTheme(settings.copy(enabled = settings.enabled && hasMedia)) {
-            content()
+            val settings = uiPassthroughSettings ?: UiPassthroughSettings(
+                enabled = passthroughEnabled,
+                surfaceOpacity = 1f - sanitizeCustomWallpaperPassthroughOpacity(passthroughOpacity),
+            )
+            val hasMedia = me.weishu.kernelsu.ui.component.rain.isRainInterfaceStyle() ||
+                !uriString.isNullOrBlank() || !videoUriString.isNullOrBlank() ||
+                pagerBackgrounds.any { it.hasMedia }
+            UiPassthroughTheme(settings.copy(enabled = settings.enabled && hasMedia)) {
+                content()
+            }
         }
     }
 }

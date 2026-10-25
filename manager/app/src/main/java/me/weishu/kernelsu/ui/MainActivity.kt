@@ -162,14 +162,7 @@ import me.weishu.kernelsu.ui.component.pixel.PixelStyle
 import me.weishu.kernelsu.ui.component.pixel.rememberPixelCardMotionProgress
 import me.weishu.kernelsu.ui.component.rain.LocalRainStyle
 import me.weishu.kernelsu.ui.component.rain.LocalRainCardMotionEnabled
-import me.weishu.kernelsu.ui.component.rain.LocalRainCardMotionProgress
-import me.weishu.kernelsu.ui.component.rain.LocalRainSceneProgress
-import me.weishu.kernelsu.ui.component.rain.RainBackdrop
-import me.weishu.kernelsu.ui.component.rain.RainChromeOverlay
-import me.weishu.kernelsu.ui.component.rain.RainForegroundOverlay
 import me.weishu.kernelsu.ui.component.rain.RainStyle
-import me.weishu.kernelsu.ui.component.rain.rememberRainCardMotionProgress
-import me.weishu.kernelsu.ui.component.rain.rememberRainSceneProgress
 import me.weishu.kernelsu.ui.component.snow.LocalSeasonStyle
 import me.weishu.kernelsu.ui.component.snow.LocalSeasonCardMotionEnabled
 import me.weishu.kernelsu.ui.component.snow.LocalSeasonCardMotionProgress
@@ -415,7 +408,13 @@ class MainActivity : ComponentActivity() {
                 startupStateResolved = uiState.stealthModeResolved
             }
             val appSettings = uiState.appSettings
-            val uiMode = uiState.uiMode
+            val rainSettings = me.weishu.kernelsu.ui.component.rain.rememberRainSettings(
+                active = uiState.interfaceStyle == InterfaceStyle.Rain.value,
+            )
+            val layoutInterfaceStyle = me.weishu.kernelsu.ui.component.rain.resolveRainLayoutStyle(
+                uiState.interfaceStyle, rainSettings,
+            )
+            val uiMode = UiMode.fromValue(layoutInterfaceStyle)
             val startupAnimationUri = if (uiState.stealthModeEnabled) null else uiState.customStartupAnimationUri
             val clickSoundUri = if (uiState.stealthModeEnabled) null else uiState.customClickSoundUri
             val clickSoundVolume = uiState.customClickSoundVolume
@@ -434,7 +433,15 @@ class MainActivity : ComponentActivity() {
                 interfaceStyle = uiState.interfaceStyle,
                 requested = uiState.enableFloatingBottomBarBlur,
             )
-            val selectedRainStyle = RainStyle.fromValue(uiState.rainStyle)
+            val rainInterfaceActive = uiState.interfaceStyle == InterfaceStyle.Rain.value
+            val rainWeather = me.weishu.kernelsu.ui.component.rain.rememberRainWeather(rainSettings)
+            // Atmosphere only applies while rain is the active style; otherwise the stored scene stands.
+            val rainTimeOfDay = me.weishu.kernelsu.ui.component.rain.rememberRainTimeOfDay(
+                rainInterfaceActive && rainSettings.atmosphere,
+            )
+            val selectedRainStyle = if (!rainInterfaceActive || !rainSettings.atmosphere) rainSettings.scene else {
+                me.weishu.kernelsu.ui.component.rain.resolveRainScene(rainSettings, rainTimeOfDay, rainWeather.condition)
+            }
             val selectedPixelStyle = PixelStyle.fromValue(uiState.pixelStyle)
             val selectedExternalTheme = remember(
                 uiState.interfaceStyle,
@@ -448,7 +455,7 @@ class MainActivity : ComponentActivity() {
                     InterfaceStyle.Pixel.value -> uiState.pixelStyle
                     else -> null
                 }
-                interfaceStyleTheme(
+                if (uiState.interfaceStyle == InterfaceStyle.Rain.value) null else interfaceStyleTheme(
                     applicationContext,
                     if (uiState.interfaceStyle == InterfaceStyle.Delta.value) InterfaceStyle.Alpha.value
                     else uiState.interfaceStyle,
@@ -456,20 +463,12 @@ class MainActivity : ComponentActivity() {
                     uiState.activeInterfaceStyleId,
                 )
             }
-            val rainInterfaceActive = uiState.interfaceStyle == InterfaceStyle.Rain.value
             val seasonInterfaceActive = uiState.interfaceStyle == InterfaceStyle.Snow.value
             val pixelInterfaceActive = uiState.interfaceStyle == InterfaceStyle.Pixel.value
             val seasonCardMotionProgress = rememberSeasonCardMotionProgress(
                 enabled = seasonInterfaceActive && uiState.seasonCardMotionEnabled,
             )
-            val rainCardMotionProgress = rememberRainCardMotionProgress(
-                enabled = rainInterfaceActive && uiState.rainCardMotionEnabled,
-            )
-            val rainSceneProgress = rememberRainSceneProgress(
-                enabled = rainInterfaceActive,
-                style = selectedRainStyle,
-                theme = selectedExternalTheme,
-            )
+            val rainCardMotionEnabled = rainInterfaceActive && rainSettings.decorationMotionEnabled()
             val pixelCardMotionProgress = rememberPixelCardMotionProgress(
                 enabled = pixelInterfaceActive && uiState.pixelCardMotionEnabled,
                 theme = selectedExternalTheme,
@@ -533,6 +532,9 @@ class MainActivity : ComponentActivity() {
             } else {
                 navigator.current() as? Route
             }
+            val rainSoundVolume = me.weishu.kernelsu.ui.component.rain.rainSoundVolume(
+                rainSettings.sound, rainSettings.soundVolume, selectedRainStyle,
+            )
             val systemDensity = LocalDensity.current
             val density = remember(systemDensity, uiState.pageScale, uiState.fontScale) {
                 Density(
@@ -554,7 +556,9 @@ class MainActivity : ComponentActivity() {
                 LocalModuleTopBarAutoHide provides uiState.moduleTopBarAutoHideEnabled,
                 LocalModuleDescriptionMaxLines provides uiState.moduleDescriptionMaxLines,
                 LocalUiMode provides uiMode,
-                LocalInterfaceStyle provides uiState.interfaceStyle,
+                LocalInterfaceStyle provides layoutInterfaceStyle,
+                me.weishu.kernelsu.ui.component.rain.LocalRainSettings provides
+                    rainSettings.copy(scene = selectedRainStyle),
                 LocalInterfaceStyleTheme provides selectedExternalTheme,
                 LocalSeasonStyle provides SeasonStyle.fromValue(uiState.seasonStyle),
                 LocalSeasonCardMotionEnabled provides (
@@ -562,11 +566,7 @@ class MainActivity : ComponentActivity() {
                     ),
                 LocalSeasonCardMotionProgress provides seasonCardMotionProgress,
                 LocalRainStyle provides selectedRainStyle,
-                LocalRainCardMotionEnabled provides (
-                    rainInterfaceActive && uiState.rainCardMotionEnabled
-                    ),
-                LocalRainCardMotionProgress provides rainCardMotionProgress,
-                LocalRainSceneProgress provides rainSceneProgress,
+                LocalRainCardMotionEnabled provides rainCardMotionEnabled,
                 LocalPixelStyle provides selectedPixelStyle,
                 LocalPixelCardMotionEnabled provides (
                     pixelInterfaceActive && uiState.pixelCardMotionEnabled
@@ -648,7 +648,7 @@ class MainActivity : ComponentActivity() {
                     val kpmPageActiveForNavigation = mainPagerState.kpmActive || currentRoute == Route.Kpm
                     val sidebarStackTransitions = shouldUseSidebarStackNavigationTransitions(
                         kpmPageActive = kpmPageActiveForNavigation,
-                        sidebarStyleActive = uiState.interfaceStyle == InterfaceStyle.SidebarWidget.value,
+                        sidebarStyleActive = layoutInterfaceStyle == InterfaceStyle.SidebarWidget.value,
                         animationsEnabled = rememberSystemAnimationsEnabled(),
                         stealthModeEnabled = uiState.stealthModeEnabled,
                     )
@@ -694,6 +694,9 @@ class MainActivity : ComponentActivity() {
                                 entry<Route.NavigationIcons> { NavigationIconScreen() }
                                 entry<Route.SidebarWidgetSettings> {
                                     SidebarWidgetSettingsScreen()
+                                }
+                                entry<Route.RainDesign> {
+                                    me.weishu.kernelsu.ui.component.rain.RainDesignScreen()
                                 }
                                 entry<Route.Backgrounds> { BackgroundSettingsScreen() }
                                 entry<Route.SoundEffects> { SoundEffectsScreen() }
@@ -754,6 +757,7 @@ class MainActivity : ComponentActivity() {
                                 }
                                 entry<Route.ThemeStoreTransfer> { ThemeStoreScreen(ThemeStorePage.My) }
                                 entry<Route.ThemeStoreMy> { ThemeStoreMyScreen() }
+                                entry<Route.ThemeCommentAccount> { ThemeCommentsScreen("", "", false, accountMode = true) }
                                 entry<Route.ThemeStoreLibrary> { ThemeStoreLibraryScreen() }
                                 entry<Route.CloudThemeDetail> { key -> CloudThemeDetailScreen(key.themeId) }
                                 entry<Route.ThemeComments> { key ->
@@ -801,7 +805,7 @@ class MainActivity : ComponentActivity() {
                                 sidebarStackTransitions -> sidebarStackForwardTransition(stackDirection)
                                 shouldUseLayeredNavigationTransitions(
                                     kpmPageActiveForNavigation,
-                                    uiState.interfaceStyle == InterfaceStyle.SidebarWidget.value,
+                                    layoutInterfaceStyle == InterfaceStyle.SidebarWidget.value,
                                 ) -> stableNavForwardTransition()
                                 else -> instantNavTransition()
                             },
@@ -809,7 +813,7 @@ class MainActivity : ComponentActivity() {
                                 sidebarStackTransitions -> sidebarStackPopTransition(stackDirection)
                                 shouldUseLayeredNavigationTransitions(
                                     kpmPageActiveForNavigation,
-                                    uiState.interfaceStyle == InterfaceStyle.SidebarWidget.value,
+                                    layoutInterfaceStyle == InterfaceStyle.SidebarWidget.value,
                                 ) -> stableNavPopTransition()
                                 else -> instantNavTransition()
                             },
@@ -877,9 +881,9 @@ class MainActivity : ComponentActivity() {
                     val seasonalStyleActive = seasonInterfaceActive
                     val rainStyleActive = rainInterfaceActive
                     val pixelStyleActive = uiState.interfaceStyle == InterfaceStyle.Pixel.value
-                    val sidebarStyleActive = uiState.interfaceStyle == InterfaceStyle.SidebarWidget.value
+                    val sidebarStyleActive = layoutInterfaceStyle == InterfaceStyle.SidebarWidget.value
                     val sidebarConfig = if (sidebarStyleActive) rememberSidebarWidgetConfig() else null
-                    val sidebarMaterial = sidebarConfig?.material ?: SidebarMaterial.Flat
+                    val sidebarMaterial = if (rainSettings.active) SidebarMaterial.Flat else sidebarConfig?.material ?: SidebarMaterial.Flat
                     val sidebarGlassBackdrop = rememberSidebarGlassBackdrop(
                         enabled = canCaptureSidebarWallpaper(
                             sidebarStyleActive, sidebarMaterial,
@@ -893,6 +897,12 @@ class MainActivity : ComponentActivity() {
                     val hasCustomBackground =
                         !effectiveBackground.wallpaperUriString.isNullOrBlank() ||
                             !effectiveBackground.videoUriString.isNullOrBlank()
+                    // Use the same resolved main-page/route wallpaper as the renderer.
+                    me.weishu.kernelsu.ui.component.rain.RainAmbience(
+                        enabled = rainInterfaceActive && !uiState.stealthModeEnabled && rainSoundVolume > 0f &&
+                            (!hasCustomBackground || rainSettings.soundWithWallpaper),
+                        sound = rainSettings.sound, volume = rainSoundVolume,
+                    )
                     val immersiveBackgroundActive =
                         seasonalStyleActive ||
                             rainStyleActive ||
@@ -945,6 +955,8 @@ class MainActivity : ComponentActivity() {
                                 LocalImmersiveBackgroundActive provides immersiveBackgroundActive,
                                 LocalBackgroundScrollFollowState provides backgroundScrollFollowState,
                                 LocalSidebarGlassBackdrop provides sidebarGlassBackdrop,
+                                me.weishu.kernelsu.ui.component.rain.LocalRainCoveredByWallpaper provides
+                                    hasCustomBackground,
                             ) {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     if (seasonalStyleActive && !hasCustomBackground) {
@@ -953,9 +965,6 @@ class MainActivity : ComponentActivity() {
                                     }
                                     if (pixelStyleActive && !hasCustomBackground) {
                                         PixelBackdrop(modifier = Modifier.fillMaxSize())
-                                    }
-                                    if (rainStyleActive && !hasCustomBackground) {
-                                        RainBackdrop(modifier = Modifier.fillMaxSize())
                                     }
                                     if (!uiState.nightBackgroundPassthrough) {
                                         NightBackgroundEffectOverlay(
@@ -988,7 +997,7 @@ class MainActivity : ComponentActivity() {
                                                 shouldShowSettingsSidebar(
                                                     currentRoute,
                                                     navigator.backStack.any {
-                                                        it is Route.SettingsCategory || it == Route.SidebarWidgetSettings
+                                                        it is Route.SettingsCategory || it == Route.SidebarWidgetSettings || it == Route.RainDesign
                                                     },
                                                     navigator.backStack.any { (it as? Route).isStoreRoute() },
                                                 )
@@ -1061,7 +1070,6 @@ class MainActivity : ComponentActivity() {
                         }
 
                         SeasonChromeOverlay(modifier = Modifier.fillMaxSize())
-                        RainChromeOverlay(modifier = Modifier.fillMaxSize())
                         PixelChromeOverlay(modifier = Modifier.fillMaxSize())
 
                         if (uiState.nightBackgroundPassthrough) {
@@ -1091,7 +1099,6 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize(),
                         )
 
-                        RainForegroundOverlay(modifier = Modifier.fillMaxSize())
                         ThemeModeTransitionOverlay(darkMode = darkMode)
 
                         if (showStartupAnimation && !startupAnimationUri.isNullOrBlank()) {
@@ -1229,7 +1236,7 @@ private fun Route?.isStoreRoute(): Boolean = when (this) {
     Route.ThemeStore, Route.ThemeStoreCustomize, Route.InterfaceStyleStore,
     Route.StoreInterfaceStyles, Route.ThemeStoreAssets, Route.ThemeStoreFonts,
     Route.ThemeStoreBackgrounds, Route.ThemeStoreTransfer, Route.ThemeStoreMy,
-    Route.ThemeStoreLibrary, is Route.CloudThemeDetail, is Route.ThemeComments, Route.CloudThemeRanking,
+    Route.ThemeStoreLibrary, Route.ThemeCommentAccount, is Route.CloudThemeDetail, is Route.ThemeComments, Route.CloudThemeRanking,
     Route.CloudThemeCreator, Route.CloudThemeCreatorSubmission, Route.CloudThemeCreatorGuide,
     -> true
     else -> false
@@ -1242,7 +1249,7 @@ internal fun shouldShowSettingsSidebar(
 ): Boolean {
     if (storeAncestor || route.isStoreRoute()) return false
     return when (route) {
-        is Route.SettingsCategory, Route.SidebarWidgetSettings, Route.About -> true
+        is Route.SettingsCategory, Route.SidebarWidgetSettings, Route.RainDesign, Route.About -> true
         null, Route.Main, Route.Home, Route.SuperUser, Route.Module, Route.Settings,
         Route.Install, is Route.Flash -> false
         else -> settingsAncestor
@@ -1689,6 +1696,7 @@ fun MainScreen(
                 } else HorizontalPager(
                     modifier = Modifier
                         .fillMaxSize()
+                        .clipToBounds()
                         .then(
                             if (floatingBarBackdrop != null && !kpmPageActive) {
                                 Modifier.layerBackdrop(floatingBarBackdrop)
@@ -1710,6 +1718,7 @@ fun MainScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
+                            .clipToBounds()
                             .mainPageTransition(
                                 effect = pageTransitionEffect,
                                 interfaceStyle = interfaceStyle,
@@ -1845,8 +1854,8 @@ fun MainScreen(
                 ) {
                     Box(modifier = Modifier.fillMaxWidth()) {
                         BottomBar(
-                            blurBackdrop = blurBackdrop,
-                            backdrop = floatingBarBackdrop,
+                            blurBackdrop = blurBackdrop.takeUnless { kpmPageActive },
+                            backdrop = floatingBarBackdrop.takeUnless { kpmPageActive },
                             navigationBadge = navigationBadge,
                             modifier = Modifier.align(Alignment.BottomCenter),
                         )
@@ -1888,7 +1897,7 @@ internal fun resolveMainContentBottomPadding(
     floatingBarEnabled: Boolean,
     navigationBarVisible: Boolean,
 ): Dp {
-    if (!floatingBarEnabled || !navigationBarVisible) return scaffoldPadding
+    if (!floatingBarEnabled || !navigationBarVisible) return maxOf(scaffoldPadding, systemNavigationPadding)
     val floatingBarClearance = 88.dp + systemNavigationPadding
     return maxOf(scaffoldPadding, floatingBarClearance)
 }

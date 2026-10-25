@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -13,6 +14,15 @@ import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.ui.util.SusfsPathConfigState
 import me.weishu.kernelsu.ui.util.buildSusfsBackupJson
 import me.weishu.kernelsu.ui.util.parseSusfsBackupJson
+
+/** Keep cancellation distinct from an import, export, or configuration failure. */
+internal suspend fun <T> runSusfsOperation(block: suspend () -> T): Result<T> = try {
+    Result.success(block())
+} catch (error: CancellationException) {
+    throw error
+} catch (error: Exception) {
+    Result.failure(error)
+}
 
 internal class SusfsEditViewModel : ViewModel() {
     val runtime = mutableStateOf(SusfsPathConfigState())

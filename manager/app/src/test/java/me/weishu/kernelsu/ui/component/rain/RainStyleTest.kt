@@ -70,22 +70,21 @@ class RainStyleTest {
     }
 
     @Test
-    fun forcedDarkAndLightningArePackageControlled() {
-        val theme = theme(forceDark = true, lightning = true)
+    fun forcedDarkIsPackageControlledForTheMatchingVariant() {
+        val theme = theme(forceDark = true)
 
         assertTrue(forceRainDarkTheme(RainStyle.LightRain, theme))
-        assertTrue(isRainLightningEnabled(theme, dark = true, animationsEnabled = true))
-        assertFalse(isRainLightningEnabled(theme, dark = false, animationsEnabled = true))
-        assertFalse(isRainLightningEnabled(theme, dark = true, animationsEnabled = false))
         assertFalse(forceRainDarkTheme(RainStyle.LightRain, null))
+        // A package for another scene must not force dark on the current one.
+        assertFalse(forceRainDarkTheme(RainStyle.MediumRain, theme))
     }
 
     @Test
-    fun lightningTimingStaysInsideRequestedBounds() {
-        val random = Random(32685)
-        repeat(200) {
-            assertTrue(nextLightningDelayMillis(random) in 3_000L..8_000L)
-            assertTrue(nextLightningFlashDurationMillis(random) in 50L..100L)
+    fun heavyRainForcesDarkWithoutAThemePackage() {
+        assertTrue(forceRainDarkTheme(RainStyle.HeavyRain, null))
+        assertTrue(forceRainDarkTheme(RainStyle.HeavyRain, theme(variant = RainStyle.Thunderstorm.value, forceDark = false)))
+        RainStyle.entries.filterNot { it == RainStyle.HeavyRain }.forEach {
+            assertFalse(it.value, forceRainDarkTheme(it, null))
         }
     }
 
@@ -95,18 +94,16 @@ class RainStyleTest {
         assertEquals(9.5f, rainCardDecorationHeight(13f, 320f, 50f), 0.001f)
         assertEquals(0f, rainCardDecorationHeight(13f, 71f, 180f), 0.001f)
         assertEquals(0f, rainCardDecorationHeight(13f, 320f, 47f), 0.001f)
-        assertEquals(0.14f, rainCardContentLayerColor(Color.Blue).alpha, 0.002f)
     }
 
     @Test
-    fun clearOnCycleFadesRainWithoutHidingWetReflections() {
-        assertEquals(1f, rainCycleAlpha(true, 0f), 0.001f)
-        assertEquals(0.59f, rainCycleAlpha(true, 0.5f), 0.001f)
-        assertEquals(0.18f, rainCycleAlpha(true, 1f), 0.001f)
-        assertEquals(1f, rainCycleAlpha(false, 1f), 0.001f)
+    fun disabledCardSurfacePaintsNoCanopy() {
+        // A zero cap height is how the "Dry" option removes the wet edge.
+        assertEquals(0f, rainCardDecorationHeight(0f, 320f, 180f), 0f)
     }
 
     private fun theme(
+        variant: String = RainStyle.LightRain.value,
         forceDark: Boolean = false,
         lightning: Boolean = false,
         primaryCount: Int = 68,
@@ -128,7 +125,7 @@ class RainStyleTest {
         )
         return InterfaceStyleTheme(
             engine = "rain",
-            variant = RainStyle.LightRain.value,
+            variant = variant,
             accent = 0xFF5E84A6,
             forceDark = forceDark,
             lightPalette = light,

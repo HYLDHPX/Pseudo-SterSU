@@ -44,6 +44,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -175,17 +176,29 @@ fun SuperUserPagerMiuix(
             }
         },
         contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
-    ) { innerPadding ->
-        val layoutDirection = LocalLayoutDirection.current
-        val isSearching = searchStatus.searchText.isNotBlank()
-        val visibleApps = if (isSearching) uiState.searchResults else uiState.groupedApps
-        val expandedSearchUids = remember { mutableStateOf(setOf<Int>()) }
-        LaunchedEffect(uiState.searchResults) {
-            expandedSearchUids.value = uiState.searchResults
-                .filter { it.apps.size > 1 }
-                .map { it.uid }
-                .toSet()
-        }
+    ) { scaffoldPadding ->
+        val bodyLayoutDirection = LocalLayoutDirection.current
+        val innerPadding = PaddingValues(
+            start = scaffoldPadding.calculateStartPadding(bodyLayoutDirection),
+            end = scaffoldPadding.calculateEndPadding(bodyLayoutDirection),
+            bottom = scaffoldPadding.calculateBottomPadding(),
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(top = scaffoldPadding.calculateTopPadding())
+                .clipToBounds(),
+        ) {
+            val layoutDirection = LocalLayoutDirection.current
+            val isSearching = searchStatus.searchText.isNotBlank()
+            val visibleApps = if (isSearching) uiState.searchResults else uiState.groupedApps
+            val expandedSearchUids = remember { mutableStateOf(setOf<Int>()) }
+            LaunchedEffect(uiState.searchResults) {
+                expandedSearchUids.value = uiState.searchResults
+                    .filter { it.apps.size > 1 }
+                    .map { it.uid }
+                    .toSet()
+            }
             var refreshTick by remember { mutableIntStateOf(0) }
             val latestGroupedApps = rememberUpdatedState(uiState.groupedApps)
             val latestRefreshing = rememberUpdatedState(uiState.isRefreshing)
@@ -300,6 +313,7 @@ fun SuperUserPagerMiuix(
                     }
                 }
             }
+        }
     }
 }
 

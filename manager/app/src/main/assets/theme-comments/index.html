@@ -16,6 +16,43 @@
       <p id="connection-message"></p>
       <button id="retry" type="button" hidden></button>
     </section>
+    <section id="account" class="account" hidden aria-label="Account">
+      <div class="account-copy"><strong id="account-name"></strong><p id="account-status" role="status" aria-live="polite"></p></div>
+      <button id="account-manage" class="account-button" type="button" hidden></button>
+    </section>
+    <section id="account-editor" hidden>
+      <p id="account-description" class="guidance"></p>
+      <div id="email-panel">
+        <div class="account-tabs" role="group" aria-label="Account">
+          <button id="tab-login" type="button" aria-controls="email-form" aria-pressed="true"></button>
+          <button id="tab-register" type="button" aria-controls="email-form" aria-pressed="false"></button>
+        </div>
+        <form id="email-form">
+          <fieldset id="email-fields" class="account-fields">
+            <label id="register-name-row" hidden><span data-copy="name"></span><input id="register-name" autocomplete="nickname" maxlength="80"></label>
+            <label><span data-copy="email"></span><input id="email" type="email" autocomplete="username" maxlength="254" required></label>
+            <label><span data-copy="password"></span><input id="password" type="password" autocomplete="current-password" maxlength="1024" required></label>
+            <label id="confirm-row" hidden><span data-copy="confirm"></span><input id="confirm-password" type="password" autocomplete="new-password" maxlength="1024"></label>
+            <details id="two-factor-row"><summary data-copy="twoFactor"></summary><label><span data-copy="code"></span><input id="two-factor" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}"></label></details>
+            <button id="email-submit" class="account-button primary" type="submit"></button>
+          </fieldset>
+        </form>
+      </div>
+      <div id="profile-panel" hidden>
+        <div class="profile-heading"><img id="profile-avatar" alt="" hidden referrerpolicy="no-referrer"><div><strong id="profile-name"></strong><p id="profile-email" class="guidance"></p></div></div>
+        <form id="profile-form">
+          <fieldset id="profile-fields" class="account-fields">
+            <label><span data-copy="name"></span><input id="profile-display-name" autocomplete="nickname" maxlength="80" required></label>
+            <label><span data-copy="avatar"></span><input id="profile-avatar-url" type="url" inputmode="url" autocomplete="url" maxlength="2048" placeholder="https://" aria-describedby="avatar-help"></label>
+            <p id="avatar-help" class="guidance" data-copy="avatarHelp"></p>
+            <button id="profile-submit" class="account-button primary" type="submit" data-copy="save"></button>
+          </fieldset>
+        </form>
+        <button id="account-logout" class="account-button" type="button" data-copy="logout"></button>
+      </div>
+      <p id="account-feedback" role="status" aria-live="polite" hidden></p>
+      <button id="account-retry" class="account-button" type="button" data-copy="retry" hidden></button>
+    </section>
     <div id="waline" hidden></div>
     <p id="guidance" class="guidance"></p>
   </main>

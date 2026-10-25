@@ -1,12 +1,17 @@
 package me.weishu.kernelsu.ui.component.bottombar
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Home
@@ -22,45 +27,121 @@ import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarArrangement
 import androidx.compose.material3.ShortNavigationBarItem
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import me.weishu.kernelsu.ui.component.rain.rainNavigationIndicator
+import me.weishu.kernelsu.ui.component.rain.RainChromeArea
+import me.weishu.kernelsu.ui.component.rain.rainChromeDecoration
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import me.weishu.kernelsu.ui.theme.uiPassthroughNavigationColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.LocalMainPagerState
+import me.weishu.kernelsu.ui.component.liquid.lens
+import me.weishu.kernelsu.ui.component.liquid.vibrancy
+import me.weishu.kernelsu.ui.theme.LocalBlurIntensity
+import me.weishu.kernelsu.ui.theme.LocalEnableFloatingBottomBar
+import me.weishu.kernelsu.ui.theme.LocalEnableFloatingBottomBarBlur
+import me.weishu.kernelsu.ui.theme.LocalImmersiveBackgroundActive
+import me.weishu.kernelsu.ui.theme.LocalUiPassthroughSettings
+import me.weishu.kernelsu.ui.util.BlurredBar
 import me.weishu.kernelsu.ui.component.CustomNavigationIconImage
 import me.weishu.kernelsu.ui.util.CustomNavigationIconState
 import me.weishu.kernelsu.ui.util.LocalCustomNavigationIcons
-import me.weishu.kernelsu.ui.util.rootAvailable
+import top.yukonga.miuix.kmp.blur.Backdrop
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import top.yukonga.miuix.kmp.blur.blur
+import top.yukonga.miuix.kmp.blur.drawBackdrop
+import top.yukonga.miuix.kmp.shader.isRenderEffectSupported
 
 @Composable
 fun BottomBarMaterial(
     navigationBadge: NavigationBadgeState,
     destinations: List<MainDestination>,
+    blurBackdrop: LayerBackdrop? = null,
+    backdrop: Backdrop? = null,
+    modifier: Modifier = Modifier,
 ) {
-    val isManager = Natives.isManager
-    val fullFeatured = isManager && !Natives.requireNewKernel() && rootAvailable()
+    // BottomBar already gates visibility through the pager's debounced root state.
+    // A second synchronous probe here can tear down navigation during a refresh.
+    val floating = LocalEnableFloatingBottomBar.current
+    val immersive = LocalImmersiveBackgroundActive.current
+    val passthrough = LocalUiPassthroughSettings.current
+    val blurIntensity = LocalBlurIntensity.current
+    val glass = floating && LocalEnableFloatingBottomBarBlur.current && isRenderEffectSupported() && backdrop != null &&
+        !immersive && !passthrough.enabled
+    val containerColor = uiPassthroughNavigationColor(MaterialTheme.colorScheme.surfaceContainer)
+    val insets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
+        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+    )
+
+    if (floating) {
+        val shape = RoundedCornerShape(28.dp)
+        Box(
+            modifier = modifier.fillMaxWidth().windowInsetsPadding(insets)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            Box(
+                Modifier.clip(shape).then(
+                    if (glass) Modifier.drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { shape },
+                        effects = {
+                            vibrancy()
+                            blur(8.dp.toPx() * blurIntensity, 8.dp.toPx() * blurIntensity)
+                            lens(refractionHeight = 16.dp.toPx(), refractionAmount = 12.dp.toPx())
+                        },
+                        onDrawSurface = { drawRect(containerColor.copy(alpha = containerColor.alpha * 0.65f)) },
+                    ) else Modifier,
+                ),
+            ) {
+                MaterialNavigationBar(
+                    navigationBadge, destinations,
+                    containerColor = if (glass) Color.Transparent else containerColor,
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+                )
+            }
+        }
+    } else {
+        Box(modifier) {
+            val activeBackdrop = if (passthrough.enabled || immersive) null else blurBackdrop
+            BlurredBar(activeBackdrop) {
+                MaterialNavigationBar(
+                    navigationBadge, destinations,
+                    containerColor = if (activeBackdrop != null) Color.Transparent else containerColor,
+                    windowInsets = insets,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MaterialNavigationBar(
+    navigationBadge: NavigationBadgeState,
+    destinations: List<MainDestination>,
+    containerColor: Color,
+    windowInsets: WindowInsets,
+) {
     val mainPagerState = LocalMainPagerState.current
     val customIcons = LocalCustomNavigationIcons.current
-
-    if (!fullFeatured) return
-
     ShortNavigationBar(
-        containerColor = uiPassthroughNavigationColor(MaterialTheme.colorScheme.surfaceContainer),
-        windowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
-            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
-        )
+        modifier = Modifier.fillMaxWidth().rainChromeDecoration(RainChromeArea.Navigation),
+        containerColor = containerColor,
+        windowInsets = windowInsets,
+        arrangement = ShortNavigationBarArrangement.EqualWeight,
     ) {
         destinations.forEachIndexed { index, destination ->
             val selected = mainPagerState.selectedPage == index
             val label = customIcons.labelFor(destination, stringResource(destination.label))
             ShortNavigationBarItem(
+                modifier = Modifier.rainNavigationIndicator(RoundedCornerShape(24.dp), paintBackground = false, interactionKey = destination, selected = selected),
                 selected = selected,
                 onClick = {
                     if (!selected) {

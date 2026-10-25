@@ -1,5 +1,7 @@
 package me.weishu.kernelsu.ui.screen.module
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -63,6 +65,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -70,6 +73,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -180,10 +184,11 @@ private fun ModuleWallpaperEditorContent(
     val isKpmWallpaper = moduleId.startsWith(KPM_CARD_WALLPAPER_ID_PREFIX)
     val module = moduleUiState.moduleList.firstOrNull { it.id == moduleId }
     var snapshot by remember(moduleId) { mutableStateOf(readModuleCardWallpaperSnapshot(context, moduleId)) }
-    var variant by remember { mutableStateOf(ModuleWallpaperVariant.Day) }
-    var selectedIndex by remember { mutableIntStateOf(0) }
-    var previewAspectRatio by remember { mutableFloatStateOf(MODULE_CARD_WALLPAPER_ASPECT_RATIO) }
-    var importMode by remember { mutableStateOf(WallpaperImportMode.Add) }
+    val darkTheme = isInDarkTheme()
+    var variant by rememberSaveable(moduleId) { mutableStateOf(activeModuleWallpaperVariant(darkTheme, snapshot)) }
+    var selectedIndex by rememberSaveable(moduleId) { mutableIntStateOf(snapshot.collection(variant).selectedIndex) }
+    var previewAspectRatio by rememberSaveable(moduleId) { mutableFloatStateOf(MODULE_CARD_WALLPAPER_ASPECT_RATIO) }
+    var importMode by rememberSaveable(moduleId) { mutableStateOf(WallpaperImportMode.Add) }
     var busy by remember { mutableStateOf(false) }
     var showCrop by remember { mutableStateOf(false) }
     var showBatch by remember { mutableStateOf(false) }
@@ -194,6 +199,20 @@ private fun ModuleWallpaperEditorContent(
         selectedIndex.coerceIn(0, collection.entries.lastIndex.coerceAtLeast(0))
     )
     val previewState = rememberModuleCardWallpaperLoadState(selectedEntry)
+
+    val prefs = remember(context) { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    DisposableEffect(prefs, moduleId, variant) {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == moduleWallpaperEntriesKey(moduleId)) {
+                scope.launch {
+                    snapshot = readModuleCardWallpaperSnapshot(prefs, moduleId)
+                    selectedIndex = snapshot.collection(variant).selectedIndex
+                }
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
 
     fun commit(next: ModuleCardWallpaperSnapshot): Boolean {
         if (!replaceModuleCardWallpaperSnapshot(context, moduleId, next)) {
@@ -229,40 +248,22 @@ private fun ModuleWallpaperEditorContent(
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        val importVariant = variant
+        val append = importMode == WallpaperImportMode.Add
         busy = true
         scope.launch {
             val result = withContext(Dispatchers.IO) {
-                importModuleWallpaperEntries(context, moduleId, variant, uris)
+                importAndSaveModuleWallpapers(context, moduleId, importVariant, uris, append)
             }
-            result.onSuccess { imported ->
-                val previous = snapshot.collection(variant)
-                val nextEntries = when (importMode) {
-                    WallpaperImportMode.Add -> previous.entries + imported
-                    WallpaperImportMode.Replace -> imported
-                }
-                if (nextEntries.size > MODULE_CARD_WALLPAPER_MAX_COUNT) {
-                    imported.forEach { me.weishu.kernelsu.ui.util.releaseCustomImageReference(context, it.uriString) }
-                    errorText = resources.getString(
-                        R.string.module_wallpaper_too_many,
-                        MODULE_CARD_WALLPAPER_MAX_COUNT,
-                    )
+            result.onSuccess { next ->
+                snapshot = next
+                selectedIndex = next.collection(variant).selectedIndex
+            }.onFailure { error ->
+                errorText = if (error is ModuleWallpaperLimitException) {
+                    resources.getString(R.string.module_wallpaper_too_many, MODULE_CARD_WALLPAPER_MAX_COUNT)
                 } else {
-                    val nextCollection = previous.copy(
-                        entries = nextEntries,
-                        carouselEnabled = nextEntries.size > 1 && previous.carouselEnabled,
-                        selectedIndex = if (importMode == WallpaperImportMode.Add) previous.entries.size else 0,
-                    )
-                    val next = snapshot.withCollection(variant, nextCollection)
-                    if (replaceModuleCardWallpaperSnapshot(context, moduleId, next)) {
-                        snapshot = next
-                        selectedIndex = nextCollection.selectedIndex
-                    } else {
-                        imported.forEach { me.weishu.kernelsu.ui.util.releaseCustomImageReference(context, it.uriString) }
-                        errorText = resources.getString(R.string.module_wallpaper_save_failed)
-                    }
+                    resources.getString(R.string.module_wallpaper_import_failed)
                 }
-            }.onFailure {
-                errorText = resources.getString(R.string.module_wallpaper_import_failed)
             }
             busy = false
         }

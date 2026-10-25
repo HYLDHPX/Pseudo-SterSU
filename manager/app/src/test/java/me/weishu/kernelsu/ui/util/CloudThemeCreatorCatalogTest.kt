@@ -150,6 +150,44 @@ class CloudThemeCreatorCatalogTest {
     }
 
     @Test
+    fun submissionManifest_acceptsNoImagesAfterDraftRoundTrip() {
+        val draft = validDraft().copy(coverUrl = "", screenshotUrlsText = "")
+        val restored = decodeCloudThemeSubmissionDraft(encodeCloudThemeSubmissionDraft(draft))
+        val theme = JSONObject(buildCloudThemeSubmissionManifest(restored)).getJSONObject("theme")
+
+        assertEquals("", restored.coverUrl)
+        assertEquals("", restored.screenshotUrlsText)
+        assertEquals(CLOUD_THEME_DEFAULT_COVER_URL, theme.getString("coverUrl"))
+        assertEquals(0, theme.getJSONArray("screenshots").length())
+    }
+
+    @Test
+    fun submissionManifest_acceptsWhitespaceOnlyMedia() {
+        val theme = JSONObject(
+            buildCloudThemeSubmissionManifest(
+                validDraft().copy(coverUrl = "  ", screenshotUrlsText = " \n\t\n ")
+            )
+        ).getJSONObject("theme")
+
+        assertEquals(CLOUD_THEME_DEFAULT_COVER_URL, theme.getString("coverUrl"))
+        assertEquals(0, theme.getJSONArray("screenshots").length())
+    }
+
+    @Test
+    fun submissionManifest_acceptsSingleCollageWithoutSeparateCover() {
+        val collage = "https://raw.githubusercontent.com/alice-theme/themes/main/four-page-collage.jpg"
+        val theme = JSONObject(
+            buildCloudThemeSubmissionManifest(
+                validDraft().copy(coverUrl = "", screenshotUrlsText = collage)
+            )
+        ).getJSONObject("theme")
+
+        assertEquals(collage, theme.getString("coverUrl"))
+        assertEquals(1, theme.getJSONArray("screenshots").length())
+        assertEquals(collage, theme.getJSONArray("screenshots").getString(0))
+    }
+
+    @Test
     fun submissionManifest_requiresRemotePackageMatch() {
         val unverified = validDraft().copy(remoteVerifiedSha256 = "b".repeat(64))
 
@@ -186,6 +224,42 @@ class CloudThemeCreatorCatalogTest {
                 "https://github.com/another-user/themes/releases/download/v1/aurora.kstheme",
                 "alice-theme",
             )
+        }
+    }
+
+    @Test
+    fun creatorRepositoryPackageAcceptsOwnedRawFileAndCanBeSubmitted() {
+        val url = "https://raw.githubusercontent.com/alice-theme/themes/main/aurora.kstheme"
+        assertEquals(url, validateCloudThemeCreatorPackageUrl(url, "Alice-Theme"))
+        val manifest = JSONObject(buildCloudThemeSubmissionManifest(validDraft().copy(
+            packageUrl = url,
+            remoteVerifiedUrl = url,
+        )))
+        assertEquals(url, manifest.getJSONObject("theme").getString("packageUrl"))
+    }
+
+    @Test
+    fun creatorRepositoryPackageRejectsWrongOwnerHtmlAndUnsafePaths() {
+        listOf(
+            "https://raw.githubusercontent.com/another-user/themes/main/aurora.kstheme",
+            "https://github.com/alice-theme/themes/blob/main/aurora.kstheme",
+            "https://raw.githubusercontent.com/alice-theme/themes/main/../aurora.kstheme",
+            "https://raw.githubusercontent.com/alice-theme/themes/main/%2e%2e/aurora.kstheme",
+            "https://raw.githubusercontent.com/alice-theme/themes/main/a%2fb/aurora.kstheme",
+            "https://raw.githubusercontent.com/alice-theme/themes/main/aurora.kstheme?download=1",
+        ).forEach { url ->
+            assertThrows(IllegalArgumentException::class.java) {
+                validateCloudThemeCreatorPackageUrl(url, "alice-theme")
+            }
+        }
+    }
+
+    @Test
+    fun submissionRejectsPackageBeyondGitRepositoryFileLimit() {
+        assertThrows(IllegalArgumentException::class.java) {
+            buildCloudThemeSubmissionManifest(validDraft().copy(
+                packageSizeBytes = CLOUD_THEME_MAX_REPOSITORY_PACKAGE_BYTES + 1L,
+            ))
         }
     }
 

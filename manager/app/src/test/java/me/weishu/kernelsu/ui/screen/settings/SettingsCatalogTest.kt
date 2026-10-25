@@ -7,6 +7,14 @@ import org.junit.Test
 
 class SettingsCatalogTest {
     @Test
+    fun rainDesignIsVisibleOnlyWhenRainIsTheActiveInterfaceStyle() {
+        InterfaceStyle.entries.forEach { style ->
+            val entries = SettingsCatalog.entriesFor(SettingsCategory.Appearance, SettingsUiState(uiMode = style.value))
+            assertEquals(style.name, style == InterfaceStyle.Rain, entries.any { it.key == "rain_design" })
+        }
+    }
+
+    @Test
     fun pluginCountTracksInstalledAndEnabledEntries() {
         val base = SettingsUiState(uiMode = InterfaceStyle.Material.value)
         assertEquals(1, SettingsCatalog.visibleEntryCount(SettingsCategory.Plugins, base))

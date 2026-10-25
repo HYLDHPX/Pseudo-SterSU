@@ -84,6 +84,23 @@ class SettingsInterfaceStyleSelectionTest {
         assertEquals(InterfaceStyle.selectableEntries.size + 1, delta.interfaceStyleSelectedIndex())
     }
 
+    @Test
+    fun downloadedRainRemainsSelectedWhenItsWeatherSceneChanges() {
+        val downloaded = listOf(
+            installedStyle("spring", InterfaceStyle.Snow, "spring"),
+            installedStyle("rain-environment", InterfaceStyle.Rain, "light_rain"),
+        )
+        for (scene in me.weishu.kernelsu.ui.component.rain.RainStyle.entries) {
+            val state = SettingsUiState(
+                uiMode = InterfaceStyle.Rain.value,
+                rainStyle = scene.value,
+                activeInterfaceStyleId = "rain-environment",
+                installedInterfaceStyles = downloaded,
+            )
+            assertEquals(InterfaceStyle.selectableEntries.size + 1, state.interfaceStyleSelectedIndex())
+        }
+    }
+
     private fun installedStyle(id: String, engine: InterfaceStyle, variant: String? = null) =
         InstalledInterfaceStyle(
             style = InterfaceStylePackage(

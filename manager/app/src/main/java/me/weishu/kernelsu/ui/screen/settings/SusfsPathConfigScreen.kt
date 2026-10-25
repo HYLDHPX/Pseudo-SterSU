@@ -85,6 +85,7 @@ import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
@@ -97,6 +98,7 @@ import me.weishu.kernelsu.ui.theme.immersiveScrolledTopBarColor
 import me.weishu.kernelsu.ui.theme.immersiveSurfaceColor
 import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.util.SusfsCapabilities
+import me.weishu.kernelsu.ui.util.SusfsImplementation
 import me.weishu.kernelsu.ui.util.SusfsKstatEntry
 import me.weishu.kernelsu.ui.util.SusfsOpenRedirectEntry
 import me.weishu.kernelsu.ui.util.SusfsPathConfigState
@@ -207,15 +209,23 @@ fun SusfsPathConfigScreen() {
         if (loading || applying || importing || dirty) return
         scope.launch {
             loading = true
-            val refreshed = getSusfsPathConfig()
-            replaceWithRuntime(refreshed)
-            offerSavedDraft(refreshed)
-            if (refreshed.available) {
-                val backup = captureSusfsRecoverySnapshot()
-                recoveryError = if (backup.success || refreshed.runtimeStatus.generation.isBlank()) "" else backup.error
+            try {
+                val refreshed = getSusfsPathConfig()
+                replaceWithRuntime(refreshed)
+                offerSavedDraft(refreshed)
+                if (refreshed.available) {
+                    val backup = captureSusfsRecoverySnapshot()
+                    recoveryError = if (backup.success || refreshed.runtimeStatus.generation.isBlank()) "" else backup.error
+                }
+                recoveryAvailable = hasSusfsRecoverySnapshot()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                actionError = error.message.orEmpty().ifBlank { "probe_failed" }
+                actionErrorRetryable = false
+            } finally {
+                loading = false
             }
-            recoveryAvailable = hasSusfsRecoverySnapshot()
-            loading = false
         }
     }
 
@@ -239,47 +249,55 @@ fun SusfsPathConfigScreen() {
             applying = true
             actionError = ""
             actionErrorRetryable = false
-            val result = saveAndApplySusfsConfig(config)
-            if (result.saved) {
-                draftSaveJob?.cancelAndJoin()
-                draftStore.clear()
-                val refreshed = getSusfsPathConfig()
-                if (refreshed.available) {
-                    replaceWithRuntime(refreshed)
-                    val backup = captureSusfsRecoverySnapshot()
-                    recoveryError = if (backup.success) "" else backup.error
-                    recoveryAvailable = hasSusfsRecoverySnapshot()
+            try {
+                val result = saveAndApplySusfsConfig(config)
+                if (result.saved) {
+                    draftSaveJob?.cancelAndJoin()
+                    draftStore.clear()
+                    val refreshed = getSusfsPathConfig()
+                    if (refreshed.available) {
+                        replaceWithRuntime(refreshed)
+                        val backup = captureSusfsRecoverySnapshot()
+                        recoveryError = if (backup.success) "" else backup.error
+                        recoveryAvailable = hasSusfsRecoverySnapshot()
+                    } else {
+                        val saved = draft.copy(
+                            available = runtime.available,
+                            toolPath = runtime.toolPath,
+                            capabilities = runtime.capabilities,
+                            error = runtime.error,
+                        )
+                        runtime = saved
+                        draft = saved
+                        baseline = saved
+                    }
+                    if (!result.success) {
+                        actionError = susfsApplyErrorDetail(result)
+                        actionErrorRetryable = true
+                    }
+                    Toast.makeText(
+                        context,
+                        if (!result.success) {
+                            resources.getString(R.string.susfs_path_apply_partial)
+                        } else if (result.requiresReboot) {
+                            resources.getString(R.string.susfs_path_apply_reboot)
+                        } else {
+                            resources.getString(R.string.susfs_path_apply_success, result.appliedCount)
+                        },
+                        Toast.LENGTH_LONG,
+                    ).show()
                 } else {
-                    val saved = draft.copy(
-                        available = runtime.available,
-                        toolPath = runtime.toolPath,
-                        capabilities = runtime.capabilities,
-                        error = runtime.error,
-                    )
-                    runtime = saved
-                    draft = saved
-                    baseline = saved
-                }
-                if (!result.success) {
-                    actionError = susfsApplyErrorDetail(result)
+                    actionError = result.error.ifBlank { "apply_failed" }
                     actionErrorRetryable = true
                 }
-                Toast.makeText(
-                    context,
-                    if (!result.success) {
-                        resources.getString(R.string.susfs_path_apply_partial)
-                    } else if (result.requiresReboot) {
-                        resources.getString(R.string.susfs_path_apply_reboot)
-                    } else {
-                        resources.getString(R.string.susfs_path_apply_success, result.appliedCount)
-                    },
-                    Toast.LENGTH_LONG,
-                ).show()
-            } else {
-                actionError = result.error.ifBlank { "apply_failed" }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                actionError = error.message.orEmpty().ifBlank { "apply_failed" }
                 actionErrorRetryable = true
+            } finally {
+                applying = false
             }
-            applying = false
         }
     }
 
@@ -308,6 +326,8 @@ fun SusfsPathConfigScreen() {
                 } else {
                     actionError = result.error.ifBlank { "restore_failed" }
                 }
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 actionError = error.message.orEmpty().ifBlank { "restore_failed" }
             } finally {
@@ -322,25 +342,28 @@ fun SusfsPathConfigScreen() {
                 importing = true
                 actionError = ""
                 actionErrorRetryable = false
-                val imported = runCatching {
-                    withContext(Dispatchers.IO) {
-                        val input = requireNotNull(context.contentResolver.openInputStream(uri))
-                        input.use(::readTextLimited)
+                try {
+                    val imported = runSusfsOperation {
+                        withContext(Dispatchers.IO) {
+                            val input = requireNotNull(context.contentResolver.openInputStream(uri))
+                            parseSusfsBackupJson(input.use(::readTextLimited))
+                        }
                     }
-                }.map(::parseSusfsBackupJson)
-                imported.onSuccess { result ->
-                    val config = result.config
-                    if (config == null || result.error.isNotBlank()) {
-                        actionError = result.error.ifBlank { "invalid_backup" }
-                    } else {
-                        pendingImport = config
-                        importWarnings = result.warnings
-                        showImportModeDialog = true
+                    imported.onSuccess { result ->
+                        val config = result.config
+                        if (config == null || result.error.isNotBlank()) {
+                            actionError = result.error.ifBlank { "invalid_backup" }
+                        } else {
+                            pendingImport = config
+                            importWarnings = result.warnings
+                            showImportModeDialog = true
+                        }
+                    }.onFailure { error ->
+                        actionError = error.message.orEmpty().ifBlank { "import_failed" }
                     }
-                }.onFailure { error ->
-                    actionError = error.message.orEmpty().ifBlank { "import_failed" }
+                } finally {
+                    importing = false
                 }
-                importing = false
             }
         }
     }
@@ -350,7 +373,7 @@ fun SusfsPathConfigScreen() {
     ) { uri ->
         if (uri != null && pendingExport.isNotEmpty()) {
             scope.launch {
-                val result = runCatching {
+                val result = runSusfsOperation {
                     withContext(Dispatchers.IO) {
                         requireNotNull(context.contentResolver.openOutputStream(uri, "w")).use { output ->
                             output.write(pendingExport.toByteArray(Charsets.UTF_8))
@@ -372,7 +395,7 @@ fun SusfsPathConfigScreen() {
     ) { uri ->
         if (uri != null && pendingDiagnostics.isNotEmpty()) {
             scope.launch {
-                val result = runCatching {
+                val result = runSusfsOperation {
                     withContext(Dispatchers.IO) {
                         requireNotNull(context.contentResolver.openOutputStream(uri, "w")).use { output ->
                             output.write(pendingDiagnostics.toByteArray(Charsets.UTF_8))
@@ -392,22 +415,29 @@ fun SusfsPathConfigScreen() {
     BackHandler(enabled = dirty, onBack = { showDiscardDialog = true })
 
     LaunchedEffect(Unit) {
-        if (!draftModel.initialized) {
-            val initial = getSusfsPathConfig()
-            replaceWithRuntime(initial)
-            draftModel.initialized = true
-            offerSavedDraft(initial)
-            if (initial.available) {
-                val backup = captureSusfsRecoverySnapshot()
-                recoveryError = if (backup.success || initial.runtimeStatus.generation.isBlank()) "" else backup.error
+        try {
+            if (!draftModel.initialized) {
+                val initial = getSusfsPathConfig()
+                replaceWithRuntime(initial)
+                draftModel.initialized = true
+                offerSavedDraft(initial)
+                if (initial.available) {
+                    val backup = captureSusfsRecoverySnapshot()
+                    recoveryError = if (backup.success || initial.runtimeStatus.generation.isBlank()) "" else backup.error
+                }
+            } else if (dirty) {
+                updateDraft(draft)
+            } else {
+                offerSavedDraft(runtime)
             }
-        } else if (dirty) {
-            updateDraft(draft)
-        } else {
-            offerSavedDraft(runtime)
+            recoveryAvailable = hasSusfsRecoverySnapshot()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            actionError = error.message.orEmpty().ifBlank { "probe_failed" }
+        } finally {
+            loading = false
         }
-        recoveryAvailable = hasSusfsRecoverySnapshot()
-        loading = false
     }
 
     LaunchedEffect(selectedPage, runtime.available) {
@@ -591,9 +621,16 @@ fun SusfsPathConfigScreen() {
                                     showActionMenu = false
                                     scope.launch {
                                         exportingDiagnostics = true
-                                        pendingDiagnostics = getSusfsDiagnostics()
-                                        exportingDiagnostics = false
-                                        diagnosticLauncher.launch("SterSU-susfs-diagnostics.txt")
+                                        try {
+                                            pendingDiagnostics = getSusfsDiagnostics()
+                                            diagnosticLauncher.launch("SterSU-susfs-diagnostics.txt")
+                                        } catch (error: CancellationException) {
+                                            throw error
+                                        } catch (error: Exception) {
+                                            actionError = error.message.orEmpty().ifBlank { "diagnostic_failed" }
+                                        } finally {
+                                            exportingDiagnostics = false
+                                        }
                                     }
                                 },
                             )
@@ -972,6 +1009,7 @@ private fun SusfsStatusPanel(
         loading -> stringResource(R.string.processing)
         state.available -> stringResource(R.string.susfs_path_available, state.toolPath)
         state.error == "gki_mode_required" -> stringResource(R.string.susfs_path_gki_required)
+        state.error == "lkm_implementation_detected" -> stringResource(R.string.susfs_gki_lkm_detected)
         state.error == "root_unavailable" -> stringResource(R.string.susfs_path_root_unavailable)
         state.error == "path_feature_unavailable" -> stringResource(R.string.susfs_path_feature_unavailable)
         else -> stringResource(R.string.susfs_path_tool_unavailable)
@@ -1025,6 +1063,19 @@ private fun SusfsStatusPanel(
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Text(
+                        text = stringResource(
+                            R.string.susfs_implementation_info,
+                            state.capabilities.variant.ifBlank { stringResource(R.string.susfs_implementation_unknown) },
+                            stringResource(when (state.capabilities.implementation) {
+                                SusfsImplementation.Builtin -> R.string.susfs_implementation_builtin
+                                SusfsImplementation.Lkm -> R.string.susfs_implementation_lkm
+                                SusfsImplementation.Unknown -> R.string.susfs_implementation_unknown
+                            }),
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
                         text = when (page) {
                             SusfsPage.RuntimePolicy -> stringResource(R.string.susfs_runtime_page_summary)
                             SusfsPage.PathMasking -> stringResource(
@@ -1042,6 +1093,11 @@ private fun SusfsStatusPanel(
                         style = MaterialTheme.typography.bodySmall,
                     )
                     if (state.runtimeStatus.generation.isNotBlank()) {
+                        Text(
+                            text = stringResource(R.string.susfs_runtime_evidence_note),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                         Text(
                             text = stringResource(
                                 R.string.susfs_runtime_status_value,

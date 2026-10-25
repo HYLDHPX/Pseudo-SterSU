@@ -9,11 +9,12 @@ import me.weishu.kernelsu.ui.theme.defaultThemePresetForUiMode
 
 class InterfaceStyleTest {
     @Test
-    fun onlyThreeInterfaceStylesAreBundled() {
+    fun onlyTheThreeBaseLayoutsAreAvailableWithoutAStoreDownload() {
         assertEquals(
             listOf(InterfaceStyle.Miuix, InterfaceStyle.Material, InterfaceStyle.SidebarWidget),
             InterfaceStyle.selectableEntries,
         )
+        assertFalse(InterfaceStyle.Rain in InterfaceStyle.selectableEntries)
     }
 
     @Test
