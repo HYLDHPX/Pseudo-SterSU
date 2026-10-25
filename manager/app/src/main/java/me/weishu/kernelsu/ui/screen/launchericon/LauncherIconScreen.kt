@@ -94,7 +94,6 @@ import me.weishu.kernelsu.ui.util.adaptiveDialogContentMaxHeight
 import me.weishu.kernelsu.ui.util.LauncherIconOption
 import me.weishu.kernelsu.ui.util.InstalledLauncher
 import me.weishu.kernelsu.ui.util.InstalledLauncherStatus
-import me.weishu.kernelsu.ui.util.shouldAutoHideInstalledLauncher
 import me.weishu.kernelsu.ui.util.INSTALLED_LAUNCHER_HIDDEN
 import me.weishu.kernelsu.ui.util.UiPassthroughSettings
 import me.weishu.kernelsu.ui.theme.UiPassthroughTheme
@@ -141,7 +140,6 @@ fun LauncherIconScreen() {
     var preparing by remember { mutableStateOf(false) }
     var showHideConfirmation by remember { mutableStateOf(false) }
     var pendingInstallPath by rememberSaveable { mutableStateOf<String?>(null) }
-    var pendingInstallPreviousUpdateTime by rememberSaveable { mutableStateOf<Long?>(null) }
     var statusRefreshJob by remember { mutableStateOf<Job?>(null) }
     val customIconFailedMessage = stringResource(R.string.settings_app_icon_custom_failed)
     val defaultManagerName = stringResource(R.string.app_name)
@@ -155,37 +153,18 @@ fun LauncherIconScreen() {
         Toast.makeText(context, error.localizedMessage ?: customIconFailedMessage, Toast.LENGTH_LONG).show()
     }
     val installLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        val wasInstalling = pendingInstallPath != null
-        val previousUpdateTime = pendingInstallPreviousUpdateTime
         pendingInstallPath = null
-        pendingInstallPreviousUpdateTime = null
         refreshEntry() // Installer result codes are not reliable on all OEM installers.
-        if (wasInstalling) {
-            scope.launch {
-                try {
-                    val installed = withContext(Dispatchers.IO) { InstalledLauncher.status(context) }
-                    if (shouldAutoHideInstalledLauncher(previousUpdateTime, installed)) {
-                        InstalledLauncher.verifyAndHide(context)
-                    }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (error: Exception) {
-                    showError(error)
-                }
-            }
-        }
     }
     val installPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         val file = pendingInstallPath?.let(::File)
         if (context.packageManager.canRequestPackageInstalls() && file?.isFile == true) {
             runCatching { installLauncher.launch(InstalledLauncher.installationIntent(context, file)) }.onFailure {
                 pendingInstallPath = null
-                pendingInstallPreviousUpdateTime = null
                 showError(it)
             }
         } else {
             pendingInstallPath = null
-            pendingInstallPreviousUpdateTime = null
             Toast.makeText(context, R.string.launcher_install_permission, Toast.LENGTH_LONG).show()
         }
     }
@@ -280,12 +259,10 @@ fun LauncherIconScreen() {
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                             refreshEntry()
                         } else {
-                            val (file, previousUpdateTime) = withContext(Dispatchers.IO) {
-                                val previousUpdateTime = InstalledLauncher.status(context).lastUpdateTime
-                                InstalledLauncher.create(context, bitmap, managerName) to previousUpdateTime
+                            val file = withContext(Dispatchers.IO) {
+                                InstalledLauncher.create(context, bitmap, managerName)
                             }
                             pendingInstallPath = file.absolutePath
-                            pendingInstallPreviousUpdateTime = previousUpdateTime
                             if (context.packageManager.canRequestPackageInstalls()) {
                                 installLauncher.launch(InstalledLauncher.installationIntent(context, file))
                             } else {
@@ -300,7 +277,6 @@ fun LauncherIconScreen() {
                     throw cancelled
                 } catch (error: Exception) {
                     pendingInstallPath = null
-                    pendingInstallPreviousUpdateTime = null
                     showError(error)
                 } finally {
                     preparing = false

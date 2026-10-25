@@ -41,12 +41,23 @@ class InstalledLauncherTest {
         assertTrue(shouldAutoHideInstalledLauncher(1_000, installed))
         // Cancelling an install leaves the package timestamp unchanged.
         assertFalse(shouldAutoHideInstalledLauncher(2_000, installed))
+        assertFalse(shouldAutoHideInstalledLauncher(3_000, installed))
         assertFalse(shouldAutoHideInstalledLauncher(null, InstalledLauncherStatus(false, false, false)))
         assertFalse(shouldAutoHideInstalledLauncher(1_000, installed.copy(trusted = false)))
         assertFalse(shouldAutoHideInstalledLauncher(1_000, installed.copy(installed = false)))
         assertFalse(shouldAutoHideInstalledLauncher(1_000, installed.copy(hidden = true)))
         assertFalse(shouldAutoHideInstalledLauncher(null, installed.copy(lastUpdateTime = null)))
         assertFalse(shouldAutoHideInstalledLauncher(null, installed.copy(lastUpdateTime = 0)))
+    }
+
+    @Test
+    fun aPendingInstallSurvivesResumeButExpiresAndRejectsClockRollback() {
+        assertTrue(validPendingLauncherInstall(1_000, 1_000))
+        assertTrue(validPendingLauncherInstall(1_000, 601_000))
+        assertFalse(validPendingLauncherInstall(1_000, 601_001))
+        assertFalse(validPendingLauncherInstall(1_000, 999))
+        assertFalse(validPendingLauncherInstall(0, 1_000))
+        assertFalse(validPendingLauncherInstall(Long.MIN_VALUE, 1_000))
     }
 
     @Test
@@ -183,11 +194,11 @@ class InstalledLauncherTest {
         assertFalse(screen.contains("createManagerShortcut"))
         val installationResult = screen.substringAfter("val installLauncher = rememberLauncherForActivityResult(")
             .substringBefore("val installPermissionLauncher =")
-        assertTrue(installationResult.contains("pendingInstallPath != null"))
-        assertTrue(installationResult.contains("shouldAutoHideInstalledLauncher(previousUpdateTime, installed)"))
-        assertTrue(installationResult.contains("InstalledLauncher.verifyAndHide(context)"))
+        assertTrue(installationResult.contains("pendingInstallPath = null"))
+        assertFalse(installationResult.contains("InstalledLauncher.verifyAndHide(context)"))
         assertFalse(installationResult.contains("setComponentEnabledSetting"))
-        assertTrue(screen.contains("pendingInstallPreviousUpdateTime by rememberSaveable"))
+        assertTrue(entry.contains("suspend fun completePendingInstall(context: Context)"))
+        assertTrue(entry.contains("shouldAutoHideInstalledLauncher(previous, installed)"))
         assertTrue(entry.contains("status(context).trusted"))
         assertTrue(entry.contains("setCertificateSubject"))
         assertTrue(entry.contains("AndroidKeyStore"))
@@ -202,6 +213,8 @@ class InstalledLauncherTest {
         val main = source("ui/MainActivity.kt")
         assertTrue(main.substringAfter("override fun onPostResume()").substringBefore("override fun onStart()")
             .contains("InstalledLauncher.acceptChallenge(this, challenge)"))
+        assertTrue(main.substringAfter("override fun onPostResume()").substringBefore("override fun onStart()")
+            .contains("InstalledLauncher.completePendingInstall(this@MainActivity)"))
         assertTrue(source("ui/util/LauncherIconOption.kt").contains("InstalledLauncher.restore(appContext)"))
     }
 }

@@ -58,7 +58,7 @@ class CustomLauncherIconTest {
         assertFalse(branch.contains("InstalledLauncher."))
         assertFalse(branch.contains("installLauncher.launch"))
         assertFalse(branch.contains("installPermissionLauncher.launch"))
-        assertTrue(screen.contains("InstalledLauncher.create(context, bitmap, managerName) to previousUpdateTime"))
+        assertTrue(screen.contains("InstalledLauncher.create(context, bitmap, managerName)"))
     }
 
     @Test

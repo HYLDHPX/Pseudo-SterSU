@@ -4,10 +4,11 @@
 # Commons-compress
 -dontwarn com.github.luben.zstd.**
 
-# apksig's ASN.1 readers/encoders inspect annotated fields and no-arg constructors.
--keepattributes RuntimeVisibleAnnotations,AnnotationDefault
+# apksig reflects on annotated classes, generic field types and no-arg constructors.
+# R8 full mode also requires the class itself to be kept to retain its annotation.
+-keepattributes RuntimeVisibleAnnotations,AnnotationDefault,Signature
 -keep @interface com.android.apksig.internal.asn1.* { *; }
--keepclassmembers,allowobfuscation @com.android.apksig.internal.asn1.Asn1Class class * {
+-keep,allowobfuscation @com.android.apksig.internal.asn1.Asn1Class class * {
     public <init>();
     @com.android.apksig.internal.asn1.Asn1Field <fields>;
 }

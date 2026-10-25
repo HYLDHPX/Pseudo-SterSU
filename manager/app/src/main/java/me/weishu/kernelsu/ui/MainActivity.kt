@@ -106,6 +106,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.BuildConfig
@@ -308,6 +309,7 @@ import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 class MainActivity : ComponentActivity() {
+    private var launcherVerificationJob: Job? = null
 
     private val intentState = MutableStateFlow(0)
     private val managerReadyState = MutableStateFlow(false)
@@ -1117,11 +1119,25 @@ class MainActivity : ComponentActivity() {
 
     override fun onPostResume() {
         super.onPostResume()
-        val challenge = intent.getStringExtra("launcher_challenge") ?: return
-        intent.removeExtra("launcher_challenge")
-        // Hide aliases only after the signed entry has reached the real, resumed Manager.
-        if (!me.weishu.kernelsu.ui.util.InstalledLauncher.acceptChallenge(this, challenge)) {
-            android.widget.Toast.makeText(this, R.string.launcher_install_verify_failed, android.widget.Toast.LENGTH_LONG).show()
+        val challenge = intent.getStringExtra("launcher_challenge")
+        if (challenge != null) {
+            intent.removeExtra("launcher_challenge")
+            // Hide aliases only after the signed entry has reached the real, resumed Manager.
+            if (!me.weishu.kernelsu.ui.util.InstalledLauncher.acceptChallenge(this, challenge)) {
+                android.widget.Toast.makeText(this, R.string.launcher_install_verify_failed, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+        launcherVerificationJob?.cancel()
+        launcherVerificationJob = lifecycleScope.launch {
+            try {
+                me.weishu.kernelsu.ui.util.InstalledLauncher.completePendingInstall(this@MainActivity)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                android.util.Log.e("InstalledLauncher", "Unable to verify the newly installed entry", error)
+                android.widget.Toast.makeText(this@MainActivity, R.string.launcher_install_verify_failed,
+                    android.widget.Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -1136,6 +1152,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        launcherVerificationJob?.cancel()
         StartupSoundPlayer.stop()
         ClickSoundPlayer.release()
         BackgroundMusicPlayer.stop()

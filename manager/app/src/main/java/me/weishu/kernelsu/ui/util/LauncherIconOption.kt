@@ -81,11 +81,13 @@ fun applyLauncherIcon(context: Context, option: LauncherIconOption): Boolean {
             )
             if (candidate == option) synchronizeManagerIconShortcut(context, option)
         }
-        context.getSharedPreferences(SETTINGS_PREFERENCES, Context.MODE_PRIVATE).edit()
+        check(context.getSharedPreferences(SETTINGS_PREFERENCES, Context.MODE_PRIVATE).edit()
             .remove(INSTALLED_LAUNCHER_HIDDEN)
             .remove("installed_launcher_challenge")
             .remove("installed_launcher_challenge_time")
-            .commit()
+            .remove("installed_launcher_pending_time")
+            .remove("installed_launcher_pending_previous_update")
+            .commit())
         true
     }.onFailure {
         Log.e("LauncherIcon", "failed to apply launcher icon ${option.value}", it)

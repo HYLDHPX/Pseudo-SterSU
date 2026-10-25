@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Log
@@ -22,6 +23,9 @@ import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.Calendar
 import java.util.Date
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.MainActivity
 
@@ -31,6 +35,8 @@ private const val CHALLENGE_TIME_KEY = "installed_launcher_challenge_time"
 private const val KEY_ALIAS = "stersu-launcher-only-v1"
 private const val ENTRY_CLASS = "me.weishu.kernelsu.launcher.LauncherActivity"
 private const val CHALLENGE_EXTRA = "launcher_challenge"
+private const val PENDING_INSTALL_TIME = "installed_launcher_pending_time"
+private const val PENDING_INSTALL_PREVIOUS_UPDATE = "installed_launcher_pending_previous_update"
 
 internal fun validLauncherChallenge(expected: String?, actual: String?, createdAt: Long, now: Long): Boolean =
     !expected.isNullOrBlank() && expected == actual && createdAt > 0 && now >= createdAt && now - createdAt in 0..120_000L
@@ -44,7 +50,10 @@ internal data class InstalledLauncherStatus(
 
 internal fun shouldAutoHideInstalledLauncher(previousUpdateTime: Long?, current: InstalledLauncherStatus): Boolean =
     current.installed && current.trusted && !current.hidden &&
-        current.lastUpdateTime != null && current.lastUpdateTime > 0 && current.lastUpdateTime != previousUpdateTime
+        current.lastUpdateTime != null && current.lastUpdateTime > (previousUpdateTime ?: 0L)
+
+internal fun validPendingLauncherInstall(createdAt: Long, now: Long): Boolean =
+    createdAt > 0 && now >= createdAt && now - createdAt <= 600_000L
 
 /** This is only a launcher replacement; it never changes root or stealth mode. */
 internal object InstalledLauncher {
@@ -116,6 +125,9 @@ internal object InstalledLauncher {
             } catch (error: Exception) {
                 throw IllegalStateException(context.getString(R.string.launcher_install_sign_failed), error)
             }
+            check(preferences(context).edit()
+                .putLong(PENDING_INSTALL_TIME, System.currentTimeMillis())
+                .putLong(PENDING_INSTALL_PREVIOUS_UPDATE, current.lastUpdateTime ?: 0L).commit())
             return output
         } catch (error: Exception) {
             Log.e("InstalledLauncher", "Unable to generate launcher entry APK", error)
@@ -136,6 +148,12 @@ internal object InstalledLauncher {
 
     fun verifyAndHide(context: Context) {
         check(status(context).trusted) { context.getString(R.string.launcher_install_not_ready) }
+        val prefs = preferences(context)
+        // Returning from an OEM installer can deliver both a result and a resume.
+        // Do not replace a challenge which is already on its way through the entry.
+        val pendingChallenge = prefs.getString(CHALLENGE_KEY, null)
+        if (validLauncherChallenge(pendingChallenge, pendingChallenge,
+                prefs.getLong(CHALLENGE_TIME_KEY, 0L), System.currentTimeMillis())) return
         val nonce = ByteArray(32).also(SecureRandom()::nextBytes).joinToString("") { "%02x".format(it) }
         check(preferences(context).edit().putString(CHALLENGE_KEY, nonce)
             .putLong(CHALLENGE_TIME_KEY, System.currentTimeMillis()).commit())
@@ -146,6 +164,39 @@ internal object InstalledLauncher {
             clearChallenge(context)
             throw error
         }
+    }
+
+    /** Called only while the Manager is resumed; survives lost OEM installer result callbacks. */
+    suspend fun completePendingInstall(context: Context) {
+        val prefs = preferences(context)
+        val requestTime = prefs.getLong(PENDING_INSTALL_TIME, 0L)
+        if (requestTime == 0L) return
+        if (!validPendingLauncherInstall(requestTime, System.currentTimeMillis())) {
+            clearPendingInstall(context)
+            return
+        }
+        val previous = prefs.getLong(PENDING_INSTALL_PREVIOUS_UPDATE, 0L)
+        repeat(10) {
+            val installed = withContext(Dispatchers.IO) { status(context) }
+            // An explicit restore or a newer install attempt cancels this request.
+            if (prefs.getLong(PENDING_INSTALL_TIME, 0L) != requestTime ||
+                !validPendingLauncherInstall(requestTime, System.currentTimeMillis())) return
+            if (installed.hidden) {
+                clearPendingInstall(context)
+                return
+            }
+            if (shouldAutoHideInstalledLauncher(previous, installed)) {
+                verifyAndHide(context)
+                return
+            }
+            // Some package installers return before PackageManager publishes the new entry.
+            delay(300)
+        }
+    }
+
+    private fun clearPendingInstall(context: Context) {
+        preferences(context).edit().remove(PENDING_INSTALL_TIME)
+            .remove(PENDING_INSTALL_PREVIOUS_UPDATE).commit()
     }
 
     private fun clearChallenge(context: Context) {
@@ -159,15 +210,25 @@ internal object InstalledLauncher {
         if (!valid) return false
         clearChallenge(context) // One use, including failed attempts to hide.
         if (!status(context).trusted) return false
-        // Commit intent first. Any partial PackageManager failure restores the original icon.
-        if (!prefs.edit().putBoolean(INSTALLED_LAUNCHER_HIDDEN, true).commit()) return false
+        clearPendingInstall(context)
         return runCatching {
-            LauncherIconOption.entries.forEach {
-                context.packageManager.setComponentEnabledSetting(
-                    ComponentName(context.packageName, it.aliasClassName),
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP,
-                )
+            val packageManager = context.packageManager
+            val aliases = LauncherIconOption.entries.map { ComponentName(context.packageName, it.aliasClassName) }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.setComponentEnabledSettings(aliases.map {
+                    PackageManager.ComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        PackageManager.DONT_KILL_APP)
+                })
+            } else {
+                aliases.forEach {
+                    packageManager.setComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        PackageManager.DONT_KILL_APP)
+                }
             }
+            check(aliases.all {
+                packageManager.getComponentEnabledSetting(it) == PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            })
+            check(prefs.edit().putBoolean(INSTALLED_LAUNCHER_HIDDEN, true).commit())
             true
         }.getOrElse {
             restore(context)
@@ -177,6 +238,7 @@ internal object InstalledLauncher {
     }
 
     fun restore(context: Context): Boolean {
+        clearPendingInstall(context)
         val option = LauncherIconOption.fromValue(preferences(context).getString(LauncherIconOption.PREF_KEY, null))
         return applyLauncherIcon(context, option)
     }
