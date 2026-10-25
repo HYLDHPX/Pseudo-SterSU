@@ -10,7 +10,7 @@
     <a href="README.ko.md">한국어</a> ·
     <a href="README.es.md">Español</a>
   </p>
-  <p><a href="https://t.me/+LkrMQKXtXvpmYmNl">Telegram</a></p>
+  <p><a href="https://t.me/muyan762">Telegram</a></p>
 </div>
 
 SterSU 是基于 [KernelSU](https://github.com/tiann/KernelSU) 的开源衍生项目，面向 GKI 与 LKM 场景。它保留 Root 授权和模块管理能力，并扩展内核维护、管理器界面及可选功能。部分实现参考 [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) 等项目；SterSU 不是 KernelSU 或 SukiSU-Ultra 的官方发行版。
