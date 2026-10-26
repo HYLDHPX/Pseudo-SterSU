@@ -1281,10 +1281,7 @@
     <string name="settings_manager_name_dialog_summary">Leave empty to use the default name. This changes display and shortcut names only, not the package name or root status.</string>
     <string name="settings_manager_name_sync_lkm_card">Sync name to LKM status card</string>
     <string name="settings_manager_name_sync_settings_header">Sync name to settings header</string>
-    <string name="settings_home_title">Home header name</string>
-    <string name="settings_home_title_default_summary">Using the default name for the current interface style</string>
-    <string name="settings_home_title_custom_summary">Current name: %1$s</string>
-    <string name="settings_home_title_dialog_summary">Leave empty to use the current interface style\'s default home name. Up to 40 characters.</string>
+    <string name="settings_manager_name_sync_home_header">Sync name to home header</string>
     <string name="settings_app_icon_default">Default</string>
     <string name="settings_app_icon_fox_mask">Delta</string>
     <string name="settings_app_icon_opera_mask">Alpha</string>

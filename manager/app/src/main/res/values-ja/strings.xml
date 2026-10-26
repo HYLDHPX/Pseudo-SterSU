@@ -761,10 +761,7 @@
     <string name="settings_manager_name_custom_summary">カスタム ショートカット名: %1$s</string>
     <string name="settings_manager_name_input_label">マネージャー名</string>
     <string name="settings_manager_name_dialog_summary">デフォルトのアプリ名を使用するには、空のままにします。</string>
-    <string name="settings_home_title">ホームヘッダー名</string>
-    <string name="settings_home_title_default_summary">現在のインターフェイス スタイルのデフォルト名を使用する</string>
-    <string name="settings_home_title_custom_summary">現在の名前: %1$s</string>
-    <string name="settings_home_title_dialog_summary">現在のインターフェイス スタイル\&apos; のデフォルトのホーム名を使用するには、空のままにします。最大 40 文字。</string>
+    <string name="settings_manager_name_sync_home_header">ホームヘッダーに名前を同期</string>
     <string name="settings_app_icon_default">デフォルト</string>
     <string name="settings_app_icon_fox_mask">デルタ</string>
     <string name="settings_app_icon_opera_mask">アルファ</string>

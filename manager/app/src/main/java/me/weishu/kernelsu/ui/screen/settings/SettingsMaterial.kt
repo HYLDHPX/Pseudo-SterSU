@@ -40,7 +40,6 @@ import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Brush
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.rounded.Dashboard
-import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.ImageSearch
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Layers
@@ -214,21 +213,6 @@ fun SettingPagerMaterial(
                                 summary = stringResource(R.string.settings_manager_identity_summary),
                                 icon = Icons.Rounded.Badge,
                                 onClick = actions.onOpenLauncherIcon,
-                            )
-                        },
-                        {
-                            MaterialSettingsLink(
-                                title = stringResource(R.string.settings_home_title),
-                                summary = if (uiState.customHomeTitle.isBlank()) {
-                                    stringResource(R.string.settings_home_title_default_summary)
-                                } else {
-                                    stringResource(
-                                        R.string.settings_home_title_custom_summary,
-                                        uiState.customHomeTitle,
-                                    )
-                                },
-                                icon = Icons.Rounded.EditNote,
-                                onClick = actions.onEditHomeTitle,
                             )
                         },
                         {

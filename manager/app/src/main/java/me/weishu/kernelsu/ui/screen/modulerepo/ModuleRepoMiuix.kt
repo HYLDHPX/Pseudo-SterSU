@@ -487,28 +487,34 @@ fun ModuleRepoScreenMiuix(
                                             thickness = 0.5.dp,
                                             color = colorScheme.outline.copy(alpha = 0.5f)
                                         )
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            Row {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
                                                 Text(
                                                     text = module.latestVersion,
+                                                    modifier = Modifier.weight(1f),
                                                     fontSize = 12.sp,
                                                     color = colorScheme.onSurfaceVariantSummary,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis,
                                                 )
                                                 RepoStarsMiuix(module.stars, Modifier.padding(start = 12.dp))
-                                                Spacer(Modifier.weight(1f))
-                                                if (module.latestReleaseTime.isNotEmpty()) {
-                                                    Text(
-                                                        text = module.latestReleaseTime,
-                                                        fontSize = 12.sp,
-                                                        color = colorScheme.onSurfaceVariantSummary,
-                                                        textAlign = TextAlign.End
-                                                    )
-                                                }
+                                            }
+                                            if (module.latestReleaseTime.isNotEmpty()) {
+                                                Text(
+                                                    text = module.latestReleaseTime,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    fontSize = 12.sp,
+                                                    color = colorScheme.onSurfaceVariantSummary,
+                                                    textAlign = TextAlign.End,
+                                                    maxLines = 1,
+                                                    softWrap = false,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
                                             }
                                         }
                                     }
@@ -568,7 +574,9 @@ private fun RepoStarsMiuix(stars: Int?, modifier: Modifier = Modifier) {
             text = formatStarCount(stars),
             fontSize = 12.sp,
             color = colorScheme.onSurfaceVariantSummary,
-            modifier = Modifier.padding(start = 4.dp)
+            modifier = Modifier.padding(start = 4.dp),
+            maxLines = 1,
+            softWrap = false,
         )
     }
 }

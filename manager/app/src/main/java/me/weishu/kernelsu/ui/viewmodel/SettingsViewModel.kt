@@ -24,6 +24,7 @@ import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
 import me.weishu.kernelsu.data.repository.CUSTOM_MANAGER_NAME_KEY
 import me.weishu.kernelsu.data.repository.SYNC_MANAGER_NAME_LKM_CARD_KEY
 import me.weishu.kernelsu.data.repository.SYNC_MANAGER_NAME_SETTINGS_HEADER_KEY
+import me.weishu.kernelsu.data.repository.SYNC_MANAGER_NAME_HOME_HEADER_KEY
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.InterfaceStyle
 import me.weishu.kernelsu.ui.resolveRealtimeBlurEnabled
@@ -90,13 +91,15 @@ class SettingsViewModel(
     private val managerNameListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == CUSTOM_MANAGER_NAME_KEY ||
             key == SYNC_MANAGER_NAME_LKM_CARD_KEY ||
-            key == SYNC_MANAGER_NAME_SETTINGS_HEADER_KEY
+            key == SYNC_MANAGER_NAME_SETTINGS_HEADER_KEY ||
+            key == SYNC_MANAGER_NAME_HOME_HEADER_KEY
         ) {
             _uiState.update {
                 it.copy(
                     customManagerName = repo.customManagerName,
                     syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard,
                     syncManagerNameToSettingsHeader = repo.syncManagerNameToSettingsHeader,
+                    syncManagerNameToHomeHeader = repo.syncManagerNameToHomeHeader,
                 )
             }
         }
@@ -211,7 +214,7 @@ class SettingsViewModel(
             val customManagerName = repo.customManagerName
             val syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard
             val syncManagerNameToSettingsHeader = repo.syncManagerNameToSettingsHeader
-            val customHomeTitle = repo.customHomeTitle
+            val syncManagerNameToHomeHeader = repo.syncManagerNameToHomeHeader
             val customWallpaperUri = repo.customWallpaperUri
             val customWallpaperOpacity = repo.customWallpaperOpacity
             val customWallpaperVisualSettings = repo.customWallpaperVisualSettings
@@ -343,7 +346,7 @@ class SettingsViewModel(
                     customManagerName = customManagerName,
                     syncManagerNameToLkmCard = syncManagerNameToLkmCard,
                     syncManagerNameToSettingsHeader = syncManagerNameToSettingsHeader,
-                    customHomeTitle = customHomeTitle,
+                    syncManagerNameToHomeHeader = syncManagerNameToHomeHeader,
                     customWallpaperUri = customWallpaperUri,
                     customWallpaperOpacity = customWallpaperOpacity,
                     customWallpaperVisualSettings = customWallpaperVisualSettings,
@@ -647,20 +650,16 @@ class SettingsViewModel(
         _uiState.update { it.copy(launcherIcon = repo.launcherIcon) }
     }
 
-    fun setCustomManagerName(name: String, syncLkmCard: Boolean, syncSettingsHeader: Boolean) {
-        repo.setManagerNameSettings(name, syncLkmCard, syncSettingsHeader)
+    fun setCustomManagerName(name: String, syncLkmCard: Boolean, syncSettingsHeader: Boolean, syncHomeHeader: Boolean) {
+        repo.setManagerNameSettings(name, syncLkmCard, syncSettingsHeader, syncHomeHeader)
         _uiState.update {
             it.copy(
                 customManagerName = repo.customManagerName,
                 syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard,
                 syncManagerNameToSettingsHeader = repo.syncManagerNameToSettingsHeader,
+                syncManagerNameToHomeHeader = repo.syncManagerNameToHomeHeader,
             )
         }
-    }
-
-    fun setCustomHomeTitle(title: String) {
-        repo.customHomeTitle = title
-        _uiState.update { it.copy(customHomeTitle = repo.customHomeTitle) }
     }
 
     fun setCustomWallpaperUri(uri: String?) {

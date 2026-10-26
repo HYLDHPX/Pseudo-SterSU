@@ -766,10 +766,7 @@
     <string name="settings_manager_name_custom_summary">Пользовательское имя ярлыка: %1$s</string>
     <string name="settings_manager_name_input_label">Имя менеджера</string>
     <string name="settings_manager_name_dialog_summary">Оставьте пустым, чтобы использовать имя приложения по умолчанию.</string>
-    <string name="settings_home_title">Имя домашнего заголовка</string>
-    <string name="settings_home_title_default_summary">Использование имени по умолчанию для текущего стиля интерфейса.</string>
-    <string name="settings_home_title_custom_summary">Текущее имя: %1$s</string>
-    <string name="settings_home_title_dialog_summary">Оставьте пустым, чтобы использовать текущее домашнее имя стиля интерфейса\&apos;s по умолчанию. До 40 символов.</string>
+    <string name="settings_manager_name_sync_home_header">Синхронизировать имя с заголовком главной страницы</string>
     <string name="settings_app_icon_default">По умолчанию</string>
     <string name="settings_app_icon_fox_mask">Дельта</string>
     <string name="settings_app_icon_opera_mask">Альфа</string>

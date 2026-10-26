@@ -137,6 +137,7 @@ private const val SETTINGS_PREFS = "settings"
 const val CUSTOM_MANAGER_NAME_KEY = "custom_manager_name"
 const val SYNC_MANAGER_NAME_LKM_CARD_KEY = "sync_manager_name_lkm_card"
 const val SYNC_MANAGER_NAME_SETTINGS_HEADER_KEY = "sync_manager_name_settings_header"
+const val SYNC_MANAGER_NAME_HOME_HEADER_KEY = "sync_manager_name_home_header"
 
 class SettingsRepositoryImpl : SettingsRepository {
 
@@ -144,7 +145,6 @@ class SettingsRepositoryImpl : SettingsRepository {
         private const val INTENT_TOKEN_KEY = "intent_token"
         private val secureRandom = SecureRandom()
         const val MAX_CUSTOM_MANAGER_NAME_LENGTH = 40
-        const val MAX_CUSTOM_HOME_TITLE_LENGTH = 40
         const val CUSTOM_THEME_PRESET_IDS_KEY = "custom_theme_preset_ids"
         const val MAX_RECENT_UI_DECORATION_COMPONENTS = 16
         val CUSTOM_THEME_PRESET_FIELDS = listOf(
@@ -606,27 +606,22 @@ class SettingsRepositoryImpl : SettingsRepository {
     override val syncManagerNameToSettingsHeader: Boolean
         get() = prefs.getBoolean(SYNC_MANAGER_NAME_SETTINGS_HEADER_KEY, false)
 
-    override fun setManagerNameSettings(name: String, syncLkmCard: Boolean, syncSettingsHeader: Boolean) {
+    override val syncManagerNameToHomeHeader: Boolean
+        get() = prefs.getBoolean(SYNC_MANAGER_NAME_HOME_HEADER_KEY, false)
+
+    override val homeHeaderName: String
+        get() = if (syncManagerNameToHomeHeader) customManagerName else ""
+
+    override fun setManagerNameSettings(name: String, syncLkmCard: Boolean, syncSettingsHeader: Boolean, syncHomeHeader: Boolean) {
         val value = sanitizeCustomManagerName(name)
         prefs.edit {
             if (value.isBlank()) remove(CUSTOM_MANAGER_NAME_KEY) else putString(CUSTOM_MANAGER_NAME_KEY, value)
             putBoolean(SYNC_MANAGER_NAME_LKM_CARD_KEY, syncLkmCard)
             putBoolean(SYNC_MANAGER_NAME_SETTINGS_HEADER_KEY, syncSettingsHeader)
+            putBoolean(SYNC_MANAGER_NAME_HOME_HEADER_KEY, syncHomeHeader)
+            remove("custom_home_title")
         }
     }
-
-    override var customHomeTitle: String
-        get() = sanitizeCustomHomeTitle(prefs.getString(CUSTOM_HOME_TITLE_KEY, null))
-        set(value) {
-            val title = sanitizeCustomHomeTitle(value)
-            prefs.edit {
-                if (title.isBlank()) {
-                    remove(CUSTOM_HOME_TITLE_KEY)
-                } else {
-                    putString(CUSTOM_HOME_TITLE_KEY, title)
-                }
-            }
-        }
 
     override var customWallpaperUri: String?
         get() = prefs.getString(CUSTOM_WALLPAPER_URI_KEY, null)
@@ -1344,10 +1339,6 @@ class SettingsRepositoryImpl : SettingsRepository {
 
     private fun sanitizeCustomManagerName(value: String?): String {
         return value.orEmpty().trim().take(MAX_CUSTOM_MANAGER_NAME_LENGTH)
-    }
-
-    private fun sanitizeCustomHomeTitle(value: String?): String {
-        return value.orEmpty().trim().take(MAX_CUSTOM_HOME_TITLE_LENGTH)
     }
 
 }

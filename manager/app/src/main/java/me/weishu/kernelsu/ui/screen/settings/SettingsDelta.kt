@@ -24,7 +24,6 @@ import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Badge
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DeveloperMode
-import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.ImageSearch
@@ -153,16 +152,6 @@ fun SettingPagerDelta(
                     summary = stringResource(R.string.settings_manager_identity_summary),
                     icon = Icons.Rounded.Apps,
                     onClick = actions.onOpenLauncherIcon,
-                )
-                DeltaActionRow(
-                    title = stringResource(R.string.settings_home_title),
-                    summary = if (uiState.customHomeTitle.isBlank()) {
-                        stringResource(R.string.settings_home_title_default_summary)
-                    } else {
-                        stringResource(R.string.settings_home_title_custom_summary, uiState.customHomeTitle)
-                    },
-                    icon = Icons.Rounded.EditNote,
-                    onClick = actions.onEditHomeTitle,
                 )
                 DeltaSwitchRow(
                     title = stringResource(R.string.settings_show_home_support_card),

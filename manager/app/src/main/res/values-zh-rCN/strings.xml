@@ -1392,10 +1392,7 @@
     <string name="settings_manager_name_dialog_summary">留空恢复默认名称。仅修改显示和快捷入口名称，不更改包名或 Root 状态。</string>
     <string name="settings_manager_name_sync_lkm_card">同步到 LKM 状态卡片</string>
     <string name="settings_manager_name_sync_settings_header">同步到设置页面顶部</string>
-    <string name="settings_home_title">自定义主页顶部名称</string>
-    <string name="settings_home_title_default_summary">当前跟随界面风格使用默认名称</string>
-    <string name="settings_home_title_custom_summary">当前名称：%1$s</string>
-    <string name="settings_home_title_dialog_summary">留空则恢复当前界面风格的默认主页名称，最多 40 个字符。</string>
+    <string name="settings_manager_name_sync_home_header">同步主页顶部名称</string>
     <string name="settings_app_icon_default">默认</string>
     <string name="settings_app_icon_fox_mask">德尔塔</string>
     <string name="settings_app_icon_opera_mask">阿尔法</string>

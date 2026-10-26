@@ -48,7 +48,6 @@ internal object SettingsCatalog {
 
         entry("manager_identity", SettingsCategory.HomeAndManager, R.string.settings_manager_identity, R.string.settings_manager_identity_summary),
         entry("dynamic_manager", SettingsCategory.HomeAndManager, R.string.dynamic_manager_title, R.string.dynamic_manager_settings_summary),
-        entry("home_title", SettingsCategory.HomeAndManager, R.string.settings_home_title, R.string.settings_home_title_default_summary),
         entry("support_card", SettingsCategory.HomeAndManager, R.string.settings_show_home_support_card, R.string.settings_show_home_support_card_summary),
         entry("learn_card", SettingsCategory.HomeAndManager, R.string.settings_show_home_learn_card, R.string.settings_show_home_learn_card_summary),
 

@@ -40,12 +40,12 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TextFieldDefaults
-import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.CheckboxLocation
 import top.yukonga.miuix.kmp.preference.CheckboxPreference
-import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
+import top.yukonga.miuix.kmp.window.WindowDialog
 
 @Composable
 fun RootProfileConfigMiuix(
@@ -176,7 +176,7 @@ private fun GroupsPanel(
 
     val currentSelection = remember(selected) { mutableStateOf(selected.toSet()) }
 
-    OverlayDialog(
+    WindowDialog(
         show = showDialog.value,
         title = stringResource(R.string.profile_groups),
         summary = "${currentSelection.value.size} / 32",
@@ -255,7 +255,7 @@ private fun MountNameSpacePanel(
     profile: Natives.Profile,
     onMntNamespaceChange: (namespaceType: Int) -> Unit
 ) {
-    OverlayDropdownPreference(
+    WindowDropdownPreference(
         enabled = enabled,
         title = stringResource(id = R.string.profile_namespace),
         items = listOf(
@@ -283,7 +283,7 @@ private fun RootProfileFlagPanel(
 
     val currentSelection = remember(selected) { mutableStateOf(selected.toSet()) }
 
-    OverlayDialog(
+    WindowDialog(
         show = showDialog.value,
         title = stringResource(R.string.profile_flags),
         onDismissRequest = { showDialog.value = false },
@@ -369,7 +369,7 @@ private fun CapsPanel(
 
     val currentSelection = remember(selected) { mutableStateOf(selected.toSet()) }
 
-    OverlayDialog(
+    WindowDialog(
         show = showDialog.value,
         title = stringResource(R.string.profile_capabilities),
         onDismissRequest = { showDialog.value = false },
@@ -458,7 +458,7 @@ private fun SELinuxPanel(
     }
     val isRulesValid = remember(rules) { isSepolicyValid(rules) }
 
-    OverlayDialog(
+    WindowDialog(
         show = showDialog.value,
         title = stringResource(R.string.profile_selinux_context),
         onDismissRequest = { showDialog.value = false },

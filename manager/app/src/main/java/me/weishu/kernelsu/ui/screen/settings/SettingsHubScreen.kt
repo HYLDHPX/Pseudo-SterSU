@@ -286,7 +286,7 @@ internal fun SettingsCategory.icon(): ImageVector = when (this) {
 @Composable
 private fun categoryStatus(category: SettingsCategory, uiState: SettingsUiState): String? = when (category) {
     SettingsCategory.Appearance -> null
-    SettingsCategory.HomeAndManager -> uiState.customHomeTitle.takeIf(String::isNotBlank)
+    SettingsCategory.HomeAndManager -> uiState.customManagerName.takeIf(String::isNotBlank)
     SettingsCategory.RootAndPermissions -> when {
         uiState.isLateLoadMode -> stringResource(R.string.settings_runtime_mode_jailbreak)
         uiState.isLkmMode -> stringResource(R.string.settings_runtime_mode_lkm)

@@ -97,7 +97,7 @@ data class HomeUiState(
     val showHomeSupportCard: Boolean = true,
     val showHomeLearnCard: Boolean = true,
     val miuixClassicHomeLayoutEnabled: Boolean = false,
-    val customHomeTitle: String = "",
+    val homeHeaderName: String = "",
     val customManagerName: String = "",
     val syncManagerNameToLkmCard: Boolean = false,
     val superuserCount: Int,

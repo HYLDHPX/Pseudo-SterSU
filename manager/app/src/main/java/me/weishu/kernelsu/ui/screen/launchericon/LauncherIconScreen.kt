@@ -299,6 +299,7 @@ fun LauncherIconScreen() {
         initialName = uiState.customManagerName,
         initialSyncLkmCard = uiState.syncManagerNameToLkmCard,
         initialSyncSettingsHeader = uiState.syncManagerNameToSettingsHeader,
+        initialSyncHomeHeader = uiState.syncManagerNameToHomeHeader,
         onDismissRequest = { showManagerNameDialog = false },
         onConfirm = viewModel::setCustomManagerName,
     )

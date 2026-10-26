@@ -40,19 +40,21 @@ fun ManagerNameDialog(
     initialName: String,
     initialSyncLkmCard: Boolean,
     initialSyncSettingsHeader: Boolean,
+    initialSyncHomeHeader: Boolean,
     onDismissRequest: () -> Unit,
-    onConfirm: (String, Boolean, Boolean) -> Unit,
+    onConfirm: (String, Boolean, Boolean, Boolean) -> Unit,
 ) {
     if (!show) return
     var syncLkmCard by rememberSaveable(initialSyncLkmCard) { mutableStateOf(initialSyncLkmCard) }
     var syncSettingsHeader by rememberSaveable(initialSyncSettingsHeader) { mutableStateOf(initialSyncSettingsHeader) }
+    var syncHomeHeader by rememberSaveable(initialSyncHomeHeader) { mutableStateOf(initialSyncHomeHeader) }
     NameEditDialog(
         initialName = initialName,
         titleRes = R.string.settings_manager_name,
         summaryRes = R.string.settings_manager_name_dialog_summary,
         inputLabelRes = R.string.settings_manager_name_input_label,
         onDismissRequest = onDismissRequest,
-        onConfirm = { onConfirm(it, syncLkmCard, syncSettingsHeader) },
+        onConfirm = { onConfirm(it, syncLkmCard, syncSettingsHeader, syncHomeHeader) },
         additionalContent = {
             ManagerNameSyncOption(
                 label = stringResource(R.string.settings_manager_name_sync_lkm_card),
@@ -63,6 +65,11 @@ fun ManagerNameDialog(
                 label = stringResource(R.string.settings_manager_name_sync_settings_header),
                 checked = syncSettingsHeader,
                 onCheckedChange = { syncSettingsHeader = it },
+            )
+            ManagerNameSyncOption(
+                label = stringResource(R.string.settings_manager_name_sync_home_header),
+                checked = syncHomeHeader,
+                onCheckedChange = { syncHomeHeader = it },
             )
         },
     )
@@ -81,23 +88,6 @@ private fun ManagerNameSyncOption(label: String, checked: Boolean, onCheckedChan
         Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         ExpressiveSwitch(checked = checked, onCheckedChange = null)
     }
-}
-
-@Composable
-fun HomeTitleDialog(
-    show: Boolean,
-    initialTitle: String,
-    onDismissRequest: () -> Unit,
-    onConfirm: (String) -> Unit,
-) {
-    if (!show) return
-    NameEditDialog(
-        initialName = initialTitle,
-        titleRes = R.string.settings_home_title,
-        summaryRes = R.string.settings_home_title_dialog_summary,
-        onDismissRequest = onDismissRequest,
-        onConfirm = onConfirm,
-    )
 }
 
 @Composable

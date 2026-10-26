@@ -543,10 +543,7 @@
     <string name="module_wallpaper_slot_save_failed">無法儲存目前桌布</string>
     <string name="module_wallpaper_slot_apply_failed">無法切換至已儲存的桌布</string>
     <string name="module_wallpaper_slot_delete_failed">無法刪除已儲存的桌布</string>
-    <string name="settings_home_title">自訂主頁頂部名稱</string>
-    <string name="settings_home_title_default_summary">目前依介面風格使用預設名稱</string>
-    <string name="settings_home_title_custom_summary">目前名稱：%1$s</string>
-    <string name="settings_home_title_dialog_summary">留空則恢復目前介面風格的預設主頁名稱，最多 40 個字元。</string>
+    <string name="settings_manager_name_sync_home_header">同步主頁頂部名稱</string>
     <string name="cloud_theme_store_title">雲端主題</string>
     <string name="cloud_theme_tab_discover">探索</string>
     <string name="cloud_theme_discover_heading">探索主題</string>

@@ -143,10 +143,10 @@ class SettingsCatalogTest {
     }
 
     @Test
-    fun homeAndManagerCountIncludesDynamicManager() {
+    fun homeAndManagerKeepsIdentitySettingsWithoutStandaloneHomeTitle() {
         assertEquals(
-            5,
-            SettingsCatalog.visibleEntryCount(SettingsCategory.HomeAndManager, SettingsUiState()),
+            listOf("manager_identity", "dynamic_manager", "support_card", "learn_card"),
+            SettingsCatalog.entriesFor(SettingsCategory.HomeAndManager, SettingsUiState()).map { it.key },
         )
         assertEquals(
             false,

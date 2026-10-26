@@ -789,10 +789,7 @@
     <string name="settings_manager_name_custom_summary">Nom du raccourci personnalisé : %1$s</string>
     <string name="settings_manager_name_input_label">Nom du gestionnaire</string>
     <string name="settings_manager_name_dialog_summary">Laissez vide pour utiliser le nom de l\&apos;application par défaut.</string>
-    <string name="settings_home_title">Nom de l\&apos;en-tête d\&apos;accueil</string>
-    <string name="settings_home_title_default_summary">Utilisation du nom par défaut pour le style d\&apos;interface actuel</string>
-    <string name="settings_home_title_custom_summary">Nom actuel : %1$s</string>
-    <string name="settings_home_title_dialog_summary">Laissez vide pour utiliser le nom d\&apos;accueil par défaut du style d\&apos;interface actuel\&apos;. Jusqu\&apos;à 40 caractères.</string>
+    <string name="settings_manager_name_sync_home_header">Synchroniser le nom avec l’en-tête d’accueil</string>
     <string name="settings_app_icon_default">Par défaut</string>
     <string name="settings_app_icon_fox_mask">Delta</string>
     <string name="settings_app_icon_opera_mask">Alpha</string>

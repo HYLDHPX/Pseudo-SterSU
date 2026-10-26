@@ -59,7 +59,7 @@ fun HomePagerSkrootpro(
     }
 
     SkrootproScreen(
-        title = state.customHomeTitle.ifBlank { stringResource(R.string.skrootpro_title) },
+        title = state.homeHeaderName.ifBlank { stringResource(R.string.skrootpro_title) },
         showAdd = state.showSusfsPathConfig,
         onAddClick = actions.onSusfsPathClick,
         actionIcon = Icons.Rounded.Apps,

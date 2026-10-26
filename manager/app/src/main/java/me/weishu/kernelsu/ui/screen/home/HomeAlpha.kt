@@ -52,7 +52,7 @@ fun HomePagerAlpha(
 ) {
     val warnings = homeWarningMessages(state)
     AlphaScreen(
-        title = state.customHomeTitle.ifBlank { stringResource(R.string.home) },
+        title = state.homeHeaderName.ifBlank { stringResource(R.string.home) },
         bottomInnerPadding = bottomInnerPadding,
         topActionIcon = Icons.Rounded.Apps.takeIf { state.showSusfsPathConfig },
         onTopActionClick = actions.onSusfsPathClick,
@@ -108,7 +108,7 @@ private fun AlphaStatusCard(
                     modifier = Modifier.size(40.dp),
                 )
                 Text(
-                    text = state.customHomeTitle.ifBlank { stringResource(R.string.app_name) },
+                    text = state.homeHeaderName.ifBlank { stringResource(R.string.app_name) },
                     color = AlphaColors.Accent,
                     fontSize = alphaSp(22f, maxScale = 1.02f),
                     lineHeight = alphaSp(26f, maxScale = 1.02f),

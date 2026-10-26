@@ -46,7 +46,6 @@ import androidx.compose.material.icons.rounded.ContactPage
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeveloperMode
-import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.ElectricalServices
 import androidx.compose.material.icons.rounded.Fence
 import androidx.compose.material.icons.rounded.FolderDelete
@@ -128,7 +127,6 @@ fun SettingsCategoryScreen(routeValue: String) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val onBack = dropUnlessResumed { navigator.pop() }
-    var showHomeTitleDialog by rememberSaveable { mutableStateOf(false) }
     var showSendLogDialog by rememberSaveable { mutableStateOf(false) }
     var showUninstallDialog by rememberSaveable { mutableStateOf(false) }
     var showStealthModeDialog by rememberSaveable { mutableStateOf(false) }
@@ -196,7 +194,6 @@ fun SettingsCategoryScreen(routeValue: String) {
             }
             SettingsCategory.HomeAndManager -> HomeManagerSettingsContent(
                 uiState = uiState,
-                onEditHomeTitle = { showHomeTitleDialog = true },
                 onSetShowSupportCard = viewModel::setShowHomeSupportCard,
                 onSetShowLearnCard = viewModel::setShowHomeLearnCard,
                 onOpen = navigator::push,
@@ -256,12 +253,6 @@ fun SettingsCategoryScreen(routeValue: String) {
         }
     }
 
-    HomeTitleDialog(
-        show = showHomeTitleDialog,
-        initialTitle = uiState.customHomeTitle,
-        onDismissRequest = { showHomeTitleDialog = false },
-        onConfirm = viewModel::setCustomHomeTitle,
-    )
     SendLogDialog(
         show = showSendLogDialog,
         onDismissRequest = { showSendLogDialog = false },
@@ -437,7 +428,6 @@ private fun AppearanceSettingsContent(
 @Composable
 private fun HomeManagerSettingsContent(
     uiState: SettingsUiState,
-    onEditHomeTitle: () -> Unit,
     onSetShowSupportCard: (Boolean) -> Unit,
     onSetShowLearnCard: (Boolean) -> Unit,
     onOpen: (Route) -> Unit,
@@ -455,17 +445,6 @@ private fun HomeManagerSettingsContent(
             summary = stringResource(R.string.dynamic_manager_settings_summary),
             icon = Icons.Rounded.AdminPanelSettings,
             onClick = { onOpen(Route.DynamicManager) },
-        )
-        SettingsDivider()
-        SettingsActionRow(
-            title = stringResource(R.string.settings_home_title),
-            summary = if (uiState.customHomeTitle.isBlank()) {
-                stringResource(R.string.settings_home_title_default_summary)
-            } else {
-                stringResource(R.string.settings_home_title_custom_summary, uiState.customHomeTitle)
-            },
-            icon = Icons.Rounded.EditNote,
-            onClick = onEditHomeTitle,
         )
     }
     SettingsGroup(stringResource(R.string.settings_group_home_cards)) {

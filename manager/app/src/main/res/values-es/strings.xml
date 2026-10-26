@@ -727,10 +727,7 @@
     <string name="settings_manager_name_custom_summary">Nombre de acceso directo personalizado: %1$s</string>
     <string name="settings_manager_name_input_label">Nombre del administrador</string>
     <string name="settings_manager_name_dialog_summary">Déjelo vacío para usar el nombre predeterminado de la aplicación.</string>
-    <string name="settings_home_title">Nombre del encabezado de inicio</string>
-    <string name="settings_home_title_default_summary">Usando el nombre predeterminado para el estilo de interfaz actual</string>
-    <string name="settings_home_title_custom_summary">Nombre actual: %1$s</string>
-    <string name="settings_home_title_dialog_summary">Déjelo vacío para usar el nombre de inicio predeterminado del estilo de interfaz actual \&apos;. Hasta 40 caracteres.</string>
+    <string name="settings_manager_name_sync_home_header">Sincronizar nombre con la cabecera de inicio</string>
     <string name="settings_app_icon_default">Predeterminado</string>
     <string name="settings_app_icon_fox_mask">Delta</string>
     <string name="settings_app_icon_opera_mask">Alfa</string>

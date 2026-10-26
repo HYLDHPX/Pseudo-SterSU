@@ -98,7 +98,7 @@ private fun HomePagerMaterialContent(
     ExpressiveScaffold(
         topBar = {
             TopBar(
-                title = state.customHomeTitle.ifBlank { stringResource(R.string.app_name) },
+                title = state.homeHeaderName.ifBlank { stringResource(R.string.app_name) },
                 showSusfs = state.showSusfsPathConfig,
                 onSusfsClick = actions.onSusfsPathClick,
                 showReboot = showPrivilegedActions,

@@ -22,7 +22,7 @@ import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.data.repository.SettingsRepository
 import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
-import me.weishu.kernelsu.data.repository.CUSTOM_HOME_TITLE_KEY
+import me.weishu.kernelsu.data.repository.SYNC_MANAGER_NAME_HOME_HEADER_KEY
 import me.weishu.kernelsu.data.repository.CUSTOM_MANAGER_NAME_KEY
 import me.weishu.kernelsu.data.repository.SYNC_MANAGER_NAME_LKM_CARD_KEY
 import me.weishu.kernelsu.data.repository.MIUIX_CLASSIC_HOME_LAYOUT_KEY
@@ -81,7 +81,7 @@ class HomeViewModel(
             key == SHOW_HOME_SUPPORT_CARD_KEY ||
             key == SHOW_HOME_LEARN_CARD_KEY ||
             key == MIUIX_CLASSIC_HOME_LAYOUT_KEY ||
-            key == CUSTOM_HOME_TITLE_KEY ||
+            key == SYNC_MANAGER_NAME_HOME_HEADER_KEY ||
             key == CUSTOM_MANAGER_NAME_KEY ||
             key == SYNC_MANAGER_NAME_LKM_CARD_KEY
         ) {
@@ -92,7 +92,7 @@ class HomeViewModel(
                     showHomeSupportCard = repo.showHomeSupportCard,
                     showHomeLearnCard = repo.showHomeLearnCard,
                     miuixClassicHomeLayoutEnabled = repo.miuixClassicHomeLayoutEnabled,
-                    customHomeTitle = repo.customHomeTitle,
+                    homeHeaderName = repo.homeHeaderName,
                     customManagerName = repo.customManagerName,
                     syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard,
                 )
@@ -292,7 +292,7 @@ class HomeViewModel(
             showHomeSupportCard = repo.showHomeSupportCard,
             showHomeLearnCard = repo.showHomeLearnCard,
             miuixClassicHomeLayoutEnabled = repo.miuixClassicHomeLayoutEnabled,
-            customHomeTitle = repo.customHomeTitle,
+            homeHeaderName = repo.homeHeaderName,
             customManagerName = repo.customManagerName,
             syncManagerNameToLkmCard = repo.syncManagerNameToLkmCard,
             superuserCount = runCatching { getSuperuserCount() }.getOrDefault(0),
@@ -456,7 +456,7 @@ class HomeViewModel(
             miuixClassicHomeLayoutEnabled = runCatching {
                 repo.miuixClassicHomeLayoutEnabled
             }.getOrDefault(false),
-            customHomeTitle = runCatching { repo.customHomeTitle }.getOrDefault(""),
+            homeHeaderName = runCatching { repo.homeHeaderName }.getOrDefault(""),
             customManagerName = runCatching { repo.customManagerName }.getOrDefault(""),
             syncManagerNameToLkmCard = runCatching { repo.syncManagerNameToLkmCard }.getOrDefault(false),
             superuserCount = 0,

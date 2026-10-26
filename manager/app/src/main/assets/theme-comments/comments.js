@@ -9,11 +9,13 @@ const copy = chinese ? {
   loading: '\u6b63\u5728\u8fde\u63a5\u8bc4\u8bba\u670d\u52a1\u2026',
   failed: '\u8bc4\u8bba\u670d\u52a1\u6682\u65f6\u65e0\u6cd5\u8fde\u63a5\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
   retry: '\u91cd\u8bd5',
+  optional: '\u53ef\u9009\uff0c\u4e0d\u4f1a\u516c\u5f00',
   placeholder: '\u5206\u4eab\u4f7f\u7528\u53cd\u9988\uff0c\u8bf7\u52ff\u53d1\u5e03\u5bc6\u7801\u6216\u9690\u79c1\u65e5\u5fd7\u3002\u8bc4\u8bba\u53ef\u80fd\u9700\u8981\u5ba1\u6838\u3002',
   guidance: '\u6635\u79f0\u4e0d\u4ee3\u8868\u5df2\u9a8c\u8bc1\u7684 GitHub \u8eab\u4efd\u3002\u8bf7\u6587\u660e\u4ea4\u6d41\uff0c\u4e0d\u8981\u5206\u4eab\u4e2a\u4eba\u9690\u79c1\u3002',
 } : {
   title: 'Comments', loading: 'Connecting to the comment service...',
   failed: 'The comment service could not be reached. Please try again later.', retry: 'Retry',
+  optional: 'optional, not public',
   placeholder: 'Share feedback. Do not post passwords or private logs. Comments may require moderation.',
   guidance: 'Nicknames are not verified GitHub identities. Keep discussions respectful and protect your privacy.',
 };
@@ -145,7 +147,7 @@ async function mountComments() {
       pageSize: 10, commentSorting: 'latest', wordLimit: 1000,
       emoji: false, search: false, imageUploader: false, texRenderer: false,
       highlighter: false, reaction: false, pageview: false, comment: false, noRss: true,
-      locale: { placeholder: copy.placeholder },
+      locale: { placeholder: copy.placeholder, optional: copy.optional },
     });
     account.connect();
   } catch {

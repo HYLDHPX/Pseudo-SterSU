@@ -55,7 +55,7 @@ fun HomePagerDelta(
 ) {
     val warnings = homeWarningMessages(state)
     DeltaScreen(
-        title = state.customHomeTitle.ifBlank { stringResource(R.string.home) },
+        title = state.homeHeaderName.ifBlank { stringResource(R.string.home) },
         icon = Icons.Rounded.Home,
         bottomInnerPadding = bottomInnerPadding,
         topActionIcon = Icons.Rounded.Apps.takeIf { state.showSusfsPathConfig },
@@ -124,7 +124,7 @@ private fun DeltaStatusCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = state.customHomeTitle.ifBlank { stringResource(R.string.app_name) },
+                    text = state.homeHeaderName.ifBlank { stringResource(R.string.app_name) },
                     color = DeltaColors.Ink,
                     fontSize = deltaSp(28f, maxScale = 1.0f),
                     lineHeight = deltaSp(32f, maxScale = 1.0f),

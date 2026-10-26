@@ -181,7 +181,7 @@ fun HomePagerMiuix(
     showPrivilegedActions: Boolean = true,
 ) {
     val enableBlur = LocalEnableBlur.current
-    val homeTitle = state.customHomeTitle.ifBlank { stringResource(R.string.app_name) }
+    val homeTitle = state.homeHeaderName.ifBlank { stringResource(R.string.app_name) }
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
     val barColor = immersiveTopBarColor(

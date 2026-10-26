@@ -414,19 +414,6 @@ fun SettingPagerMiuix(
                             icon = Icons.Rounded.AdminPanelSettings,
                             onClick = actions.onOpenDynamicManager,
                         )
-                        CategorizedMiuixActionRow(
-                            title = stringResource(id = R.string.settings_home_title),
-                            summary = if (uiState.customHomeTitle.isBlank()) {
-                                stringResource(id = R.string.settings_home_title_default_summary)
-                            } else {
-                                stringResource(
-                                    id = R.string.settings_home_title_custom_summary,
-                                    uiState.customHomeTitle,
-                                )
-                            },
-                            icon = Icons.Rounded.EditNote,
-                            onClick = actions.onEditHomeTitle,
-                        )
                         CategorizedMiuixSwitchRow(
                             title = stringResource(id = R.string.settings_show_home_support_card),
                             summary = stringResource(id = R.string.settings_show_home_support_card_summary),

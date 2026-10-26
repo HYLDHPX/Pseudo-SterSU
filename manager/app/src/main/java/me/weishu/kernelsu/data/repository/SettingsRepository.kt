@@ -24,7 +24,6 @@ const val SHOW_HOME_SUPPORT_CARD_KEY = "show_home_support_card"
 const val SHOW_HOME_LEARN_CARD_KEY = "show_home_learn_card"
 const val MIUIX_CLASSIC_HOME_LAYOUT_KEY = "miuix_classic_home_layout"
 const val GRAPHICS_RENDERER_FEATURE_ENABLED_KEY = "graphics_renderer_feature_enabled"
-const val CUSTOM_HOME_TITLE_KEY = "custom_home_title"
 const val ACTIVE_INTERFACE_STYLE_ID_KEY = "active_interface_style_id"
 internal const val SOFT_REBOOT_KEY = "soft_reboot"
 
@@ -87,8 +86,9 @@ interface SettingsRepository {
     var customManagerName: String
     val syncManagerNameToLkmCard: Boolean
     val syncManagerNameToSettingsHeader: Boolean
-    fun setManagerNameSettings(name: String, syncLkmCard: Boolean, syncSettingsHeader: Boolean)
-    var customHomeTitle: String
+    val syncManagerNameToHomeHeader: Boolean
+    fun setManagerNameSettings(name: String, syncLkmCard: Boolean, syncSettingsHeader: Boolean, syncHomeHeader: Boolean)
+    val homeHeaderName: String
     var customWallpaperUri: String?
     var customWallpaperOpacity: Float
     var customWallpaperVisualSettings: MediaVisualSettings
