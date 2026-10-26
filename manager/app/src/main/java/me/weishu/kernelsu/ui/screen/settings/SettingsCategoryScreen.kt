@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -68,7 +69,6 @@ import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -89,14 +89,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.dropUnlessResumed
@@ -114,9 +117,23 @@ import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.theme.LocalImmersiveBackgroundActive
 import me.weishu.kernelsu.ui.theme.immersiveScrolledTopBarColor
 import me.weishu.kernelsu.ui.theme.immersiveSurfaceColor
+import me.weishu.kernelsu.ui.theme.immersivePageColor
+import me.weishu.kernelsu.ui.theme.immersiveTopBarColor
 import me.weishu.kernelsu.ui.util.INTERFACE_STYLE_RESULT_KEY
 import me.weishu.kernelsu.ui.util.ManagerPlugin
 import me.weishu.kernelsu.ui.viewmodel.SettingsViewModel
+import me.weishu.kernelsu.ui.component.miuix.SunMoonSwitchPreference
+import me.weishu.kernelsu.ui.component.passthrough.MiuixText
+import top.yukonga.miuix.kmp.basic.Card as MiuixCard
+import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
+import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
+import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun SettingsCategoryScreen(routeValue: String) {
@@ -150,6 +167,7 @@ fun SettingsCategoryScreen(routeValue: String) {
     SettingsCategoryScaffold(
         category = category,
         onBack = onBack,
+        miuix = category == SettingsCategory.Appearance && uiState.uiMode != InterfaceStyle.Material.value,
     ) {
         when (category) {
             SettingsCategory.Appearance -> {
@@ -280,14 +298,11 @@ fun SettingsCategoryScreen(routeValue: String) {
 private fun SettingsCategoryScaffold(
     category: SettingsCategory,
     onBack: () -> Unit,
+    miuix: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    ApkeSecondaryScaffold(
-        title = stringResource(category.titleRes),
-        onBack = onBack,
-        maxContentWidth = 680.dp,
-    ) { innerPadding, _ ->
+    val pageContent: @Composable (PaddingValues) -> Unit = { innerPadding ->
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.TopCenter,
@@ -310,6 +325,39 @@ private fun SettingsCategoryScaffold(
             }
         }
     }
+    if (miuix) {
+        MiuixScaffold(
+            containerColor = immersivePageColor(MiuixTheme.colorScheme.background),
+            contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+            popupHost = { },
+            topBar = {
+                SmallTopAppBar(
+                    title = stringResource(category.titleRes),
+                    color = immersiveTopBarColor(MiuixTheme.colorScheme.surface),
+                    navigationIcon = {
+                        val layoutDirection = LocalLayoutDirection.current
+                        MiuixIconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = MiuixIcons.Back,
+                                modifier = Modifier.graphicsLayer {
+                                    if (layoutDirection == LayoutDirection.Rtl) scaleX = -1f
+                                },
+                                contentDescription = stringResource(R.string.back),
+                                tint = MiuixTheme.colorScheme.onSurface,
+                            )
+                        }
+                    },
+                )
+            },
+            content = pageContent,
+        )
+    } else {
+        ApkeSecondaryScaffold(
+            title = stringResource(category.titleRes),
+            onBack = onBack,
+            maxContentWidth = 680.dp,
+        ) { innerPadding, _ -> pageContent(innerPadding) }
+    }
 }
 
 @Composable
@@ -324,6 +372,7 @@ private fun AppearanceSettingsContent(
     highlightedInterfaceStyleId: String?,
     onOpen: (Route) -> Unit,
 ) {
+    val miuix = uiState.uiMode != InterfaceStyle.Material.value
     val styles = InterfaceStyle.selectableEntries
     val stylePickerRequester = remember { BringIntoViewRequester() }
     val highlightStylePicker = uiState.installedInterfaceStyles.any {
@@ -332,23 +381,23 @@ private fun AppearanceSettingsContent(
     LaunchedEffect(highlightedInterfaceStyleId, highlightStylePicker) {
         if (highlightStylePicker) stylePickerRequester.bringIntoView()
     }
-    SettingsGroup(stringResource(R.string.settings_group_interface)) {
+    SettingsGroup(stringResource(R.string.settings_group_interface), miuix = miuix) {
         SettingsActionRow(
             title = stringResource(R.string.store_title),
             summary = stringResource(R.string.store_summary),
             icon = Icons.Rounded.Storefront,
+            miuix = miuix,
             onClick = { onOpen(Route.ThemeStore) },
         )
         if (uiState.isSidebarDesignEntryVisible) {
-            SettingsDivider()
             SettingsActionRow(
                 title = stringResource(R.string.sidebar_widget_settings_title),
                 summary = stringResource(R.string.sidebar_design_entry_summary),
                 icon = Icons.Rounded.Tune,
+                miuix = miuix,
                 onClick = { onOpen(Route.SidebarWidgetSettings) },
             )
         }
-        SettingsDivider()
         SettingsChoiceRow(
             title = stringResource(R.string.settings_ui_mode),
             summary = stringResource(R.string.settings_ui_mode_summary),
@@ -358,21 +407,21 @@ private fun AppearanceSettingsContent(
             selectedIndex = uiState.interfaceStyleSelectedIndex(),
             modifier = Modifier.bringIntoViewRequester(stylePickerRequester),
             highlighted = highlightStylePicker,
+            miuix = miuix,
             onSelected = onSetUiMode,
         )
         if (uiState.uiMode == InterfaceStyle.Miuix.value) {
-            SettingsDivider()
             SettingsSwitchRow(
                 title = stringResource(R.string.settings_miuix_classic_home_layout),
                 summary = stringResource(R.string.settings_miuix_classic_home_layout_summary),
                 icon = Icons.Rounded.Dashboard,
                 checked = uiState.miuixClassicHomeLayoutEnabled,
+                miuix = miuix,
                 onCheckedChange = onSetMiuixClassicHomeLayout,
             )
         }
         if (uiState.activeInterfaceStyleId == "alpha-delta" &&
             (uiState.uiMode == InterfaceStyle.Alpha.value || uiState.uiMode == InterfaceStyle.Delta.value)) {
-            SettingsDivider()
             SettingsChoiceRow(
                 title = stringResource(R.string.settings_alpha_delta_mode),
                 summary = stringResource(R.string.settings_alpha_delta_mode_summary),
@@ -382,44 +431,45 @@ private fun AppearanceSettingsContent(
                     stringResource(R.string.settings_delta_mode),
                 ),
                 selectedIndex = if (uiState.uiMode == InterfaceStyle.Delta.value) 1 else 0,
+                miuix = miuix,
                 onSelected = { onSetAlphaDeltaMode(it == 1) },
             )
         }
         if (uiState.uiMode == InterfaceStyle.Snow.value) {
-            SettingsDivider()
             SettingsSwitchRow(
                 title = stringResource(R.string.settings_season_card_motion),
                 summary = stringResource(R.string.settings_season_card_motion_summary),
                 icon = Icons.Rounded.AutoFixHigh,
                 checked = uiState.seasonCardMotionEnabled,
+                miuix = miuix,
                 onCheckedChange = onSetSeasonCardMotion,
             )
         }
         if (uiState.uiMode == InterfaceStyle.Rain.value) {
-            SettingsDivider()
             SettingsActionRow(
                 title = stringResource(R.string.rain_design_title),
                 summary = stringResource(R.string.rain_design_summary),
                 icon = Icons.Rounded.Tune,
+                miuix = miuix,
                 onClick = { onOpen(Route.RainDesign) },
             )
         }
         if (uiState.uiMode == InterfaceStyle.Pixel.value) {
-            SettingsDivider()
             SettingsSwitchRow(
                 title = stringResource(R.string.settings_pixel_card_motion),
                 summary = stringResource(R.string.settings_pixel_card_motion_summary),
                 icon = Icons.Rounded.AutoFixHigh,
                 checked = uiState.pixelCardMotionEnabled,
+                miuix = miuix,
                 onCheckedChange = onSetPixelCardMotion,
             )
         }
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_day_night_switch),
             summary = stringResource(R.string.settings_day_night_switch_summary),
             icon = Icons.Rounded.Palette,
             checked = isDayNightSwitchChecked(uiState.themeMode),
+            miuix = miuix,
             onCheckedChange = onSetDayNightMode,
         )
     }
@@ -439,7 +489,6 @@ private fun HomeManagerSettingsContent(
             icon = Icons.Rounded.Apps,
             onClick = { onOpen(Route.LauncherIcon) },
         )
-        SettingsDivider()
         SettingsActionRow(
             title = stringResource(R.string.dynamic_manager_title),
             summary = stringResource(R.string.dynamic_manager_settings_summary),
@@ -455,7 +504,6 @@ private fun HomeManagerSettingsContent(
             checked = uiState.showHomeSupportCard,
             onCheckedChange = onSetShowSupportCard,
         )
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_show_home_learn_card),
             summary = stringResource(R.string.settings_show_home_learn_card_summary),
@@ -504,7 +552,6 @@ private fun RootPermissionSettingsContent(
             enabled = uiState.suCompatStatus == "supported",
             onSelected = onSetSuCompatMode,
         )
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_sulog),
             summary = featureSummary(uiState.sulogStatus, R.string.settings_sulog_summary),
@@ -513,7 +560,6 @@ private fun RootPermissionSettingsContent(
             checked = uiState.isSulogEnabled,
             onCheckedChange = onSetSulog,
         )
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_adb_root),
             summary = featureSummary(uiState.adbRootStatus, R.string.settings_adb_root_summary),
@@ -522,7 +568,6 @@ private fun RootPermissionSettingsContent(
             checked = uiState.isAdbRootEnabled,
             onCheckedChange = onSetAdbRoot,
         )
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_shell_su_adb_only),
             summary = featureSummary(uiState.shellSuAdbOnlyStatus, R.string.settings_shell_su_adb_only_summary),
@@ -531,7 +576,6 @@ private fun RootPermissionSettingsContent(
             checked = uiState.isShellSuAdbOnlyEnabled,
             onCheckedChange = onSetShellSuAdbOnly,
         )
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_soft_reboot),
             summary = stringResource(R.string.settings_soft_reboot_summary),
@@ -540,7 +584,6 @@ private fun RootPermissionSettingsContent(
             checked = uiState.isLateLoadMode || uiState.useSoftReboot,
             onCheckedChange = onSetUseSoftReboot,
         )
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_auto_jailbreak),
             summary = stringResource(R.string.settings_auto_jailbreak_summary),
@@ -595,7 +638,6 @@ private fun MountHideSettingsContent(
             checked = uiState.isKernelUmountEnabled,
             onCheckedChange = onSetKernelUmount,
         )
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_webview_zygote_umount),
             summary = featureSummary(
@@ -607,7 +649,6 @@ private fun MountHideSettingsContent(
             checked = uiState.isWebViewZygoteUmountEnabled,
             onCheckedChange = onSetWebViewZygoteUmount,
         )
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_umount_modules_default),
             summary = stringResource(R.string.settings_umount_modules_default_summary),
@@ -625,7 +666,6 @@ private fun MountHideSettingsContent(
             checked = uiState.isSelinuxHideEnabled,
             onCheckedChange = onSetSelinuxHide,
         )
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_avc_spoof),
             summary = featureSummary(uiState.avcSpoofStatus, R.string.settings_avc_spoof_summary),
@@ -634,7 +674,6 @@ private fun MountHideSettingsContent(
             checked = uiState.isAvcSpoofEnabled,
             onCheckedChange = onSetAvcSpoof,
         )
-        SettingsDivider()
         if (uiState.isBuiltinPathConfigEntryVisible) {
             SettingsActionRow(
                 title = pathConfigTitle(uiState),
@@ -643,7 +682,6 @@ private fun MountHideSettingsContent(
                 enabled = uiState.canOpenPathConfig,
                 onClick = onOpenPathConfig,
             )
-            SettingsDivider()
         }
         SettingsSwitchRow(
             title = stringResource(R.string.settings_epkesu_hide),
@@ -680,8 +718,7 @@ private fun PluginSettingsContent(
         )
     } else {
         SettingsGroup(stringResource(R.string.settings_plugins_installed)) {
-            entries.forEachIndexed { index, entry ->
-                if (index > 0) SettingsDivider()
+            entries.forEach { entry ->
                 val title = stringResource(entry.titleRes)
                 val summary = entry.summaryRes?.let { stringResource(it) }.orEmpty()
                 when (entry.key) {
@@ -748,7 +785,6 @@ private fun AppMaintenanceSettingsContent(
             checked = uiState.stealthModeEnabled,
             onCheckedChange = { if (it) onOpenStealthModeDialog(true) },
         )
-        SettingsDivider()
         SettingsActionRow(
             title = stringResource(R.string.stealth_mode_code_title),
             summary = uiState.stealthModeCode,
@@ -765,7 +801,6 @@ private fun AppMaintenanceSettingsContent(
             checked = uiState.checkModuleUpdate,
             onCheckedChange = onSetCheckModuleUpdate,
         )
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_version_mismatch_warning),
             summary = stringResource(R.string.settings_version_mismatch_warning_summary),
@@ -773,7 +808,6 @@ private fun AppMaintenanceSettingsContent(
             checked = uiState.showVersionMismatchWarning,
             onCheckedChange = onSetVersionMismatchWarning,
         )
-        SettingsDivider()
         SettingsSwitchRow(
             title = stringResource(R.string.settings_gki_warning),
             summary = stringResource(R.string.settings_gki_warning_summary),
@@ -790,7 +824,6 @@ private fun AppMaintenanceSettingsContent(
             checked = uiState.enableWebDebugging,
             onCheckedChange = onSetWebDebugging,
         )
-        SettingsDivider()
         SettingsActionRow(
             title = stringResource(R.string.send_log),
             summary = stringResource(R.string.settings_log_export_summary),
@@ -814,7 +847,6 @@ private fun AppMaintenanceSettingsContent(
                 destructive = true,
                 onClick = onUninstall,
             )
-            SettingsDivider()
         }
         SettingsActionRow(
             title = stringResource(R.string.about),
@@ -828,8 +860,30 @@ private fun AppMaintenanceSettingsContent(
 @Composable
 private fun SettingsGroup(
     title: String,
+    miuix: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    if (miuix) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            MiuixText(
+                text = title,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            MiuixCard(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 16.dp,
+                colors = MiuixCardDefaults.defaultColors(
+                    color = immersiveSurfaceColor(MiuixTheme.colorScheme.surfaceContainer),
+                ),
+                insideMargin = PaddingValues(vertical = 4.dp),
+            ) {
+                Column(content = content)
+            }
+        }
+        return
+    }
     val shape = RoundedCornerShape(8.dp)
     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Text(
@@ -861,8 +915,22 @@ private fun SettingsActionRow(
     trailingText: String? = null,
     highlighted: Boolean = false,
     modifier: Modifier = Modifier,
+    miuix: Boolean = false,
     onClick: () -> Unit,
 ) {
+    if (miuix) {
+        ArrowPreference(
+            title = title,
+            summary = summary,
+            modifier = modifier.background(
+                if (highlighted) MiuixTheme.colorScheme.primary.copy(alpha = 0.10f) else Color.Transparent,
+            ),
+            startAction = { MiuixSettingsRowIcon(icon, enabled) },
+            enabled = enabled,
+            onClick = onClick,
+        )
+        return
+    }
     val accent = when {
         !enabled -> MaterialTheme.colorScheme.onSurfaceVariant
         destructive -> MaterialTheme.colorScheme.error
@@ -926,8 +994,20 @@ private fun SettingsSwitchRow(
     icon: ImageVector,
     checked: Boolean,
     enabled: Boolean = true,
+    miuix: Boolean = false,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    if (miuix) {
+        SunMoonSwitchPreference(
+            title = title,
+            summary = summary,
+            startAction = { MiuixSettingsRowIcon(icon, enabled) },
+            checked = checked,
+            enabled = enabled,
+            onCheckedChange = onCheckedChange,
+        )
+        return
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -973,10 +1053,26 @@ private fun SettingsChoiceRow(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
     highlighted: Boolean = false,
+    miuix: Boolean = false,
     onSelected: (Int) -> Unit,
 ) {
-    var showDialog by rememberSaveable(title) { mutableStateOf(false) }
     val safeIndex = selectedIndex.coerceIn(0, (options.size - 1).coerceAtLeast(0))
+    if (miuix) {
+        OverlayDropdownPreference(
+            title = title,
+            summary = summary,
+            modifier = modifier.background(
+                if (highlighted) MiuixTheme.colorScheme.primary.copy(alpha = 0.10f) else Color.Transparent,
+            ),
+            items = options,
+            startAction = { MiuixSettingsRowIcon(icon, enabled) },
+            selectedIndex = safeIndex,
+            enabled = enabled && options.isNotEmpty(),
+            onSelectedIndexChange = onSelected,
+        )
+        return
+    }
+    var showDialog by rememberSaveable(title) { mutableStateOf(false) }
     SettingsActionRow(
         title = title,
         summary = summary,
@@ -1034,6 +1130,16 @@ private fun SettingsChoiceRow(
 }
 
 @Composable
+private fun MiuixSettingsRowIcon(icon: ImageVector, enabled: Boolean) {
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        modifier = Modifier.size(22.dp),
+        tint = if (enabled) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.disabledOnSecondaryVariant,
+    )
+}
+
+@Composable
 private fun SettingsRowIcon(icon: ImageVector, color: Color, enabled: Boolean) {
     Surface(
         color = color.copy(alpha = if (enabled) 0.13f else 0.06f),
@@ -1044,14 +1150,6 @@ private fun SettingsRowIcon(icon: ImageVector, color: Color, enabled: Boolean) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(19.dp))
         }
     }
-}
-
-@Composable
-private fun SettingsDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 56.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.58f),
-    )
 }
 
 @Composable

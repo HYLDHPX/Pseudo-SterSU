@@ -43,7 +43,6 @@ import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -325,7 +324,7 @@ private fun DeviceIdentityContent(
                 color = immersiveSurfaceColor(MaterialTheme.colorScheme.surfaceContainerLow),
             ) {
                 Column {
-                    uiState.snapshot.identifiers.forEachIndexed { index, identifier ->
+                    uiState.snapshot.identifiers.forEach { identifier ->
                         DeviceIdentifierRow(
                             identifier = identifier,
                             busy = uiState.busyKind == identifier.kind || uiState.restoringAll,
@@ -334,12 +333,6 @@ private fun DeviceIdentityContent(
                             onEdit = { onEdit(identifier) },
                             onRestore = { onRestore(identifier.kind) },
                         )
-                        if (index != uiState.snapshot.identifiers.lastIndex) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 64.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                            )
-                        }
                     }
                 }
             }

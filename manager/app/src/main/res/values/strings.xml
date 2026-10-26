@@ -249,7 +249,6 @@
     <string name="home_gki_warning">Starting from v3.0.0, the GKI work mode will be used only in testing environments. We do not recommend it for daily use, and image files will no longer be provided.</string>
     <string name="home_manager_identity_warning">SterSU is active, but this app is not recognized as the manager by the kernel. Reinstall the matching Manager APK or rebuild the kernel with this app signature.</string>
     <string name="home_manager_build_mismatch_warning">The active driver (%1$d) was not built for this SterSU Manager (%2$d). Reinstalling the APK alone cannot fix it. Patch and flash a new image with this Manager, or use a GKI/LKM built from the current SterSU source.</string>
-    <string name="about_join_qq_group">点击链接加入群聊【SterSU官方群】</string>
     <string name="about_official_telegram">Official channel: SterSU</string>
     <string name="about_official_upstream">Official upstream: KernelSU</string>
     <string name="about_aster_design">UI design acknowledgements: Aster</string>
@@ -2468,6 +2467,8 @@
     <string name="switch_style_creator_thumb_off">Thumb off</string>
     <string name="switch_style_creator_thumb_on">Thumb on</string>
     <string name="switch_style_creator_select_image">Choose image</string>
+    <string name="switch_style_creator_thumb_image">Button image</string>
+    <string name="switch_style_creator_thumb_image_hint">Uses pixel artwork until you choose an image. Remove the image to restore the artwork.</string>
     <string name="switch_style_creator_remove_image">Remove</string>
     <string name="switch_style_creator_image_crop">Fill and crop</string>
     <string name="switch_style_creator_image_fit">Fit inside</string>
@@ -3113,6 +3114,11 @@
     <string name="settings_audio_policy_title">System playback policy</string>
     <string name="module_wallpaper_editor_title">Module wallpaper editor</string>
     <string name="module_wallpaper_editor_open">Edit module wallpaper</string>
+    <string name="module_button_images_title">Module button images</string>
+    <string name="module_button_images_summary">Customize the action, uninstall, and wallpaper icons for all modules. Long-press a wallpaper icon to open these settings. Normal taps keep their original actions.</string>
+    <string name="module_button_image_pick">Choose image</string>
+    <string name="module_button_image_reset">Restore default</string>
+    <string name="module_button_images_error">Unable to save the button image. Choose a valid image smaller than 8 MB and try again.</string>
     <string name="module_wallpaper_save_failed">Couldn\'t save the module wallpaper. Your previous settings were kept.</string>
     <string name="module_wallpaper_import_failed">Couldn\'t import the selected image. Check its format and size.</string>
     <string name="module_wallpaper_load_failed">The wallpaper can\'t be loaded. Replace or delete it.</string>

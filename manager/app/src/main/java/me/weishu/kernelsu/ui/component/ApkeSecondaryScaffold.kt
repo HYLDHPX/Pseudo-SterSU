@@ -35,7 +35,6 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -297,14 +296,6 @@ fun ApkeGroupedList(
             Column(content = content)
         }
     }
-}
-
-@Composable
-fun ApkeListDivider(modifier: Modifier = Modifier) {
-    HorizontalDivider(
-        modifier = modifier.padding(horizontal = ApkeUiTokens.CompactListHorizontalPadding),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.58f),
-    )
 }
 
 @Composable

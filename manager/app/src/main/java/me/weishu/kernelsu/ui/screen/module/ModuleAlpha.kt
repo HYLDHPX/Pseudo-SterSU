@@ -406,12 +406,6 @@ private fun AlphaModuleCard(
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(AlphaColors.Divider)
-            )
 
             Row(
                 modifier = Modifier

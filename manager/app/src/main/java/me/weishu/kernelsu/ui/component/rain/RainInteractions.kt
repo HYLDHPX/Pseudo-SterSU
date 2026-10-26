@@ -15,15 +15,11 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.findRootCoordinates
@@ -31,7 +27,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.Density
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 
 private data class TrackedRainSurface(
@@ -101,7 +96,11 @@ internal fun Modifier.rainInteractionTarget(
 @Composable
 fun RainUiLayer(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val settings = LocalRainSettings.current
-    if (!settings.foregroundDrawingEnabled(LocalRainCoveredByWallpaper.current)) {
+    val covered = LocalRainCoveredByWallpaper.current
+    val foreground = settings.foregroundDrawingEnabled(covered)
+    val thunderEnabled = settings.drawingEnabled(covered) && settings.thunder &&
+        settings.motion && settings.intensity > 0f && settings.scene == RainStyle.Thunderstorm
+    if (!foreground && !thunderEnabled) {
         Box(modifier, content = content)
         return
     }
@@ -117,11 +116,12 @@ fun RainUiLayer(modifier: Modifier = Modifier, content: @Composable BoxScope.() 
             registry.root = it
             rootCoordinates.value = it
         }.drawWithCache {
-            val particles = rainParticles(rainViewportDropCount(spec.dropCount, size, density), settings.scene)
+            val particles = if (foreground)
+                rainParticles(rainViewportDropCount(spec.dropCount, size, density), settings.scene) else emptyList()
             val streaks = particles.mapIndexed { index, drop ->
                 if (rainFrontParticle(index)) rainStreakPaint(drop, index, spec, palette, true, this, settings.foregroundOpacity) else null
             }
-            val thunderPaint = rainThunderPaint(size, this, palette)
+            val thunderPaint = if (thunderEnabled) rainThunderPaint(size, palette) else null
             onDrawWithContent {
                 drawContent()
                 // Observe placement once; the shared clock invalidates drawing, never page composition.
@@ -150,7 +150,15 @@ fun RainUiLayer(modifier: Modifier = Modifier, content: @Composable BoxScope.() 
                     }
                 }
                 val thunder = rainThunderPulse(settings, seconds, motionAllowed)
-                if (thunder > 0f) drawDistantThunder(palette, thunderPaint, thunder * settings.foregroundOpacity)
+                if (thunderPaint != null && thunder > 0f) {
+                    if (foreground) {
+                        drawRainThunder(thunderPaint, thunder, (seconds / settings.thunderInterval).toInt())
+                    } else {
+                        // With near rain disabled, only reflected cloud light crosses content;
+                        // the actual bolt and every streak remain behind the panels.
+                        drawRect(thunderPaint.reflection, alpha = thunder)
+                    }
+                }
             }
         }, content = content)
     }
@@ -180,29 +188,4 @@ private fun DrawScope.drawRainSurfaceHit(hit: RainSurfaceHit, palette: RainPalet
         val offset = Offset(side * radius * (0.50f + index * 0.17f), -radius * (0.30f + index * 0.1f))
         drawRainGlassBead(hit.position + offset, 1.dp.toPx(), palette, fade * 0.8f)
     }
-}
-
-private data class RainThunderPaint(val center: Offset, val radius: Float, val glow: Color, val brush: Brush, val bolt: Path)
-
-private fun rainThunderPaint(size: Size, density: Density, palette: RainPalette): RainThunderPaint = with(density) {
-    val center = Offset(size.width * 0.84f, size.height * 0.12f)
-    val radius = minOf(size.width * 0.36f, size.height * 0.3f, 150.dp.toPx())
-    val glow = lerp(palette.rain, palette.highlight, 0.35f)
-    val brush = Brush.radialGradient(listOf(glow.copy(alpha = 0.075f), Color.Transparent), center, radius.coerceAtLeast(1f))
-    val unit = minOf(1.dp.toPx(), size.width / 240f, size.height / 400f)
-    val bolt = Path().apply {
-        moveTo(center.x + 10f * unit, center.y - 23f * unit)
-        lineTo(center.x - 4f * unit, center.y - 3f * unit)
-        lineTo(center.x + 4f * unit, center.y - 3f * unit)
-        lineTo(center.x - 10f * unit, center.y + 21f * unit)
-    }
-    RainThunderPaint(center, radius, glow, brush, bolt)
-}
-
-private fun DrawScope.drawDistantThunder(palette: RainPalette, paint: RainThunderPaint, strength: Float) {
-    if (paint.radius <= 0f) return
-    drawCircle(paint.brush, paint.radius, paint.center, alpha = strength)
-    drawPath(paint.bolt, paint.glow.copy(alpha = 0.11f * strength), style = Stroke(5.dp.toPx(), cap = StrokeCap.Round))
-    drawPath(paint.bolt, rainOrnamentInk(palette).copy(alpha = 0.38f * strength),
-        style = Stroke(1.1.dp.toPx(), cap = StrokeCap.Round))
 }

@@ -73,7 +73,6 @@ import me.weishu.kernelsu.ui.util.BlurredBar
 import me.weishu.kernelsu.ui.util.rememberBlurBackdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
-import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -358,11 +357,7 @@ private fun TemplateItem(
                 color = colorScheme.onSurfaceVariantSummary,
             )
 
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 8.dp),
-                thickness = 0.5.dp,
-                color = colorScheme.outline.copy(alpha = 0.5f)
-            )
+            Spacer(Modifier.height(16.dp))
 
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)

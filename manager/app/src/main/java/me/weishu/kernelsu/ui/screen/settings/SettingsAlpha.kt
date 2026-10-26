@@ -472,13 +472,6 @@ private fun AlphaSection(
                     }
                 }
                 if (expanded) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp)
-                            .height(1.dp)
-                            .background(AlphaColors.Divider.copy(alpha = 0.30f)),
-                    )
                     Column(
                         modifier = Modifier.padding(bottom = 4.dp),
                         content = content,

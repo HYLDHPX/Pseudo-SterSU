@@ -145,6 +145,7 @@ import me.weishu.kernelsu.ui.component.custom.TRANSPARENT_PIXEL
 import me.weishu.kernelsu.ui.component.custom.cropped
 import me.weishu.kernelsu.ui.component.custom.decodeImageToPixelGrid
 import me.weishu.kernelsu.ui.component.custom.drawCustomSwitchStyle
+import me.weishu.kernelsu.ui.component.custom.drawCustomSwitchThumb
 import me.weishu.kernelsu.ui.component.custom.drawPixelLayer
 import me.weishu.kernelsu.ui.component.custom.filled
 import me.weishu.kernelsu.ui.component.custom.formatArgbHex
@@ -186,6 +187,10 @@ private enum class SwitchPixelLayer {
 private enum class SwitchImageSlot {
     Off,
     On,
+    ThumbOff,
+    ThumbOn;
+
+    val on: Boolean get() = this == On || this == ThumbOn
 }
 
 private enum class SwitchAppearanceSection {
@@ -264,7 +269,7 @@ fun SwitchStyleCreatorScreen() {
     var showAssetLibrary by remember { mutableStateOf(false) }
     var pendingAction by remember { mutableStateOf<SwitchEditorPendingAction?>(null) }
     var importCollision by remember { mutableStateOf<CustomSwitchStyle?>(null) }
-    var pendingImageSlot by remember { mutableStateOf(SwitchImageSlot.Off) }
+    var pendingImageSlot by rememberSaveable { mutableStateOf(SwitchImageSlot.Off) }
     var exportSnapshot by remember { mutableStateOf<CustomSwitchStyle?>(null) }
     var deleteCandidate by remember { mutableStateOf<CustomSwitchStyle?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -391,6 +396,10 @@ fun SwitchStyleCreatorScreen() {
                 return false
             }
         }
+        if (listOfNotNull(style.thumbOffImageUri, style.thumbOnImageUri).any { store.resolveImageFile(it) == null }) {
+            showMessage(imageRequired)
+            return false
+        }
         return true
     }
 
@@ -450,6 +459,16 @@ fun SwitchStyleCreatorScreen() {
                             imageOnUri = stored.uriString,
                             imageOnSha256 = stored.sha256,
                             imageOnMimeType = stored.mimeType,
+                        )
+                        SwitchImageSlot.ThumbOff -> draft.copy(
+                            thumbOffImageUri = stored.uriString,
+                            thumbOffImageSha256 = stored.sha256,
+                            thumbOffImageMimeType = stored.mimeType,
+                        )
+                        SwitchImageSlot.ThumbOn -> draft.copy(
+                            thumbOnImageUri = stored.uriString,
+                            thumbOnImageSha256 = stored.sha256,
+                            thumbOnImageMimeType = stored.mimeType,
                         )
                     }.normalized()
                 )
@@ -742,12 +761,13 @@ fun SwitchStyleCreatorScreen() {
                     onPaletteChange = { applyDraft(draft.copy(palette = it).normalized()) },
                     onPreviewCheckedChange = { previewChecked = it },
                      onSelectImage = { slot ->
-                         selectedStateOn = slot == SwitchImageSlot.On
+                         selectedStateOn = slot.on
+                         previewChecked = slot.on
                          pendingImageSlot = slot
                          imageLauncher.launch(arrayOf("image/png", "image/jpeg", "image/webp", "image/*"))
                      },
                      onRemoveImage = { slot ->
-                         selectedStateOn = slot == SwitchImageSlot.On
+                         selectedStateOn = slot.on
                          applyDraft(
                             when (slot) {
                                 SwitchImageSlot.Off -> draft.copy(
@@ -759,6 +779,16 @@ fun SwitchStyleCreatorScreen() {
                                     imageOnUri = null,
                                     imageOnSha256 = null,
                                     imageOnMimeType = null,
+                                )
+                                SwitchImageSlot.ThumbOff -> draft.copy(
+                                    thumbOffImageUri = null,
+                                    thumbOffImageSha256 = null,
+                                    thumbOffImageMimeType = null,
+                                )
+                                SwitchImageSlot.ThumbOn -> draft.copy(
+                                    thumbOnImageUri = null,
+                                    thumbOnImageSha256 = null,
+                                    thumbOnImageMimeType = null,
                                 )
                             }
                         )
@@ -829,6 +859,14 @@ fun SwitchStyleCreatorScreen() {
                                 SwitchPixelLayer.ThumbOff, SwitchPixelLayer.ThumbOn -> draft.copy(
                                     thumbOff = draft.thumbOn,
                                     thumbOn = draft.thumbOff,
+                                    thumbOffImageUri = draft.thumbOnImageUri,
+                                    thumbOffImageSha256 = draft.thumbOnImageSha256,
+                                    thumbOffImageMimeType = draft.thumbOnImageMimeType,
+                                    thumbOffImageAppearance = draft.thumbOnImageAppearance,
+                                    thumbOnImageUri = draft.thumbOffImageUri,
+                                    thumbOnImageSha256 = draft.thumbOffImageSha256,
+                                    thumbOnImageMimeType = draft.thumbOffImageMimeType,
+                                    thumbOnImageAppearance = draft.thumbOffImageAppearance,
                                 )
                             }
                         )
@@ -1343,65 +1381,113 @@ private fun SwitchDesignPage(
                     canPasteLayer = canPasteLayer,
                     onSwapStateLayers = onSwapStateLayers,
                 )
-                Text(
-                    text = stringResource(
-                        R.string.component_creator_grid_size,
-                        currentGrid.width,
-                        currentGrid.height,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                PixelGridEditor(
-                    grid = currentGrid,
-                    selectedColor = selectedColor,
-                    contentDescription = stringResource(R.string.component_creator_pixel_canvas),
-                    onStrokeStart = { onStrokeStart() },
-                    onStrokeEnd = onStrokeEnd,
-                    onGridChange = onGridChange,
-                    tool = selectedTool,
-                    showGrid = showGrid,
-                    symmetry = symmetry,
-                    selection = selection,
-                    onSelectionChange = onSelectionChange,
-                    onColorPicked = onColorSelected,
-                    gestureKey = editorKey,
-                    modifier = Modifier.height(if (currentGrid.width == currentGrid.height) 260.dp else 190.dp),
-                )
-                SwitchPixelToolbar(
-                    selectedTool = selectedTool,
-                    symmetry = symmetry,
-                    showGrid = showGrid,
-                    canUndo = canUndo,
-                    canRedo = canRedo,
-                    hasSelection = selection != null,
-                    canPasteSelection = canPasteSelection,
-                    onToolSelected = onToolSelected,
-                    onSymmetryChange = onSymmetryChange,
-                    onShowGridChange = onShowGridChange,
-                    onUndo = onUndo,
-                    onRedo = onRedo,
-                    onFill = onFill,
-                    onMirrorHorizontal = onMirrorHorizontal,
-                    onMirrorVertical = onMirrorVertical,
-                    onCopySelection = onCopySelection,
-                    onPasteSelection = onPasteSelection,
-                    onMoveSelection = onMoveSelection,
-                    onRotateSelection = onRotateSelection,
-                    onConvertImage = onConvertImage,
-                    onOpenAssets = onOpenAssets,
-                    onOpenFullscreen = onOpenFullscreen,
-                    onClear = onClear,
-                )
-                if (recentColors.isNotEmpty()) {
-                    SwitchRecentColors(recentColors, selectedColor, onColorSelected)
+                val thumbOn = selectedLayer == SwitchPixelLayer.ThumbOn
+                val isThumb = selectedLayer == SwitchPixelLayer.ThumbOff || thumbOn
+                val thumbImageUri = if (thumbOn) draft.thumbOnImageUri else draft.thumbOffImageUri
+                if (isThumb) {
+                    val slot = if (thumbOn) SwitchImageSlot.ThumbOn else SwitchImageSlot.ThumbOff
+                    SwitchImageSlotRow(
+                        title = stringResource(R.string.switch_style_creator_thumb_image),
+                        imageUri = thumbImageUri,
+                        hash = if (thumbOn) draft.thumbOnImageSha256 else draft.thumbOffImageSha256,
+                        busy = busy,
+                        onSelect = { onSelectImage(slot) },
+                        onRemove = { onRemoveImage(slot) },
+                        emptyText = stringResource(R.string.switch_style_creator_thumb_image_hint),
+                    )
                 }
-                PixelPaletteEditor(
-                    palette = draft.palette,
-                    selectedColor = selectedColor,
-                    onColorSelected = onColorSelected,
-                    onPaletteChange = onPaletteChange,
-                )
+                if (isThumb && thumbImageUri != null) {
+                    SwitchThumbImagePreview(draft, thumbOn, Modifier.fillMaxWidth().height(180.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        IconButton(onClick = onUndo, enabled = canUndo) {
+                            Icon(Icons.AutoMirrored.Rounded.Undo, stringResource(R.string.component_creator_undo))
+                        }
+                        IconButton(onClick = onRedo, enabled = canRedo) {
+                            Icon(Icons.AutoMirrored.Rounded.Redo, stringResource(R.string.component_creator_redo))
+                        }
+                    }
+                    val appearance = if (thumbOn) draft.thumbOnImageAppearance else draft.thumbOffImageAppearance
+                    fun withAppearance(value: SwitchImageAppearance) = if (thumbOn) {
+                        draft.copy(thumbOnImageAppearance = value)
+                    } else {
+                        draft.copy(thumbOffImageAppearance = value)
+                    }
+                    SwitchChoiceChipRow(
+                        options = SwitchImageScale.entries,
+                        selected = appearance.scale,
+                        label = { stringResource(it.labelRes()) },
+                        onSelected = { onDraftChange(withAppearance(appearance.copy(scale = it))) },
+                    )
+                    SwitchValueSlider(
+                        title = stringResource(R.string.switch_style_creator_image_zoom),
+                        value = appearance.zoom,
+                        valueRange = 0.5f..3f,
+                        valueText = "${(appearance.zoom * 100).roundToInt()}%",
+                        onValueChange = { onDraftUpdate(withAppearance(appearance.copy(zoom = it))) },
+                        onInteractionStart = onInteractionStart,
+                        onInteractionEnd = onInteractionEnd,
+                    )
+                } else {
+                    Text(
+                        text = stringResource(
+                            R.string.component_creator_grid_size,
+                            currentGrid.width,
+                            currentGrid.height,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    PixelGridEditor(
+                        grid = currentGrid,
+                        selectedColor = selectedColor,
+                        contentDescription = stringResource(R.string.component_creator_pixel_canvas),
+                        onStrokeStart = { onStrokeStart() },
+                        onStrokeEnd = onStrokeEnd,
+                        onGridChange = onGridChange,
+                        tool = selectedTool,
+                        showGrid = showGrid,
+                        symmetry = symmetry,
+                        selection = selection,
+                        onSelectionChange = onSelectionChange,
+                        onColorPicked = onColorSelected,
+                        gestureKey = editorKey,
+                        modifier = Modifier.height(if (currentGrid.width == currentGrid.height) 260.dp else 190.dp),
+                    )
+                    SwitchPixelToolbar(
+                        selectedTool = selectedTool,
+                        symmetry = symmetry,
+                        showGrid = showGrid,
+                        canUndo = canUndo,
+                        canRedo = canRedo,
+                        hasSelection = selection != null,
+                        canPasteSelection = canPasteSelection,
+                        onToolSelected = onToolSelected,
+                        onSymmetryChange = onSymmetryChange,
+                        onShowGridChange = onShowGridChange,
+                        onUndo = onUndo,
+                        onRedo = onRedo,
+                        onFill = onFill,
+                        onMirrorHorizontal = onMirrorHorizontal,
+                        onMirrorVertical = onMirrorVertical,
+                        onCopySelection = onCopySelection,
+                        onPasteSelection = onPasteSelection,
+                        onMoveSelection = onMoveSelection,
+                        onRotateSelection = onRotateSelection,
+                        onConvertImage = onConvertImage,
+                        onOpenAssets = onOpenAssets,
+                        onOpenFullscreen = onOpenFullscreen,
+                        onClear = onClear,
+                    )
+                    if (recentColors.isNotEmpty()) {
+                        SwitchRecentColors(recentColors, selectedColor, onColorSelected)
+                    }
+                    PixelPaletteEditor(
+                        palette = draft.palette,
+                        selectedColor = selectedColor,
+                        onColorSelected = onColorSelected,
+                        onPaletteChange = onPaletteChange,
+                    )
+                }
             }
         }
         item {
@@ -1418,6 +1504,7 @@ private fun SwitchImageSlotRow(
     busy: Boolean,
     onSelect: () -> Unit,
     onRemove: () -> Unit,
+    emptyText: String? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1425,13 +1512,13 @@ private fun SwitchImageSlotRow(
                 Text(title, style = MaterialTheme.typography.titleSmall)
                 Text(
                     text = if (imageUri == null) {
-                        stringResource(R.string.switch_style_creator_image_not_set)
+                        emptyText ?: stringResource(R.string.switch_style_creator_image_not_set)
                     } else {
                         hash?.let { "SHA256 ${it.take(10)}...${it.takeLast(6)}" }
                             ?: stringResource(R.string.switch_style_creator_image_ready)
                     },
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (imageUri == null) {
+                    color = if (imageUri == null && emptyText == null) {
                         MaterialTheme.colorScheme.error
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
@@ -1449,6 +1536,19 @@ private fun SwitchImageSlotRow(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SwitchThumbImagePreview(style: CustomSwitchStyle, on: Boolean, modifier: Modifier = Modifier) {
+    val images = rememberCustomSwitchImages(style)
+    Canvas(modifier.background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(8.dp))) {
+        val side = minOf(size.width, size.height) * 0.85f
+        drawCustomSwitchThumb(
+            style, on, if (on) images.thumbOn else images.thumbOff,
+            Offset((size.width - side) / 2f, (size.height - side) / 2f),
+            androidx.compose.ui.geometry.Size(side, side),
+        )
     }
 }
 
@@ -1696,6 +1796,7 @@ private fun SwitchLayerPanel(
     canPasteLayer: Boolean,
     onSwapStateLayers: () -> Unit,
 ) {
+    val images = rememberCustomSwitchImages(draft)
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1721,18 +1822,34 @@ private fun SwitchLayerPanel(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Canvas(Modifier.size(width = 62.dp, height = 30.dp)) {
-                        drawPixelLayer(grid, Offset.Zero, size)
+                        when (layer) {
+                            SwitchPixelLayer.ThumbOff, SwitchPixelLayer.ThumbOn -> {
+                                val on = layer == SwitchPixelLayer.ThumbOn
+                                val side = minOf(size.width, size.height)
+                                drawCustomSwitchThumb(
+                                    draft, on, if (on) images.thumbOn else images.thumbOff,
+                                    Offset((size.width - side) / 2f, 0f),
+                                    androidx.compose.ui.geometry.Size(side, side),
+                                )
+                            }
+                            else -> drawPixelLayer(grid, Offset.Zero, size)
+                        }
                     }
                     Text(stringResource(layer.labelRes()), style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
     }
+    val usesThumbImage = when (selected) {
+        SwitchPixelLayer.ThumbOff -> draft.thumbOffImageUri != null
+        SwitchPixelLayer.ThumbOn -> draft.thumbOnImageUri != null
+        else -> false
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        IconButton(onClick = onCopyLayer) {
+        IconButton(onClick = onCopyLayer, enabled = !usesThumbImage) {
             Icon(Icons.Rounded.ContentCopy, stringResource(R.string.switch_style_creator_copy_layer))
         }
-        IconButton(onClick = onPasteLayer, enabled = canPasteLayer) {
+        IconButton(onClick = onPasteLayer, enabled = canPasteLayer && !usesThumbImage) {
             Icon(Icons.Rounded.ContentPaste, stringResource(R.string.switch_style_creator_paste_layer))
         }
         IconButton(onClick = onSwapStateLayers) {
@@ -1949,13 +2066,19 @@ private fun SwitchDesignCheckSection(draft: CustomSwitchStyle) {
         if (draft.source == CustomSwitchSource.Pixel && draft.trackOn.isTransparent()) {
             add(stringResource(R.string.switch_style_creator_check_track_on_empty))
         }
-        if (draft.thumbOff.isTransparent() && draft.thumbOn.isTransparent()) {
+        if (draft.thumbOff.isTransparent() && draft.thumbOn.isTransparent() &&
+            draft.thumbOffImageUri == null && draft.thumbOnImageUri == null
+        ) {
             add(stringResource(R.string.switch_style_creator_check_thumb_empty))
         }
-        val imageAppearances = listOf(
-            draft.imageAppearanceFor(on = false),
-            draft.imageAppearanceFor(on = true),
-        )
+        val imageAppearances = buildList {
+            if (draft.source == CustomSwitchSource.Image) {
+                add(draft.imageAppearanceFor(on = false))
+                add(draft.imageAppearanceFor(on = true))
+            }
+            if (draft.thumbOffImageUri != null) add(draft.thumbOffImageAppearance)
+            if (draft.thumbOnImageUri != null) add(draft.thumbOnImageAppearance)
+        }
         if (imageAppearances.any {
                 it.zoom > 2f ||
                     kotlin.math.abs(it.offsetX) > 0.65f ||
@@ -1964,7 +2087,7 @@ private fun SwitchDesignCheckSection(draft: CustomSwitchStyle) {
         ) {
             add(stringResource(R.string.switch_style_creator_check_image_clipping))
         }
-        if (draft.hasLowThumbContrast()) {
+        if (draft.thumbOffImageUri == null && draft.thumbOnImageUri == null && draft.hasLowThumbContrast()) {
             add(stringResource(R.string.switch_style_creator_check_contrast))
         }
     }
@@ -2119,54 +2242,69 @@ private fun SwitchPixelFullscreenEditor(
                             label = { stringResource(it.labelRes()) },
                             onSelected = onLayerSelected,
                         )
-                        PixelGridEditor(
-                            grid = currentGrid,
-                            selectedColor = selectedColor,
-                            contentDescription = stringResource(R.string.component_creator_pixel_canvas),
-                            onStrokeStart = { onStrokeStart() },
-                            onStrokeEnd = onStrokeEnd,
-                            onGridChange = onGridChange,
-                            onColorPicked = onColorSelected,
-                            tool = selectedTool,
-                            showGrid = showGrid,
-                            symmetry = symmetry,
-                            selection = selection,
-                            onSelectionChange = onSelectionChange,
-                            gestureKey = "fullscreen:$editorKey",
-                            constrainHeight = false,
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                        )
-                        SwitchPixelToolbar(
-                            selectedTool = selectedTool,
-                            symmetry = symmetry,
-                            showGrid = showGrid,
-                            canUndo = canUndo,
-                            canRedo = canRedo,
-                            hasSelection = selection != null,
-                            canPasteSelection = canPasteSelection,
-                            onToolSelected = onToolSelected,
-                            onSymmetryChange = onSymmetryChange,
-                            onShowGridChange = onShowGridChange,
-                            onUndo = onUndo,
-                            onRedo = onRedo,
-                            onFill = onFill,
-                            onMirrorHorizontal = onMirrorHorizontal,
-                            onMirrorVertical = onMirrorVertical,
-                            onCopySelection = onCopySelection,
-                            onPasteSelection = onPasteSelection,
-                            onMoveSelection = onMoveSelection,
-                            onRotateSelection = onRotateSelection,
-                            onConvertImage = onConvertImage,
-                            onOpenAssets = onOpenAssets,
-                            onOpenFullscreen = onDismiss,
-                            onClear = onClear,
-                        )
-                        PixelPaletteEditor(
-                            palette = draft.palette,
-                            selectedColor = selectedColor,
-                            onColorSelected = onColorSelected,
-                            onPaletteChange = onPaletteChange,
-                        )
+                        val thumbOn = selectedLayer == SwitchPixelLayer.ThumbOn
+                        val imageUri = when (selectedLayer) {
+                            SwitchPixelLayer.ThumbOff -> draft.thumbOffImageUri
+                            SwitchPixelLayer.ThumbOn -> draft.thumbOnImageUri
+                            else -> null
+                        }
+                        if (imageUri != null) {
+                            SwitchThumbImagePreview(draft, thumbOn, Modifier.weight(1f).fillMaxWidth())
+                            Text(
+                                stringResource(R.string.switch_style_creator_thumb_image_hint),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        } else {
+                            PixelGridEditor(
+                                grid = currentGrid,
+                                selectedColor = selectedColor,
+                                contentDescription = stringResource(R.string.component_creator_pixel_canvas),
+                                onStrokeStart = { onStrokeStart() },
+                                onStrokeEnd = onStrokeEnd,
+                                onGridChange = onGridChange,
+                                onColorPicked = onColorSelected,
+                                tool = selectedTool,
+                                showGrid = showGrid,
+                                symmetry = symmetry,
+                                selection = selection,
+                                onSelectionChange = onSelectionChange,
+                                gestureKey = "fullscreen:$editorKey",
+                                constrainHeight = false,
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                            )
+                            SwitchPixelToolbar(
+                                selectedTool = selectedTool,
+                                symmetry = symmetry,
+                                showGrid = showGrid,
+                                canUndo = canUndo,
+                                canRedo = canRedo,
+                                hasSelection = selection != null,
+                                canPasteSelection = canPasteSelection,
+                                onToolSelected = onToolSelected,
+                                onSymmetryChange = onSymmetryChange,
+                                onShowGridChange = onShowGridChange,
+                                onUndo = onUndo,
+                                onRedo = onRedo,
+                                onFill = onFill,
+                                onMirrorHorizontal = onMirrorHorizontal,
+                                onMirrorVertical = onMirrorVertical,
+                                onCopySelection = onCopySelection,
+                                onPasteSelection = onPasteSelection,
+                                onMoveSelection = onMoveSelection,
+                                onRotateSelection = onRotateSelection,
+                                onConvertImage = onConvertImage,
+                                onOpenAssets = onOpenAssets,
+                                onOpenFullscreen = onDismiss,
+                                onClear = onClear,
+                            )
+                            PixelPaletteEditor(
+                                palette = draft.palette,
+                                selectedColor = selectedColor,
+                                onColorSelected = onColorSelected,
+                                onPaletteChange = onPaletteChange,
+                            )
+                        }
                     }
                 }
                 if (maxWidth >= 720.dp) {
@@ -2519,7 +2657,8 @@ private fun CustomSwitchStyle.gridFor(layer: SwitchPixelLayer): PixelGrid = when
     SwitchPixelLayer.ThumbOn -> thumbOn
 }
 
-private fun CustomSwitchStyle.imageUris(): List<String> = listOfNotNull(imageUri, imageOnUri).distinct()
+private fun CustomSwitchStyle.imageUris(): List<String> =
+    listOfNotNull(imageUri, imageOnUri, thumbOffImageUri, thumbOnImageUri).distinct()
 
 private fun PixelGrid.isTransparent(): Boolean = pixels.all { it == TRANSPARENT_PIXEL }
 

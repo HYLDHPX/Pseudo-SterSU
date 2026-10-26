@@ -112,13 +112,21 @@ fun RainBackdrop(modifier: Modifier = Modifier, overlayOnly: Boolean = false) {
         }
         val sky = Brush.verticalGradient(listOf(palette.backgroundTop, palette.backgroundBottom))
         val clouds = if (overlayOnly) emptyList() else rainCloudPaints(size, palette, settings.scene)
+        val thunderPaint = if (settings.scene == RainStyle.Thunderstorm && settings.thunder &&
+            !settings.foregroundDrawingEnabled(covered))
+            rainThunderPaint(size, palette) else null
         onDrawBehind {
             if (!overlayOnly) {
                 drawRect(sky)
                 drawRainClouds(clouds, progress.rainSeconds() / 30f)
             }
+            val seconds = progress.rainSeconds()
+            val thunder = rainThunderPulse(settings, seconds, progress.rainMotionAllowed())
+            if (thunderPaint != null && thunder > 0f) {
+                drawRainThunder(thunderPaint, thunder, (seconds / settings.thunderInterval).toInt())
+            }
             val margin = rainTravelMarginDp(spec).dp.toPx()
-            val wind = rainWindAt(spec.windRatio, progress.rainSeconds())
+            val wind = rainWindAt(spec.windRatio, seconds)
             drops.forEachIndexed { index, drop ->
                 if (settings.foregroundDrawingEnabled(covered) && rainFrontParticle(index)) return@forEachIndexed
                 val fieldProgress = rainFieldProgress(progress.value, index, size, density, margin)
@@ -162,8 +170,10 @@ fun Modifier.rainMiuixCardSurface(enabled: Boolean = true, capHeight: Dp = 13.dp
     if (!enabled || !isRainInterfaceStyle()) return this
     val settings = LocalRainSettings.current
     val palette = rainPalette(settings, isInDarkTheme())
-    val alpha = if (LocalUiPassthroughSettings.current.enabled) LocalUiPassthroughSettings.current.surfaceOpacity
-        else settings.surfaceOpacity
+    val alpha = settings.backgroundSurfaceOpacity(
+        if (LocalUiPassthroughSettings.current.enabled) LocalUiPassthroughSettings.current.surfaceOpacity
+        else settings.surfaceOpacity,
+    )
     return clip(shape)
         .background(palette.surfaceTop.copy(alpha = alpha), shape)
         .rainCardDecoration(capHeight, shape = shape)
@@ -216,7 +226,7 @@ internal fun rainCardDecorationHeight(requestedHeight: Float, width: Float, heig
 
 @Composable
 fun rainNavigationContainerColor(): Color = rainPalette(LocalRainSettings.current, isInDarkTheme())
-    .surfaceBottom.copy(alpha = LocalRainSettings.current.navigationOpacity)
+    .surfaceBottom.copy(alpha = LocalRainSettings.current.backgroundSurfaceOpacity(LocalRainSettings.current.navigationOpacity))
 
 @Composable
 fun Modifier.rainNavigationSurface(shape: Shape, paintBackground: Boolean = true): Modifier {
@@ -270,7 +280,7 @@ fun Modifier.rainNavigationIndicator(
 @Composable
 @ReadOnlyComposable
 fun rainTopBarContainerColor(): Color = rainPalette(LocalRainSettings.current, isInDarkTheme())
-    .surfaceBottom.copy(alpha = LocalRainSettings.current.topBarOpacity)
+    .surfaceBottom.copy(alpha = LocalRainSettings.current.backgroundSurfaceOpacity(LocalRainSettings.current.topBarOpacity))
 
 @Composable
 @ReadOnlyComposable

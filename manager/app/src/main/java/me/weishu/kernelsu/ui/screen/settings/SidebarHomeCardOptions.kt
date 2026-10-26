@@ -18,7 +18,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -169,7 +168,6 @@ internal fun SidebarHomeCardOptions(config: SidebarWidgetConfig, onUpdate: (Side
             selectedIndex = if (editingDark) 1 else 0, enabled = !importing,
             onSelected = { editingDark = it == 1; imageError = false },
         )
-        HorizontalDivider()
         // Preview the selected theme, never a captured frame from the settings page.
         CompositionLocalProvider(LocalSidebarGlassBackdrop provides null) {
             MaterialTheme(colorScheme = if (editingDark) darkColorScheme() else lightColorScheme()) {
@@ -181,7 +179,6 @@ internal fun SidebarHomeCardOptions(config: SidebarWidgetConfig, onUpdate: (Side
                 }
             }
         }
-        HorizontalDivider()
         Text(stringResource(R.string.sidebar_home_cards_image), style = MaterialTheme.typography.titleSmall)
         if (importing) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -212,7 +209,6 @@ internal fun SidebarHomeCardOptions(config: SidebarWidgetConfig, onUpdate: (Side
                 releaseUnused(style.imageUri, cards)
             }, enabled = !importing, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.sidebar_home_cards_inherit)) }
         }
-        HorizontalDivider()
         SidebarDesignChoice(
             title = stringResource(R.string.sidebar_home_cards_material),
             options = SidebarCardMaterial.entries.map { stringResource(it.cardMaterialLabel()) },
@@ -252,7 +248,6 @@ internal fun SidebarHomeCardOptions(config: SidebarWidgetConfig, onUpdate: (Side
                 }
             }
         }
-        HorizontalDivider()
         Text(stringResource(R.string.sidebar_home_cards_readability), style = MaterialTheme.typography.bodySmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { confirmAction = "apply" }, enabled = !importing, modifier = Modifier.heightIn(min = 48.dp)) {

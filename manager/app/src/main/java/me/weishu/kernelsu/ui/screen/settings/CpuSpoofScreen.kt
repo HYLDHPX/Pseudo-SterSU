@@ -33,7 +33,6 @@ import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -387,7 +386,6 @@ private fun CpuSpoofRuntimePanel(
                 onCheckedChange = onEnabledChange,
             )
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
         CpuSpoofInfoRow(
             label = stringResource(R.string.cpu_spoof_current_cpu),
             value = status.current.ifBlank { stringResource(R.string.cpu_spoof_unavailable_value) },
@@ -414,7 +412,6 @@ private fun CpuSpoofRuntimePanel(
             CpuSpoofInfoRow(
                 label = stringResource(R.string.cpu_spoof_platform),
                 value = status.platform,
-                showDivider = false,
             )
         }
         if (status.error.isNotBlank()) {
@@ -496,19 +493,13 @@ private fun CpuSpoofPresetPanel(
         icon = Icons.Rounded.CheckCircleOutline,
         contentPadding = 0.dp,
     ) {
-        cpuSpoofPresets.forEachIndexed { index, preset ->
+        cpuSpoofPresets.forEach { preset ->
             CpuSpoofPresetRow(
                 preset = preset,
                 selected = preset.model == selectedTarget,
                 enabled = enabled,
                 onClick = { onSelected(preset) },
             )
-            if (index != cpuSpoofPresets.lastIndex) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
-                )
-            }
         }
     }
 }
@@ -626,7 +617,6 @@ private fun CpuSpoofSection(
 private fun CpuSpoofInfoRow(
     label: String,
     value: String,
-    showDivider: Boolean = true,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
@@ -652,9 +642,6 @@ private fun CpuSpoofInfoRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-        }
-        if (showDivider) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
         }
     }
 }

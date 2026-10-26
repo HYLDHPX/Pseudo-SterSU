@@ -41,7 +41,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -444,7 +443,6 @@ private fun SusfsApplicationRow(app: SusfsApplication, busy: Boolean, onChange: 
                 }
             }
             if (expanded) {
-                HorizontalDivider()
                 Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SelectionContainer {
                         Text(app.packageNames.joinToString("\n"), style = MaterialTheme.typography.bodySmall)
@@ -541,7 +539,6 @@ private fun SusfsImportPreview(plan: SusfsImportPlan, busy: Boolean, onDismiss: 
                             style = MaterialTheme.typography.labelLarge,
                         )
                         if (item.reason.isNotEmpty()) Text(policyFailureText(item.reason), style = MaterialTheme.typography.bodySmall)
-                        HorizontalDivider()
                     }
                 }
             }
@@ -581,7 +578,6 @@ private fun SusfsResultDialog(report: SusfsApplyReport, onDismiss: () -> Unit) {
                             else -> R.string.susfs_apps_failed
                         }), style = MaterialTheme.typography.labelLarge)
                         if (item.detail.isNotEmpty()) SelectionContainer { Text(policyFailureText(item.detail), style = MaterialTheme.typography.bodySmall) }
-                        HorizontalDivider()
                     }
                 }
             }

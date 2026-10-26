@@ -38,7 +38,6 @@ import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
@@ -161,7 +160,6 @@ internal fun SidebarDesignWorkspace(
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.sidebar_editor_preview))
                         }
-                        HorizontalDivider()
                     }
                     content(page)
                 }

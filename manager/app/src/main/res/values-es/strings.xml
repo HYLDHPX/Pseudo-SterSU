@@ -252,7 +252,6 @@
     <string name="home_gki_warning">A partir de v3.0.0, el modo de trabajo GKI se utilizará únicamente en entornos de prueba. No lo recomendamos para el uso diario y ya no se proporcionarán archivos de imágenes.</string>
     <string name="home_manager_identity_warning">SterSU está activo, pero el kernel no reconoce esta aplicación como administrador. Reinstale el APK de Manager correspondiente o reconstruya el kernel con la firma de esta aplicación.</string>
     <string name="home_manager_build_mismatch_warning">El controlador activo (%1$d) no se creó para este SterSU Manager (%2$d). Reinstalar el APK por sí solo no puede solucionarlo. Parchee y actualice una nueva imagen con este Administrador, o use un GKI/LKM creado a partir de la fuente SterSU actual.</string>
-    <string name="about_join_qq_group">点击链接加入群聊【SterSU官方群】</string>
     <string name="profile">Perfil de la aplicación</string>
     <string name="profile_flags">Banderas</string>
     <string name="uapi_mismatch">La versión de uapi del administrador (%1$d) y la versión de uapi del controlador SterSU (%2$d) no coinciden.</string>

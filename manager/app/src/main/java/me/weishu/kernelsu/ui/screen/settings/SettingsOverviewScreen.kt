@@ -27,7 +27,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -326,13 +325,7 @@ private fun OverviewPrimaryCard(
         shape = shape,
     ) {
         Column {
-            overviewPrimaryCategories.forEachIndexed { index, category ->
-                if (index > 0) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 76.dp, end = 18.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
-                }
+            overviewPrimaryCategories.forEach { category ->
                 OverviewPrimaryRow(category, onClick = { onOpenCategory(category) })
             }
         }

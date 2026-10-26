@@ -20,8 +20,8 @@
     <string name="rain_through_ui">雨滴穿過介面</string>
     <string name="rain_foreground_opacity">前景雨滴濃度</string>
     <string name="rain_surface_interaction">卡片與側欄雨滴連動</string>
-    <string name="rain_thunder">雷雨場景遠雷微光</string>
-    <string name="rain_interaction_note">近景雨滴經過介面，在卡片與側欄的實際交會處泛起細小漣漪。雷光僅在雷雨場景中緩慢局部亮起。效果跟隨動畫與桌布疊雨開關，不攔截觸控。</string>
+    <string name="rain_thunder">雷雨場景閃電</string>
+    <string name="rain_interaction_note">關閉雨滴穿過介面後，面板會減輕遮擋，保留背景雨，文字、圖片和圖示不變透明。閃電獨立控制，呈現分叉雷光與雲層餘輝。效果跟隨動畫與桌布疊雨開關，不攔截觸控。</string>
     <string name="rain_card_edge_strength">卡片邊緣強度</string>
     <string name="rain_card_interior_strength">卡片內部強度</string>
     <string name="rain_top_bar_strength">頂部列裝飾強度</string>

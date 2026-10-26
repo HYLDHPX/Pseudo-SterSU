@@ -69,7 +69,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -680,6 +679,7 @@ private fun ModuleItem(
     closeSearch: () -> Unit
 ) {
     val wallpaperState = rememberModuleCardWallpaperState(module.id)
+    val editButtonImages = moduleButtonImageEditor()
     val wallpaperEntry = rememberModuleCardWallpaperFrame(wallpaperState, paused = false)
     val wallpaperLoadState = rememberModuleCardWallpaperLoadState(wallpaperEntry)
     val cardBackground = rememberModuleCardBackground(module, wallpaperEntry, wallpaperLoadState)
@@ -759,9 +759,21 @@ private fun ModuleItem(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = onEditWallpaper) {
-                        Icon(
-                            imageVector = Icons.Outlined.Image,
+                    CombinedClickableButton(
+                        onClick = onEditWallpaper,
+                        onLongClick = editButtonImages,
+                        onLongClickLabel = stringResource(R.string.module_button_images_title),
+                        modifier = Modifier.defaultMinSize(48.dp, 48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                        ),
+                        contentPadding = PaddingValues(12.dp),
+                    ) {
+                        ModuleButtonIcon(
+                            slot = ModuleButtonImageSlot.Wallpaper,
+                            fallback = Icons.Outlined.Image,
+                            modifier = Modifier.size(24.dp),
                             contentDescription = stringResource(R.string.module_wallpaper_editor_open),
                         )
                     }
@@ -852,7 +864,6 @@ private fun ModuleItem(
                 }
             }
 
-            HorizontalDivider(thickness = Dp.Hairline)
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -884,9 +895,10 @@ private fun ModuleItem(
                                 ),
                                 contentPadding = ButtonDefaults.TextButtonContentPadding,
                             ) {
-                                Icon(
+                                ModuleButtonIcon(
+                                    slot = ModuleButtonImageSlot.Action,
                                     modifier = Modifier.size(20.dp),
-                                    imageVector = Icons.Outlined.PlayArrow,
+                                    fallback = Icons.Outlined.PlayArrow,
                                     contentDescription = if (compact) stringResource(R.string.action) else null,
                                 )
                                 if (!compact && !module.hasWebUi && !hasUpdate) {
@@ -967,9 +979,11 @@ private fun ModuleItem(
                     onClick = onUninstallClicked,
                     contentPadding = ButtonDefaults.TextButtonContentPadding,
                 ) {
-                    Icon(
+                    ModuleButtonIcon(
+                        slot = ModuleButtonImageSlot.Uninstall,
+                        customImageEnabled = !module.remove,
                         modifier = Modifier.size(20.dp).then(if (module.remove) Modifier.rotate(180f) else Modifier),
-                        imageVector = if (module.remove) Icons.Outlined.Refresh else Icons.Outlined.Delete,
+                        fallback = if (module.remove) Icons.Outlined.Refresh else Icons.Outlined.Delete,
                         contentDescription = if (compact) stringResource(if (module.remove) R.string.undo else R.string.uninstall) else null,
                     )
                     if (!compact && ((!module.hasActionScript && !module.hasWebUi) || !hasUpdate)) {
@@ -990,6 +1004,7 @@ private fun ModuleItem(
 private fun CombinedClickableButton(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    onLongClickLabel: String? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     shape: Shape = ButtonDefaults.shape,
@@ -1010,6 +1025,7 @@ private fun CombinedClickableButton(
                 enabled = enabled,
                 onClick = onClick,
                 onLongClick = onLongClick,
+                onLongClickLabel = onLongClickLabel,
             ),
         shape = shape,
         color = if (enabled) colors.containerColor else colors.disabledContainerColor,

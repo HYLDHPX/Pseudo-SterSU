@@ -78,7 +78,6 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -240,7 +239,6 @@ fun AiChatScreen() {
                                     },
                                 )
                             }
-                            HorizontalDivider()
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.ai_chat_new_conversation)) },
                                 leadingIcon = { Icon(Icons.Rounded.AddComment, contentDescription = null) },
@@ -276,7 +274,6 @@ fun AiChatScreen() {
                                     navigator.push(Route.AiModuleStudio)
                                 },
                             )
-                            HorizontalDivider()
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.ai_chat_rename)) },
                                 leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
@@ -504,7 +501,6 @@ private fun AiApiConfigCard(
         }
 
         if (state.configExpanded) {
-            HorizontalDivider()
             Column(
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),

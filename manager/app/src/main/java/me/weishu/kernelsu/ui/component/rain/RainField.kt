@@ -176,13 +176,14 @@ internal fun rainSurfaceHit(
     return RainSurfaceHit(Offset(x, y), (ageMillis / RAIN_IMPACT_DURATION_MILLIS).coerceIn(0f, 1f), verticalHit, surface.kind, tangent)
 }
 
-/** A single slow glow, never alternating flashes; no thunder in still/reduced-motion mode. */
+/** One fast bloom with a long afterglow per storm interval; never a repeating strobe. */
 internal fun rainThunderPulse(settings: RainSettings, seconds: Float, motionAllowed: Boolean): Float {
     if (!settings.active || !settings.thunder || !settings.motion || !motionAllowed ||
-        settings.scene != RainStyle.Thunderstorm || settings.intensity <= 0f || !seconds.isFinite()) return 0f
+        settings.scene != RainStyle.Thunderstorm || settings.intensity <= 0f || !seconds.isFinite() || seconds < 0f) return 0f
     val interval = settings.thunderInterval.takeIf { it.isFinite() }?.coerceIn(8f, 60f) ?: 18f
-    val time = ((seconds % interval + interval) % interval - interval * 0.7f) / 1.8f
-    if (time !in 0f..1f) return 0f
-    val value = sin(time * PI).toFloat()
-    return value * value
+    val elapsed = seconds % interval - minOf(2.4f, interval * 0.2f)
+    if (elapsed !in 0f..1.32f) return 0f
+    if (elapsed < 0.12f) return sin(elapsed / 0.12f * PI / 2).toFloat()
+    val fade = (1f - (elapsed - 0.12f) / 1.2f).coerceIn(0f, 1f)
+    return fade * fade
 }

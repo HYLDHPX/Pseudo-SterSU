@@ -32,6 +32,8 @@ import me.weishu.kernelsu.ui.component.material.SegmentedCheckboxItem
 import me.weishu.kernelsu.ui.component.material.SegmentedColumn
 import top.yukonga.miuix.kmp.nav.gesture.WindowNavigationEventBridge
 
+internal val profileDialogSheetValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
+
 @Composable
 fun <T> MultiSelectDialog(
     title: String,
@@ -59,8 +61,8 @@ fun <T> MultiSelectDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberBottomSheetState(
-            SheetValue.Hidden,
-            setOf(SheetValue.PartiallyExpanded)
+            initialValue = SheetValue.Hidden,
+            enabledValues = profileDialogSheetValues,
         )
     ) {
         WindowNavigationEventBridge()

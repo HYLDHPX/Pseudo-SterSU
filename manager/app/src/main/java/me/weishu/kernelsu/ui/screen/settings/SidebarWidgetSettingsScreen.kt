@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,7 +27,6 @@ import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -274,7 +274,6 @@ private fun SidebarWidgetControls(
                             Icon(Icons.Rounded.ArrowDownward, contentDescription = "$itemLabel: ${stringResource(R.string.sidebar_widget_move_down)}")
                         }
                     }
-                    if (index < config.navigationOrder.lastIndex) HorizontalDivider()
                 }
             }
         }
@@ -299,7 +298,6 @@ private fun ClockOptions(config: SidebarWidgetConfig, onUpdate: (SidebarWidgetCo
             selectedIndex = SidebarClockStyle.entries.indexOf(config.clockStyle),
             onSelected = { onUpdate(config.copy(clockStyle = SidebarClockStyle.entries[it])) },
         )
-        HorizontalDivider()
         Row(
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -368,7 +366,7 @@ private fun SettingsSection(
     ) {
         if (title != null) Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         content()
-        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+        Spacer(Modifier.height(8.dp))
     }
 }
 

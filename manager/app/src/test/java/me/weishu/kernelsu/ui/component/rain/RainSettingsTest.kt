@@ -75,10 +75,10 @@ class RainSettingsTest {
         RainStyle.entries.forEach { scene -> RainQuality.entries.forEach { quality ->
             val spec = RainSceneSpec.fromSettings(RainSettings(scene = scene, quality = quality, intensity = 1f))
             assertTrue(spec.dropCount in 0..80)
-            assertTrue(spec.cycleMillis >= 7000)
+            assertTrue(spec.cycleMillis in 3000..15000)
         } }
         assertEquals(0, RainSceneSpec.fromSettings(RainSettings(intensity = 0f)).dropCount)
-        assertEquals(7000, RainSceneSpec.fromSettings(RainSettings(speed = 2f)).cycleMillis)
+        assertEquals(3000, RainSceneSpec.fromSettings(RainSettings(speed = 2f)).cycleMillis)
         assertEquals(-0.4f, RainSceneSpec.fromSettings(RainSettings(wind = -0.4f)).windRatio, 0f)
         assertTrue(RainSceneSpec.fromSettings(RainSettings(scene = RainStyle.HeavyRain)).dropCount >
             RainSceneSpec.fromSettings(RainSettings(scene = RainStyle.LightRain)).dropCount)

@@ -141,12 +141,12 @@ class RainRefinementTest {
 
     @Test fun thunderCadenceIsIndependentOfRainSpeedWithOneSmoothEnvelope() {
         val settings = RainSettings(active = true, scene = RainStyle.Thunderstorm, thunderInterval = 18f)
-        val center = settings.thunderInterval * 0.7f + 0.9f
+        val center = 2.4f + 0.12f
         for (speed in listOf(0.4f, 1f, 2f)) {
             assertEquals(1f, rainThunderPulse(settings.copy(speed = speed), center, true), 0.001f)
             assertEquals(1f, rainThunderPulse(settings.copy(speed = speed), center + 18f, true), 0.001f)
         }
-        assertEquals(0f, rainThunderPulse(settings.copy(thunderInterval = 30f), center, true), 0f)
+        assertEquals(0f, rainThunderPulse(settings.copy(thunderInterval = 30f), center + 18f, true), 0f)
         assertEquals(0f, rainThunderPulse(settings, center, false), 0f)
     }
 

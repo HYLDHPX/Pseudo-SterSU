@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,7 +55,6 @@ internal fun SuperUserOverflowMenu(
                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(20.dp)) },
                 onClick = { showSortMenu = false },
             )
-            HorizontalDivider(Modifier.padding(horizontal = 12.dp))
             val sortType = uiState.sortOption / 2
             val reversed = uiState.sortOption % 2 != 0
             listOf(
@@ -76,7 +74,6 @@ internal fun SuperUserOverflowMenu(
                     },
                 )
             }
-            HorizontalDivider(Modifier.padding(horizontal = 12.dp))
             SuperUserCheckableMenuItem(R.string.sort_reverse, reversed) {
                 haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
                 actions.onUpdateSortOption(sortType * 2 + if (reversed) 0 else 1)
@@ -87,7 +84,6 @@ internal fun SuperUserOverflowMenu(
                 text = { Text(stringResource(R.string.superuser_sort_menu, stringResource(superUserSortLabel(uiState.sortOption))), maxLines = 2, overflow = TextOverflow.Ellipsis) },
                 onClick = { showSortMenu = true },
             )
-            HorizontalDivider(Modifier.padding(horizontal = 12.dp))
             SuperUserCheckableMenuItem(R.string.show_system_apps, uiState.showSystemApps) {
                 haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
                 actions.onToggleShowSystemApps()
@@ -101,7 +97,6 @@ internal fun SuperUserOverflowMenu(
                 }
             }
             if (showTools) {
-                HorizontalDivider(Modifier.padding(horizontal = 12.dp))
                 CompactOverflowMenuItem(
                     text = { Text(stringResource(R.string.settings_sulog), maxLines = 2, overflow = TextOverflow.Ellipsis) },
                     onClick = { onDismissRequest(); actions.onOpenSulog() },

@@ -318,7 +318,6 @@
     <string name="jailbreak_timeout">脱獄に失敗した可能性があります。ログを確認してください。</string>
     <string name="home_manager_identity_warning">SterSU はアクティブですが、このアプリはカーネルによってマネージャーとして認識されません。一致するマネージャー APK を再インストールするか、このアプリ署名を使用してカーネルを再構築します。</string>
     <string name="home_manager_build_mismatch_warning">アクティブなドライバー (%1$d) は、この SterSU Manager (%2$d) 用にビルドされていません。 APK を再インストールするだけでは問題を解決できません。この Manager を使用して新しいイメージにパッチを適用してフラッシュするか、現在の SterSU ソースから構築された GKI/LKM を使用します。</string>
-    <string name="about_join_qq_group">点击链接加入群聊【SterSU官方群】</string>
     <string name="profile_flags">フラグ</string>
     <string name="uapi_mismatch">マネージャーの uapi バージョン (%1$d) と SterSU ドライバーの uapi バージョン (%2$d) が一致しません。</string>
     <string name="require_manager_version">現在の SterSU マネージャーのバージョン %1$d は、SterSU が適切に動作するには低すぎます。マネージャーをバージョン %2$d 以降にアップグレードしてください。</string>

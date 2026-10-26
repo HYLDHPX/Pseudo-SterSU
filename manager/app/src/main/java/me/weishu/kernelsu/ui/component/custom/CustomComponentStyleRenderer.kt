@@ -84,6 +84,8 @@ fun rememberComponentMotionProgress(
 data class CustomSwitchImages(
     val off: ImageBitmap? = null,
     val on: ImageBitmap? = null,
+    val thumbOff: ImageBitmap? = null,
+    val thumbOn: ImageBitmap? = null,
 )
 
 @Composable
@@ -92,17 +94,23 @@ fun rememberCustomSwitchImages(style: CustomSwitchStyle?): CustomSwitchImages {
     val imageStyle = style?.takeIf { it.source == CustomSwitchSource.Image }
     val offUri = imageStyle?.imageUri
     val onUri = imageStyle?.imageOnUri
-    val images by produceState(initialValue = CustomSwitchImages(), offUri, onUri) {
+    val thumbOffUri = style?.thumbOffImageUri
+    val thumbOnUri = style?.thumbOnImageUri
+    val images by produceState(initialValue = CustomSwitchImages(), offUri, onUri, thumbOffUri, thumbOnUri) {
         value = withContext(Dispatchers.IO) {
             val store = ComponentStyleStore(context)
+            val decoded = mutableMapOf<String, ImageBitmap?>()
             fun decode(uri: String?): ImageBitmap? {
+                uri ?: return null
+                if (decoded.containsKey(uri)) return decoded[uri]
                 val file = store.resolveImageFile(uri) ?: return null
-                return runCatching { decodeCustomSwitchImage(file) }.getOrNull()
+                return runCatching { decodeCustomSwitchImage(file) }.getOrNull().also { decoded[uri] = it }
             }
-            val off = decode(offUri)
             CustomSwitchImages(
-                off = off,
-                on = if (onUri == offUri) off else decode(onUri),
+                off = decode(offUri),
+                on = decode(onUri),
+                thumbOff = decode(thumbOffUri),
+                thumbOn = decode(thumbOnUri),
             )
         }
     }
@@ -268,28 +276,39 @@ fun DrawScope.drawCustomSwitchStyle(
     val center = Offset(startX + (endX - startX) * checkedProgress, size.height / 2f)
     val thumbSize = Size(radius * 2f, radius * 2f)
     val thumbTopLeft = center - Offset(radius, radius)
-    val offBlank = normalized.thumbOff.pixels.all { it == TRANSPARENT_PIXEL }
-    val onBlank = normalized.thumbOn.pixels.all { it == TRANSPARENT_PIXEL }
     drawCircle(
         color = thumbColor.copy(alpha = thumbColor.alpha * enabledAlpha),
         radius = radius,
         center = center,
     )
-    if (offBlank && onBlank) {
+    drawCustomSwitchThumb(
+        normalized, false, images.thumbOff, thumbTopLeft, thumbSize, dynamicAlpha * (1f - stateProgress),
+    )
+    drawCustomSwitchThumb(
+        normalized, true, images.thumbOn, thumbTopLeft, thumbSize, dynamicAlpha * stateProgress,
+    )
+}
+
+fun DrawScope.drawCustomSwitchThumb(
+    style: CustomSwitchStyle,
+    on: Boolean,
+    image: ImageBitmap?,
+    topLeft: Offset,
+    destinationSize: Size,
+    alpha: Float = 1f,
+) {
+    val uri = if (on) style.thumbOnImageUri else style.thumbOffImageUri
+    if (uri == null) {
+        drawPixelLayer(if (on) style.thumbOn else style.thumbOff, topLeft, destinationSize, alpha)
         return
-    } else {
-        drawPixelLayer(
-            grid = normalized.thumbOff,
-            topLeft = thumbTopLeft,
-            destinationSize = thumbSize,
-            alpha = dynamicAlpha * (1f - checkedProgress),
-        )
-        drawPixelLayer(
-            grid = normalized.thumbOn,
-            topLeft = thumbTopLeft,
-            destinationSize = thumbSize,
-            alpha = dynamicAlpha * checkedProgress,
-        )
+    }
+    clipRect(topLeft.x, topLeft.y, topLeft.x + destinationSize.width, topLeft.y + destinationSize.height) {
+        if (image == null) {
+            drawMissingSwitchImage(topLeft, destinationSize, alpha)
+        } else {
+            val appearance = if (on) style.thumbOnImageAppearance else style.thumbOffImageAppearance
+            drawSwitchImage(image, appearance, topLeft, destinationSize, alpha * appearance.opacity)
+        }
     }
 }
 

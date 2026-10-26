@@ -61,7 +61,6 @@ import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -282,7 +281,6 @@ internal fun SettingsSidebarScreen(
                                 stringResource(if (sidebarStyle) R.string.settings_sidebar_appearance_summary else R.string.settings_home_appearance_summary),
                                 Icons.Rounded.Palette,
                             ) { onOpenCategory(SettingsCategory.Appearance) }
-                            HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.outlineVariant)
                             SidebarSettingsEntry(
                                 stringResource(R.string.settings_sidebar_more),
                                 stringResource(R.string.settings_sidebar_more_summary),
@@ -397,7 +395,6 @@ internal fun SettingsSidebarScreen(
                     }) {
                         Text(stringResource(R.string.settings_device_text_reset))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Text(
                         stringResource(R.string.settings_device_photo),
                         style = MaterialTheme.typography.titleSmall,

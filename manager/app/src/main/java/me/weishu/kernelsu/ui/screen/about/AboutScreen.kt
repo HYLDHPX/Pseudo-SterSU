@@ -34,7 +34,6 @@ import me.weishu.kernelsu.ui.LocalUiMode
 import me.weishu.kernelsu.ui.UiMode
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.component.ApkeGroupedList
-import me.weishu.kernelsu.ui.component.ApkeListDivider
 import me.weishu.kernelsu.ui.component.ApkeSecondaryScaffold
 import me.weishu.kernelsu.ui.component.ApkeUiTokens
 
@@ -47,10 +46,6 @@ fun AboutScreen() {
         appName = stringResource(R.string.app_name),
         versionName = BuildConfig.VERSION_NAME,
         links = listOf(
-            LinkInfo(
-                fullText = stringResource(R.string.about_join_qq_group),
-                url = QQ_GROUP_URL,
-            ),
             LinkInfo(
                 fullText = stringResource(R.string.about_official_telegram),
                 url = OFFICIAL_TELEGRAM_URL,
@@ -103,7 +98,7 @@ private fun AboutScreenCompact(
             }
             item {
                 ApkeGroupedList {
-                    state.links.forEachIndexed { index, link ->
+                    state.links.forEach { link ->
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier
@@ -120,7 +115,6 @@ private fun AboutScreenCompact(
                                 )
                             },
                         )
-                        if (index < state.links.lastIndex) ApkeListDivider()
                     }
                 }
             }
@@ -169,7 +163,6 @@ private fun RowAboutIdentity(state: AboutUiState) {
     }
 }
 
-private const val QQ_GROUP_URL = "https://qm.qq.com/q/Q8PmBoq9iK"
 private const val OFFICIAL_TELEGRAM_URL = "https://t.me/muyan762"
 private const val OFFICIAL_UPSTREAM_URL = "https://github.com/tiann/KernelSU"
 private const val ASTER_PROJECT_URL = "https://github.com/LyraVoid/Aster"

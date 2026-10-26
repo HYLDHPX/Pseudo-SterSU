@@ -170,7 +170,7 @@ internal data class RainSceneSpec(
                 (safe.quality.drops * densityOf(safe.scene) * sqrt(safe.intensity)).toInt().coerceIn(0, 80),
                 // Ripples follow the drop layout, so a denser scene earns more impacts.
                 if (safe.scene == RainStyle.AfterRain) 4 else 0,
-                (14_000 / safe.speed).toInt().coerceIn(7_000, 40_000),
+                (6_000 / safe.speed).toInt().coerceIn(3_000, 15_000),
                 minLength,
                 maxLength,
                 (0.55f * strokeScale).coerceIn(0.1f, 4f),

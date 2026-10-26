@@ -47,7 +47,9 @@ fun ModulePager(
     bottomInnerPadding: Dp,
     isCurrentPage: Boolean = true,
 ) {
-    OverflowMenuBackdrop { ModulePagerContent(bottomInnerPadding, isCurrentPage) }
+    ModuleButtonImages {
+        OverflowMenuBackdrop { ModulePagerContent(bottomInnerPadding, isCurrentPage) }
+    }
 }
 
 @Composable

@@ -57,7 +57,6 @@ import me.weishu.kernelsu.ui.component.ApkeEmptyState
 import me.weishu.kernelsu.ui.component.ApkeErrorState
 import me.weishu.kernelsu.ui.component.ApkeFixedActionBar
 import me.weishu.kernelsu.ui.component.ApkeGroupedList
-import me.weishu.kernelsu.ui.component.ApkeListDivider
 import me.weishu.kernelsu.ui.component.ApkeLoadingState
 import me.weishu.kernelsu.ui.component.ApkeSecondaryScaffold
 import me.weishu.kernelsu.ui.component.ApkeStatus
@@ -413,7 +412,6 @@ private fun DynamicManagerStatusRow(state: DynamicManagerUiState) {
             )
         }
         if (runtime.configured) {
-            ApkeListDivider()
             Text(
                 stringResource(
                     R.string.dynamic_manager_certificate,

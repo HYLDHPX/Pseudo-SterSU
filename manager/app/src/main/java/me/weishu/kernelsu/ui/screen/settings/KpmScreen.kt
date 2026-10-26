@@ -55,7 +55,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
@@ -1089,7 +1088,6 @@ private fun NativeKpmScreen(
                         minLines = 2,
                     )
                     if (controlOutput.isNotBlank()) {
-                        HorizontalDivider()
                         Text(
                             text = controlOutput,
                             modifier = Modifier
@@ -1241,7 +1239,6 @@ private fun KpmOverviewCard(
                 }
             }
             if (caps?.managementAvailable == true && !caps.lateLoad) {
-                HorizontalDivider()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,

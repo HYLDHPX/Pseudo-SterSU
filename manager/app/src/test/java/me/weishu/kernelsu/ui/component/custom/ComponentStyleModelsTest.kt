@@ -9,6 +9,82 @@ import org.junit.Test
 
 class ComponentStyleModelsTest {
     @Test
+    fun buttonImagesRoundTripIndependentlyWithPixelOrImageTracks() {
+        CustomSwitchSource.entries.forEach { source ->
+            val style = CustomSwitchStyle(
+                id = "switch-thumb-images",
+                source = source,
+                thumbOffImageUri = "file:///private/off.png",
+                thumbOffImageSha256 = "a".repeat(64),
+                thumbOffImageMimeType = "image/png",
+                thumbOnImageUri = "file:///private/on.webp",
+                thumbOnImageSha256 = "b".repeat(64),
+                thumbOnImageMimeType = "image/webp",
+                thumbOffImageAppearance = SwitchImageAppearance(scale = SwitchImageScale.Fit, zoom = 0.8f),
+                thumbOnImageAppearance = SwitchImageAppearance(scale = SwitchImageScale.Crop, zoom = 1.6f),
+                thumbOff = PixelGrid.blank(SWITCH_THUMB_GRID_SIZE, SWITCH_THUMB_GRID_SIZE).filled(0xFF00FF00L),
+            )
+
+            val restored = CustomSwitchStyle.fromJsonString(style.toJsonString())
+
+            assertEquals(style.normalized(), restored)
+            assertEquals(style.thumbOff, restored.thumbOff)
+        }
+    }
+
+    @Test
+    fun buttonImagePackagesKeepHashesWithoutLeakingDeviceUris() {
+        val style = CustomSwitchStyle(
+            thumbOffImageUri = "file:///private/off.png",
+            thumbOffImageSha256 = "a".repeat(64),
+            thumbOnImageUri = "file:///private/on.png",
+            thumbOnImageSha256 = "b".repeat(64),
+        )
+        val json = style.toJson(includeLocalImageUri = false)
+        assertTrue(json.isNull("thumb_off_image_uri"))
+        assertTrue(json.isNull("thumb_on_image_uri"))
+        // Imported JSON must not be able to restore a device-specific URI.
+        json.put("thumb_off_image_uri", "file:///untrusted/off.png")
+        json.put("thumb_on_image_uri", "file:///untrusted/on.png")
+        val restored = CustomSwitchStyle.fromJson(json, allowLocalImageUri = false)
+        assertNull(restored.thumbOffImageUri)
+        assertNull(restored.thumbOnImageUri)
+        assertEquals(style.thumbOffImageSha256, restored.thumbOffImageSha256)
+        assertEquals(style.thumbOnImageSha256, restored.thumbOnImageSha256)
+    }
+
+    @Test
+    fun oldSwitchStylesKeepPixelButtonsAndFitDefaults() {
+        val old = CustomSwitchStyle().toJson(includeLocalImageUri = true)
+        old.keys().asSequence().filter { it.startsWith("thumb_off_image") || it.startsWith("thumb_on_image") }
+            .toList().forEach(old::remove)
+        val restored = CustomSwitchStyle.fromJson(old, allowLocalImageUri = true)
+        assertNull(restored.thumbOffImageUri)
+        assertNull(restored.thumbOnImageUri)
+        assertEquals(SwitchImageScale.Fit, restored.thumbOffImageAppearance.scale)
+        assertEquals(SwitchImageScale.Fit, restored.thumbOnImageAppearance.scale)
+    }
+
+    @Test
+    fun buttonImageReferencesAndAppearancesNormalizeUnsafeValues() {
+        val normalized = CustomSwitchStyle(
+            thumbOffImageUri = "  file:///private/off.png  ",
+            thumbOffImageSha256 = "A".repeat(64),
+            thumbOffImageMimeType = " IMAGE/PNG ",
+            thumbOnImageUri = "  ",
+            thumbOnImageSha256 = "bad-hash",
+            thumbOnImageAppearance = SwitchImageAppearance(zoom = Float.NaN, offsetX = 99f),
+        ).normalized()
+        assertEquals("file:///private/off.png", normalized.thumbOffImageUri)
+        assertEquals("a".repeat(64), normalized.thumbOffImageSha256)
+        assertEquals("image/png", normalized.thumbOffImageMimeType)
+        assertNull(normalized.thumbOnImageUri)
+        assertNull(normalized.thumbOnImageSha256)
+        assertEquals(1f, normalized.thumbOnImageAppearance.zoom)
+        assertEquals(1f, normalized.thumbOnImageAppearance.offsetX)
+    }
+
+    @Test
     fun pixelGridDimensionCompatibilityRejectsCrossLayerUpdates() {
         val track = PixelGrid.blank(SWITCH_TRACK_GRID_WIDTH, SWITCH_TRACK_GRID_HEIGHT)
         val thumb = PixelGrid.blank(SWITCH_THUMB_GRID_SIZE, SWITCH_THUMB_GRID_SIZE)

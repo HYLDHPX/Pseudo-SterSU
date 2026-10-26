@@ -43,7 +43,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -644,7 +643,6 @@ private fun AppIdEditor(
             } else if (state.selectedError != null) {
                 AppIdInlineError(failure = state.selectedError, onRetry = onRetry)
             } else if (snapshot != null) {
-                HorizontalDivider()
                 AppIdValueRow(
                     label = stringResource(R.string.app_id_manager_current_value),
                     value = snapshot.currentId,
@@ -908,7 +906,6 @@ private fun AppIdAppRow(
                 }
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

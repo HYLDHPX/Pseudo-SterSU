@@ -248,6 +248,14 @@ data class CustomSwitchStyle(
     val imageOnUri: String? = null,
     val imageOnSha256: String? = null,
     val imageOnMimeType: String? = null,
+    val thumbOffImageUri: String? = null,
+    val thumbOffImageSha256: String? = null,
+    val thumbOffImageMimeType: String? = null,
+    val thumbOnImageUri: String? = null,
+    val thumbOnImageSha256: String? = null,
+    val thumbOnImageMimeType: String? = null,
+    val thumbOffImageAppearance: SwitchImageAppearance = SwitchImageAppearance(scale = SwitchImageScale.Fit),
+    val thumbOnImageAppearance: SwitchImageAppearance = SwitchImageAppearance(scale = SwitchImageScale.Fit),
     val imageScale: SwitchImageScale = SwitchImageScale.Crop,
     val imageOpacity: Float = 1f,
     val imageZoom: Float = 1f,
@@ -330,6 +338,20 @@ data class CustomSwitchStyle(
                 ?.take(MAX_COMPONENT_MIME_LENGTH)
                 ?.takeIf(String::isNotBlank),
             imageOpacity = imageOpacity.takeIf(Float::isFinite)?.coerceIn(0.1f, 1f) ?: 1f,
+            thumbOffImageUri = thumbOffImageUri?.trim()
+                ?.take(MAX_COMPONENT_IMAGE_URI_LENGTH)?.takeIf(String::isNotBlank),
+            thumbOffImageSha256 = thumbOffImageSha256?.lowercase()
+                ?.takeIf { COMPONENT_SHA256_PATTERN.matches(it) },
+            thumbOffImageMimeType = thumbOffImageMimeType?.trim()?.lowercase()
+                ?.take(MAX_COMPONENT_MIME_LENGTH)?.takeIf(String::isNotBlank),
+            thumbOnImageUri = thumbOnImageUri?.trim()
+                ?.take(MAX_COMPONENT_IMAGE_URI_LENGTH)?.takeIf(String::isNotBlank),
+            thumbOnImageSha256 = thumbOnImageSha256?.lowercase()
+                ?.takeIf { COMPONENT_SHA256_PATTERN.matches(it) },
+            thumbOnImageMimeType = thumbOnImageMimeType?.trim()?.lowercase()
+                ?.take(MAX_COMPONENT_MIME_LENGTH)?.takeIf(String::isNotBlank),
+            thumbOffImageAppearance = thumbOffImageAppearance.normalized(),
+            thumbOnImageAppearance = thumbOnImageAppearance.normalized(),
             imageZoom = imageZoom.takeIf(Float::isFinite)?.coerceIn(0.5f, 3f) ?: 1f,
             imageOffsetX = imageOffsetX.takeIf(Float::isFinite)?.coerceIn(-1f, 1f) ?: 0f,
             imageOffsetY = imageOffsetY.takeIf(Float::isFinite)?.coerceIn(-1f, 1f) ?: 0f,
@@ -392,6 +414,14 @@ data class CustomSwitchStyle(
             .put("image_on_uri", if (includeLocalImageUri) value.imageOnUri else null)
             .put("image_on_sha256", value.imageOnSha256)
             .put("image_on_mime", value.imageOnMimeType)
+            .put("thumb_off_image_uri", if (includeLocalImageUri) value.thumbOffImageUri else null)
+            .put("thumb_off_image_sha256", value.thumbOffImageSha256)
+            .put("thumb_off_image_mime", value.thumbOffImageMimeType)
+            .put("thumb_on_image_uri", if (includeLocalImageUri) value.thumbOnImageUri else null)
+            .put("thumb_on_image_sha256", value.thumbOnImageSha256)
+            .put("thumb_on_image_mime", value.thumbOnImageMimeType)
+            .put("thumb_off_image_appearance", value.thumbOffImageAppearance.toJson())
+            .put("thumb_on_image_appearance", value.thumbOnImageAppearance.toJson())
             .put("image_scale", value.imageScale.value)
             .put("image_opacity", value.imageOpacity.toDouble())
             .put("image_zoom", value.imageZoom.toDouble())
@@ -473,6 +503,16 @@ data class CustomSwitchStyle(
                 imageOnUri = json.optString("image_on_uri").takeIf { allowLocalImageUri && it.isNotBlank() },
                 imageOnSha256 = json.optString("image_on_sha256"),
                 imageOnMimeType = json.optString("image_on_mime"),
+                thumbOffImageUri = json.optString("thumb_off_image_uri").takeIf { allowLocalImageUri && it.isNotBlank() },
+                thumbOffImageSha256 = json.optString("thumb_off_image_sha256"),
+                thumbOffImageMimeType = json.optString("thumb_off_image_mime"),
+                thumbOnImageUri = json.optString("thumb_on_image_uri").takeIf { allowLocalImageUri && it.isNotBlank() },
+                thumbOnImageSha256 = json.optString("thumb_on_image_sha256"),
+                thumbOnImageMimeType = json.optString("thumb_on_image_mime"),
+                thumbOffImageAppearance = SwitchImageAppearance.fromJson(json.optJSONObject("thumb_off_image_appearance"))
+                    ?: SwitchImageAppearance(scale = SwitchImageScale.Fit),
+                thumbOnImageAppearance = SwitchImageAppearance.fromJson(json.optJSONObject("thumb_on_image_appearance"))
+                    ?: SwitchImageAppearance(scale = SwitchImageScale.Fit),
                 imageScale = SwitchImageScale.fromValue(json.optString("image_scale")),
                 imageOpacity = json.optDouble("image_opacity", 1.0).toFloat(),
                 imageZoom = json.optDouble("image_zoom", 1.0).toFloat(),

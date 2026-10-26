@@ -65,7 +65,6 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -92,6 +91,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -119,6 +119,7 @@ import me.weishu.kernelsu.ui.UiMode
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
+import me.weishu.kernelsu.ui.theme.immersiveSurfaceColor
 import me.weishu.kernelsu.ui.theme.ThemePreset
 import me.weishu.kernelsu.ui.util.CustomNavigationIconSlot
 import me.weishu.kernelsu.ui.util.CustomPageBackgroundTarget
@@ -126,6 +127,14 @@ import me.weishu.kernelsu.ui.util.THEME_STORE_FILE_EXTENSION
 import me.weishu.kernelsu.ui.util.THEME_STORE_FILE_MIME_TYPE
 import me.weishu.kernelsu.ui.util.ThemeStoreImageSlot
 import me.weishu.kernelsu.ui.util.ThemeStoreImageGroup
+import top.yukonga.miuix.kmp.basic.Card as MiuixCard
+import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
+import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
+import top.yukonga.miuix.kmp.basic.TextButton as MiuixTextButton
+import top.yukonga.miuix.kmp.basic.TabRow as MiuixTabRow
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import me.weishu.kernelsu.ui.component.passthrough.MiuixText
 import me.weishu.kernelsu.ui.util.ThemeStorePackageResult
 import me.weishu.kernelsu.ui.util.ThemeStorePackageWarning
 import me.weishu.kernelsu.ui.util.ThemeStoreSummary
@@ -317,7 +326,6 @@ fun ThemeStoreScreen(
         onOpenColorPalette = dropUnlessResumed { navigator.push(Route.ColorPalette) },
         onOpenVisualEffects = dropUnlessResumed { navigator.push(Route.VisualEffects) },
         onOpenProfile = dropUnlessResumed { navigator.push(Route.ThemeStoreMy) },
-        onOpenInterfaceStyles = dropUnlessResumed { navigator.push(Route.StoreInterfaceStyles) },
         onOpenBackgroundSettings = dropUnlessResumed { navigator.push(Route.Backgrounds) },
         onOpenSoundEffects = dropUnlessResumed { navigator.push(Route.SoundEffects) },
         onOpenStartupAnimation = dropUnlessResumed { navigator.push(Route.StartupAnimation) },
@@ -711,8 +719,20 @@ private fun ThemeStoreCustomizeContent(
         mutableStateOf(initialSection)
     }
     ThemeStorePageColumn(modifier) {
-        StoreSectionHeading(stringResource(R.string.theme_store_customize_title), stringResource(R.string.store_redesign_customize_intro))
-        ThemeStoreCurrentThemeStatus(summary)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            MiuixText(
+                text = stringResource(R.string.theme_store_customize_title),
+                fontSize = MiuixTheme.textStyles.headline1.fontSize,
+                fontWeight = FontWeight.SemiBold,
+                color = MiuixTheme.colorScheme.onSurface,
+            )
+            MiuixText(
+                text = stringResource(R.string.store_redesign_customize_intro),
+                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            )
+        }
+        ThemeStoreCurrentThemeStatus(summary, miuix = true)
         ThemeStoreCustomizeSelector(
             selected = selectedSection,
             onSelected = { selectedSection = it },
@@ -733,22 +753,44 @@ private fun ThemeStoreCustomizeSelector(
     selected: ThemeStoreCustomizeSection,
     onSelected: (ThemeStoreCustomizeSection) -> Unit,
 ) {
-    StoreFilters(
-        labels = ThemeStoreCustomizeSection.entries.map { stringResource(it.titleRes) },
-        selectedIndex = selected.ordinal,
-        onSelect = { onSelected(ThemeStoreCustomizeSection.entries[it]) },
-    )
+    val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        if (maxWidth >= 288.dp && fontScale <= 1.3f) {
+            MiuixTabRow(
+                tabs = ThemeStoreCustomizeSection.entries.map { stringResource(it.titleRes) },
+                selectedTabIndex = selected.ordinal,
+                onTabSelected = { onSelected(ThemeStoreCustomizeSection.entries[it]) },
+                height = 48.dp,
+            )
+        } else {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ThemeStoreCustomizeSection.entries.forEach { section ->
+                    MiuixTextButton(
+                        text = stringResource(section.titleRes),
+                        onClick = { onSelected(section) },
+                        modifier = Modifier.widthIn(min = 88.dp * fontScale).weight(1f).heightIn(min = 48.dp),
+                        colors = if (selected == section) MiuixButtonDefaults.textButtonColorsPrimary()
+                            else MiuixButtonDefaults.textButtonColors(),
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
-private fun ThemeStoreCurrentThemeStatus(summary: ThemeStoreSummary) {
+private fun ThemeStoreCurrentThemeStatus(summary: ThemeStoreSummary, miuix: Boolean = false) {
     val palette = themeStorePalette()
     val previewColor = if (summary.appearance.keyColor != 0) {
         Color(summary.appearance.keyColor)
     } else {
         palette.accent
     }
-    ThemeStoreSurface {
+    ThemeStoreSurface(miuix = miuix) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -862,7 +904,14 @@ private fun ThemeStoreSectionHeader(title: String) {
 private fun ThemeStoreSettingsGroup(
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    ThemeStoreSurface {
+    MiuixCard(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 16.dp,
+        colors = MiuixCardDefaults.defaultColors(
+            color = immersiveSurfaceColor(MiuixTheme.colorScheme.surfaceContainer),
+        ),
+        insideMargin = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp),
+    ) {
         Column(
             modifier = Modifier.padding(vertical = 4.dp),
             content = content,
@@ -871,26 +920,10 @@ private fun ThemeStoreSettingsGroup(
 }
 
 @Composable
-private fun ThemeStoreSettingsDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        color = themeStorePalette().mutedText.copy(alpha = 0.18f),
-    )
-}
-
-@Composable
 private fun ColumnScope.ThemeStoreStyleItems(
     summary: ThemeStoreSummary,
     actions: ThemeStoreActions,
 ) {
-    ThemeStoreSectionHeader(stringResource(R.string.interface_style_store_title))
-    ThemeStoreDestinationItem(
-        title = stringResource(R.string.interface_style_store_title),
-        summary = stringResource(R.string.interface_style_store_summary),
-        status = stringResource(R.string.theme_store_open_editor),
-        icon = Icons.Rounded.Palette,
-        onClick = actions.onOpenInterfaceStyles,
-    )
     ThemeStoreSettingsGroup {
         ThemeStoreDestinationRow(
             title = stringResource(R.string.theme_store_monet_title),
@@ -906,7 +939,6 @@ private fun ColumnScope.ThemeStoreStyleItems(
             icon = Icons.Rounded.Palette,
             onClick = actions.onOpenColorPalette,
         )
-        ThemeStoreSettingsDivider()
         ThemeStoreDestinationRow(
             title = stringResource(R.string.settings_section_visual_effects),
             summary = stringResource(R.string.settings_visual_effects_summary),
@@ -934,7 +966,6 @@ private fun ColumnScope.ThemeStoreAssetItems(
             icon = Icons.Rounded.ImageSearch,
             onClick = actions.onOpenHomeCardWallpapers,
         )
-        ThemeStoreSettingsDivider()
         ThemeStoreDestinationRow(
             title = stringResource(R.string.install_card_wallpapers),
             summary = stringResource(R.string.install_card_wallpapers_summary),
@@ -946,7 +977,6 @@ private fun ColumnScope.ThemeStoreAssetItems(
             icon = Icons.Rounded.AutoFixHigh,
             onClick = actions.onOpenInstallCardWallpapers,
         )
-        ThemeStoreSettingsDivider()
         ThemeStoreDestinationRow(
             title = stringResource(R.string.theme_store_navigation_icons),
             summary = stringResource(R.string.settings_navigation_icons_summary),
@@ -958,7 +988,6 @@ private fun ColumnScope.ThemeStoreAssetItems(
             icon = Icons.Rounded.Settings,
             onClick = actions.onOpenNavigationIcons,
         )
-        ThemeStoreSettingsDivider()
         ThemeStoreDestinationRow(
             title = stringResource(R.string.app_font_title),
             summary = stringResource(R.string.theme_store_fonts_summary),
@@ -989,7 +1018,6 @@ private fun ColumnScope.ThemeStoreAtmosphereItems(
             icon = Icons.Rounded.Wallpaper,
             onClick = actions.onOpenBackgroundSettings,
         )
-        ThemeStoreSettingsDivider()
         ThemeStoreDestinationRow(
             title = stringResource(R.string.settings_sound_effects),
             summary = stringResource(R.string.settings_sound_effects_summary),
@@ -1001,7 +1029,6 @@ private fun ColumnScope.ThemeStoreAtmosphereItems(
             icon = Icons.AutoMirrored.Rounded.VolumeUp,
             onClick = actions.onOpenSoundEffects,
         )
-        ThemeStoreSettingsDivider()
         ThemeStoreDestinationRow(
             title = stringResource(R.string.settings_startup_animation),
             summary = stringResource(R.string.settings_startup_animation_summary),
@@ -1536,25 +1563,6 @@ private fun ThemeStorePageColumn(
 }
 
 @Composable
-private fun ThemeStoreDestinationItem(
-    title: String,
-    summary: String,
-    status: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-) {
-    ThemeStoreSurface {
-        ThemeStoreDestinationRow(
-            title = title,
-            summary = summary,
-            status = status,
-            icon = icon,
-            onClick = onClick,
-        )
-    }
-}
-
-@Composable
 private fun ThemeStoreDestinationRow(
     title: String,
     summary: String,
@@ -1562,62 +1570,31 @@ private fun ThemeStoreDestinationRow(
     icon: ImageVector,
     onClick: () -> Unit,
 ) {
-    val palette = themeStorePalette()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 72.dp)
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .background(palette.accentContainer, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
+    ArrowPreference(
+        title = title,
+        summary = summary,
+        startAction = {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = palette.accent,
-                modifier = Modifier.size(21.dp),
+                tint = MiuixTheme.colorScheme.onSurface,
+                modifier = Modifier.size(24.dp),
             )
-        }
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = themeStoreTextColor(),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = summary,
-                style = MaterialTheme.typography.bodySmall,
-                color = themeStoreMutedColor(),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = status,
-                style = MaterialTheme.typography.labelMedium,
-                color = palette.accent,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Icon(
-            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-            contentDescription = null,
-            tint = themeStoreMutedColor(),
-        )
-    }
+        },
+        endActions = {
+            if (status != stringResource(R.string.theme_store_open_editor)) {
+                MiuixText(
+                    text = status,
+                    modifier = Modifier.widthIn(max = 88.dp),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                    fontSize = MiuixTheme.textStyles.body2.fontSize,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        },
+        onClick = onClick,
+    )
 }
 
 
@@ -1735,8 +1712,22 @@ private fun ThemeStoreBackButton(onClick: () -> Unit) {
 private fun ThemeStoreSurface(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    miuix: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    if (miuix) {
+        MiuixCard(
+            modifier = modifier.fillMaxWidth().then(
+                if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier,
+            ),
+            cornerRadius = 16.dp,
+            colors = MiuixCardDefaults.defaultColors(
+                color = immersiveSurfaceColor(MiuixTheme.colorScheme.surfaceContainer),
+            ),
+            insideMargin = androidx.compose.foundation.layout.PaddingValues(0.dp),
+        ) { content() }
+        return
+    }
     val palette = themeStorePalette()
     val shape = if (LocalInterfaceStyle.current == InterfaceStyle.SidebarWidget.value) {
         MaterialTheme.shapes.large
@@ -1802,7 +1793,6 @@ private data class ThemeStoreActions(
     val onOpenColorPalette: () -> Unit,
     val onOpenVisualEffects: () -> Unit,
     val onOpenProfile: () -> Unit,
-    val onOpenInterfaceStyles: () -> Unit,
     val onOpenBackgroundSettings: () -> Unit,
     val onOpenSoundEffects: () -> Unit,
     val onOpenStartupAnimation: () -> Unit,

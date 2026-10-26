@@ -21,7 +21,6 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Inventory2
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -145,7 +144,6 @@ fun CloudThemeCreatorGuideScreen() {
                         GuideField(
                             stringResource(R.string.cloud_theme_creator_license),
                             "CC-BY-4.0",
-                            showDivider = false,
                         )
                     }
                 }
@@ -270,7 +268,6 @@ private fun GuideCode(value: String) {
 private fun GuideField(
     label: String,
     value: String,
-    showDivider: Boolean = true,
 ) {
     Column {
         Row(
@@ -294,7 +291,6 @@ private fun GuideField(
                 )
             }
         }
-        if (showDivider) HorizontalDivider()
     }
 }
 

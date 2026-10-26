@@ -1116,12 +1116,6 @@ private fun ThemePreviewCardMiuix(
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(0.5.dp)
-                            .background(textColor.copy(alpha = 0.1f))
-                    )
                     Row(
                         modifier = Modifier
                             .height(36.dp)

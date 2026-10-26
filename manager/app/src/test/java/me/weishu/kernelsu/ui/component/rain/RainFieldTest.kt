@@ -145,19 +145,19 @@ class RainFieldTest {
         }
     }
 
-    @Test fun thunderIsOneSmoothBoundedLocalPulseAndHonorsAllMotionControls() {
+    @Test fun thunderHasOneBloomAndAfterglowAndHonorsAllMotionControls() {
         val settings = RainSettings(active = true, scene = RainStyle.Thunderstorm)
         var previous = 0f
         var lit = 0
         repeat(1001) { index ->
             val value = rainThunderPulse(settings, index / 1000f * settings.thunderInterval, true)
             assertTrue(value in 0f..1f)
-            assertTrue(abs(value - previous) < 0.04f)
+            assertTrue(abs(value - previous) < 0.25f)
             if (value > 0f) lit++
             previous = value
         }
-        assertTrue(lit in 90..110)
-        val peak = settings.thunderInterval * 0.7f + 0.9f
+        assertTrue(lit in 70..76)
+        val peak = 2.4f + 0.12f
         assertEquals(1f, rainThunderPulse(settings, peak, true), 0.001f)
         assertEquals(0f, rainThunderPulse(settings, peak, false), 0f)
         listOf(settings.copy(active = false), settings.copy(motion = false), settings.copy(thunder = false),
@@ -165,6 +165,9 @@ class RainFieldTest {
             assertEquals(0f, rainThunderPulse(it, peak, true), 0f)
         }
         assertEquals(0f, rainThunderPulse(settings, Float.NaN, true), 0f)
+        assertEquals(0f, rainThunderPulse(settings, -1f, true), 0f)
+        // Hiding near rain must never silently disable the storm.
+        assertEquals(1f, rainThunderPulse(settings.copy(rainThroughUi = false, foregroundOpacity = 0f), peak, true), 0.001f)
     }
 
     @Test fun rootWeatherUsesOneClockWithoutTouchOrAlphaInterception() {

@@ -165,6 +165,10 @@ data class RainSettings(
     fun foregroundDrawingEnabled(hasCustomBackground: Boolean): Boolean = drawingEnabled(hasCustomBackground) &&
         rainThroughUi && foregroundOpacity > 0f && intensity > 0f
 
+    /** Leave a window onto background rain without fading foreground content or rewriting preferences. */
+    fun backgroundSurfaceOpacity(requested: Float): Float =
+        if (active && !rainThroughUi && intensity > 0f) minOf(requested, 0.58f) else requested
+
     fun decorationMotionEnabled(): Boolean = active && motion && decorationOpacity > 0f && (
         cardEdgeStrength > 0f && (cardSurface != RainDecoration.Off || cardBorder != RainCardBorder.Off) ||
         cardInteriorStrength > 0f && cardInterior != RainCardInterior.Off ||

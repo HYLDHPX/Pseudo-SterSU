@@ -323,7 +323,6 @@
     <string name="jailbreak_timeout">Возможно, произошел сбой джейлбрейка, проверьте журналы.</string>
     <string name="home_manager_identity_warning">SterSU активен, но это приложение не распознается ядром как менеджер. Переустановите соответствующий APK-файл Manager или пересоберите ядро ​​с помощью этой подписи приложения.</string>
     <string name="home_manager_build_mismatch_warning">Активный драйвер (%1$d) не был создан для этого диспетчера SterSU (%2$d). Одной только переустановкой APK это не исправить. Исправьте и прошейте новый образ с помощью этого менеджера или используйте GKI/LKM, созданный на основе текущего источника SterSU.</string>
-    <string name="about_join_qq_group">点击链接加入群聊【SterSU官方群】</string>
     <string name="profile_flags">Флаги</string>
     <string name="uapi_mismatch">Версия uapi менеджера (%1$d) и версия uapi драйвера SterSU (%2$d) не совпадают.</string>
     <string name="require_manager_version">Текущая версия менеджера SterSU %1$d слишком низкая для правильной работы SterSU. Пожалуйста, обновите менеджер до версии %2$d или выше!</string>

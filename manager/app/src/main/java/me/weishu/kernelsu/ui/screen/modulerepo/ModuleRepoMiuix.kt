@@ -101,7 +101,6 @@ import me.weishu.kernelsu.ui.util.rememberContentReady
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.DropdownImpl
-import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
@@ -482,11 +481,7 @@ fun ModuleRepoScreenMiuix(
                                         if (module.summary.isNotEmpty()) {
                                             RepoSummaryText(module) { actions.onOpenRepoDetail(module) }
                                         }
-                                        HorizontalDivider(
-                                            modifier = Modifier.padding(vertical = 8.dp),
-                                            thickness = 0.5.dp,
-                                            color = colorScheme.outline.copy(alpha = 0.5f)
-                                        )
+                                        Spacer(Modifier.height(16.dp))
                                         Column(
                                             verticalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
@@ -886,11 +881,7 @@ fun ReleasesPage(
                         val changelog = rel.changelogHtml
                         if (changelog != null) {
                             Column {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp),
-                                    thickness = 0.5.dp,
-                                    color = colorScheme.outline.copy(alpha = 0.5f)
-                                )
+                                Spacer(Modifier.height(4.dp))
                                 val descReady = rememberContentReady()
                                 var descLoaded by remember(changelog) { mutableStateOf(false) }
                                 val descAlpha by animateFloatAsState(
@@ -931,11 +922,7 @@ fun ReleasesPage(
                                 }
                             }
                         }
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-                            thickness = 0.5.dp,
-                            color = colorScheme.outline.copy(alpha = 0.5f)
-                        )
+                        Spacer(Modifier.height(16.dp))
                         ReleaseZipRowMiuix(
                             release = rel,
                             canInstall = state.canInstall,
@@ -1137,11 +1124,7 @@ private fun InfoCardMiuix(title: String, rows: List<@Composable () -> Unit>) {
             rows.forEachIndexed { index, row ->
                 row()
                 if (index != rows.lastIndex) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        thickness = 0.5.dp,
-                        color = colorScheme.outline.copy(alpha = 0.5f)
-                    )
+                    Spacer(Modifier.height(16.dp))
                 }
             }
         }

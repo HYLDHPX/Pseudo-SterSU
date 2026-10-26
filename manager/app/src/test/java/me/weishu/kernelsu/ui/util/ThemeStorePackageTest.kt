@@ -853,6 +853,75 @@ class ThemeStorePackageTest {
     }
 
     @Test
+    fun pixelTrackCanPackageIndependentButtonImages() {
+        val assetsDir = temporaryFolder.newFolder("switch-thumb-assets")
+        val owner = JSONObject().put("style", CustomSwitchStyle().toJson(includeLocalImageUri = false))
+        val styleJson = owner.getJSONObject("style")
+        listOf("Off" to "off", "On" to "on").forEach { (ownerState, styleState) ->
+            val file = assetsDir.resolve("thumb-$styleState.png").apply { writeText("button $styleState") }
+            val hash = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+                .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+            owner.put("thumb${ownerState}ImageAsset", JSONObject().put("path", "assets/${file.name}"))
+            styleJson.put("thumb_${styleState}_image_sha256", hash)
+        }
+        val config = currentThemeConfig().put("components", JSONObject().put("switchStyle", owner))
+
+        validateThemeStoreConfig(config)
+        validateEmbeddedThemeStoreAssets(config, assetsDir)
+        listOf("off", "on").forEach { state ->
+            val key = "thumb_${state}_image_sha256"
+            val original = styleJson.getString(key)
+            styleJson.put(key, "f".repeat(64))
+            assertThrows(IllegalArgumentException::class.java) {
+                validateEmbeddedThemeStoreAssets(config, assetsDir)
+            }
+            styleJson.put(key, original)
+        }
+        assetsDir.resolve("thumb-on.png").delete()
+        assertThrows(IllegalArgumentException::class.java) {
+            validateEmbeddedThemeStoreAssets(config, assetsDir)
+        }
+    }
+
+    @Test
+    fun buttonImageRequiresAnAssetAndValidHash() {
+        val owner = JSONObject().put("style", CustomSwitchStyle().toJson(includeLocalImageUri = false))
+        val styleJson = owner.getJSONObject("style")
+        val config = currentThemeConfig().put("components", JSONObject().put("switchStyle", owner))
+        styleJson.put("thumb_off_image_sha256", "a".repeat(64))
+        assertThrows(IllegalArgumentException::class.java) { validateThemeStoreConfig(config) }
+        owner.put("thumbOffImageAsset", JSONObject().put("path", "assets/off.png"))
+        validateThemeStoreConfig(config)
+        styleJson.put("thumb_off_image_sha256", "bad-hash")
+        assertThrows(IllegalArgumentException::class.java) { validateThemeStoreConfig(config) }
+    }
+
+    @Test
+    fun cloudButtonImagesStripLocalUrisAndKeepEmbeddedAssets() {
+        val owner = JSONObject().put("style", CustomSwitchStyle().toJson(includeLocalImageUri = false))
+        val styleJson = owner.getJSONObject("style")
+        listOf("Off" to "off", "On" to "on").forEach { (ownerState, styleState) ->
+            owner.put("thumb${ownerState}ImageAsset", JSONObject().put("path", "assets/$styleState.png"))
+            owner.put("thumb${ownerState}ImageUri", "file:///private/$styleState.png")
+            styleJson.put("thumb_${styleState}_image_uri", "file:///private/$styleState.png")
+            styleJson.put("thumb_${styleState}_image_sha256", "a".repeat(64))
+        }
+        val config = currentThemeConfig().put("components", JSONObject().put("switchStyle", owner))
+        assertThrows(IllegalArgumentException::class.java) { validateThemeStoreConfigForCloud(config) }
+        sanitizeThemeStoreConfigForCloud(config)
+        validateThemeStoreConfigForCloud(config)
+        validateThemeStoreConfig(config)
+        listOf("Off" to "off", "On" to "on").forEach { (ownerState, styleState) ->
+            assertTrue(owner.isNull("thumb${ownerState}ImageUri"))
+            assertTrue(styleJson.isNull("thumb_${styleState}_image_uri"))
+            assertTrue(owner.has("thumb${ownerState}ImageAsset"))
+            styleJson.put("thumb_${styleState}_image_uri", "file:///injected.png")
+            assertThrows(IllegalArgumentException::class.java) { validateThemeStoreConfigForCloud(config) }
+            styleJson.remove("thumb_${styleState}_image_uri")
+        }
+    }
+
+    @Test
     fun validateThemeStoreConfigForCloud_rejectsPrivateProfileAndDeviceUri() {
         val config = cloudUnsafeConfig()
 

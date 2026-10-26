@@ -2407,6 +2407,8 @@
     <string name="switch_style_creator_thumb_off">关闭按钮</string>
     <string name="switch_style_creator_thumb_on">开启按钮</string>
     <string name="switch_style_creator_select_image">选择图片</string>
+    <string name="switch_style_creator_thumb_image">按钮图片</string>
+    <string name="switch_style_creator_thumb_image_hint">未选图片时使用像素绘制，移除图片可恢复像素样式。</string>
     <string name="switch_style_creator_remove_image">移除</string>
     <string name="switch_style_creator_image_crop">填充裁剪</string>
     <string name="switch_style_creator_image_fit">完整适应</string>
@@ -2779,7 +2781,6 @@
     <string name="sulog_filter_sucompat">经典SU</string>
     <string name="sulog_filter_ioctl_grant_root">授予root权限</string>
     <string name="sulog_filter_daemon_restart">守护进程重新启动</string>
-    <string name="about_join_qq_group">点击链接加入群聊【SterSU官方群】</string>
     <string name="about_official_telegram">官方频道：SterSU</string>
     <string name="about_official_upstream">官方上游：KernelSU</string>
     <string name="about_aster_design">界面设计致谢：Aster</string>
@@ -3072,6 +3073,11 @@
     <string name="settings_audio_policy_title">系统播放策略</string>
     <string name="module_wallpaper_editor_title">模块壁纸编辑器</string>
     <string name="module_wallpaper_editor_open">编辑模块壁纸</string>
+    <string name="module_button_images_title">模块按钮图片</string>
+    <string name="module_button_images_summary">更换执行、卸载和壁纸入口的图标，所有模块共用。长按壁纸图标可打开本设置，点击仍执行原来的操作。</string>
+    <string name="module_button_image_pick">选择图片</string>
+    <string name="module_button_image_reset">恢复默认</string>
+    <string name="module_button_images_error">无法保存按钮图片，请选择小于 8 MB 的有效图片后重试。</string>
     <string name="module_wallpaper_save_failed">模块壁纸保存失败，原配置已保留。</string>
     <string name="module_wallpaper_import_failed">无法导入所选图片，请检查格式和文件大小。</string>
     <string name="module_wallpaper_load_failed">壁纸无法加载，请替换或删除这张图片。</string>

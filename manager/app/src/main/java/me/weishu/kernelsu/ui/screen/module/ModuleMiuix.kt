@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -134,7 +135,6 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
-import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MiuixIcon as Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import me.weishu.kernelsu.ui.component.overflow.OverflowMenuAnchor
@@ -985,11 +985,7 @@ fun ModuleItem(
                     }
                 }
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    thickness = 0.5.dp,
-                    color = colorScheme.outline.copy(alpha = 0.5f)
-                )
+                Spacer(Modifier.height(16.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -1018,9 +1014,10 @@ fun ModuleItem(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center,
                                 ) {
-                                    Icon(
+                                    ModuleButtonIcon(
+                                        slot = ModuleButtonImageSlot.Action,
                                         modifier = Modifier.size(24.dp),
-                                        imageVector = Icons.Rounded.PlayArrow,
+                                        fallback = Icons.Rounded.PlayArrow,
                                         tint = actionIconTint,
                                         contentDescription = stringResource(R.string.action),
                                     )
@@ -1118,9 +1115,11 @@ fun ModuleItem(
                             modifier = Modifier.padding(horizontal = animatedPadding),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(
+                            ModuleButtonIcon(
+                                slot = ModuleButtonImageSlot.Uninstall,
+                                customImageEnabled = !module.remove,
                                 modifier = Modifier.size(20.dp),
-                                imageVector = if (module.remove) MiuixIcons.Undo else MiuixIcons.Delete,
+                                fallback = if (module.remove) MiuixIcons.Undo else MiuixIcons.Delete,
                                 tint = actionIconTint,
                                 contentDescription = null,
                             )
@@ -1229,6 +1228,7 @@ private fun ModuleWallpaperMenuMiuix(
         canPlayCarousel -> 6
         else -> 5
     }
+    val editButtonImages = moduleButtonImageEditor()
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Box(
         modifier = Modifier.clickable(
@@ -1237,15 +1237,19 @@ private fun ModuleWallpaperMenuMiuix(
             onClick = { },
         )
     ) {
-        IconButton(
-            minHeight = 35.dp,
-            minWidth = 35.dp,
-            holdDownState = expanded,
-            onClick = { onExpandedChange(true) },
+        Box(
+            modifier = Modifier.size(40.dp).clip(CircleShape).combinedClickable(
+                onClick = { onExpandedChange(true) },
+                onLongClick = editButtonImages,
+                onLongClickLabel = stringResource(R.string.module_button_images_title),
+                role = androidx.compose.ui.semantics.Role.Button,
+            ),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(
+            ModuleButtonIcon(
+                slot = ModuleButtonImageSlot.Wallpaper,
                 modifier = Modifier.size(20.dp),
-                imageVector = MiuixIcons.MoreCircle,
+                fallback = MiuixIcons.MoreCircle,
                 tint = colorScheme.onSurface.copy(alpha = if (isInDarkTheme()) 0.7f else 0.9f),
                 contentDescription = stringResource(R.string.module_wallpaper_pick),
             )

@@ -226,4 +226,5 @@ private const val COMPONENT_IMAGE_DIRECTORY = "component-styles/images"
 private const val CUSTOM_SWITCH_EDITOR_DRAFT_KEY = "custom_switch_editor_draft"
 private val componentStyleLock = Any()
 
-private fun CustomSwitchStyle.imageUris(): List<String> = listOfNotNull(imageUri, imageOnUri).distinct()
+private fun CustomSwitchStyle.imageUris(): List<String> =
+    listOfNotNull(imageUri, imageOnUri, thumbOffImageUri, thumbOnImageUri).distinct()

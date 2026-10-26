@@ -15,7 +15,6 @@ import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -292,7 +291,6 @@ internal fun SidebarWeatherOptions(config: SidebarWidgetConfig, onUpdate: (Sideb
                     },
                 )
             }
-            HorizontalDivider()
             Text(stringResource(R.string.sidebar_weather_fields), style = MaterialTheme.typography.titleSmall)
             Text(
                 stringResource(R.string.sidebar_weather_fields_help),

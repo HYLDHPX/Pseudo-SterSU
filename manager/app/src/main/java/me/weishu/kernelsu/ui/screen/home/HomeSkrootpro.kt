@@ -215,12 +215,6 @@ fun HomePagerSkrootpro(
                         modifier = Modifier.padding(top = 12.dp),
                     )
                     Spacer(modifier = Modifier.weight(1f))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(Color(0xFF777777))
-                    )
                 }
             }
         }

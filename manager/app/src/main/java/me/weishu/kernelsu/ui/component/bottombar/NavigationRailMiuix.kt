@@ -258,6 +258,6 @@ private fun rainAwareRailColor(fallback: Color): Color {
     val rain = LocalRainSettings.current
     if (!rain.active || LocalUiPassthroughSettings.current.enabled) return fallback
     return rainPalette(rain, isInDarkTheme()).surfaceBottom.copy(
-        alpha = if (rain.miuixSidebar) rain.sidebarOpacity else rain.navigationOpacity,
+        alpha = rain.backgroundSurfaceOpacity(if (rain.miuixSidebar) rain.sidebarOpacity else rain.navigationOpacity),
     )
 }

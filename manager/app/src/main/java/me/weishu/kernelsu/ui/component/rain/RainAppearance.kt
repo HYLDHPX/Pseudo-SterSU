@@ -9,8 +9,8 @@ import top.yukonga.miuix.kmp.theme.Colors
 internal fun ColorScheme.withRainAppearance(settings: RainSettings, dark: Boolean): ColorScheme {
     if (!settings.active) return this
     val palette = rainPalette(settings, dark)
-    val surface = palette.surfaceTop.copy(alpha = settings.surfaceOpacity)
-    val raised = palette.surfaceBottom.copy(alpha = settings.surfaceOpacity)
+    val surface = palette.surfaceTop.copy(alpha = settings.backgroundSurfaceOpacity(settings.surfaceOpacity))
+    val raised = palette.surfaceBottom.copy(alpha = settings.backgroundSurfaceOpacity(settings.surfaceOpacity))
     return copy(
         background = Color.Transparent, onBackground = palette.content,
         surface = surface, onSurface = palette.content,
@@ -26,8 +26,8 @@ internal fun ColorScheme.withRainAppearance(settings: RainSettings, dark: Boolea
 internal fun Colors.withRainAppearance(settings: RainSettings, dark: Boolean): Colors {
     if (!settings.active) return this
     val palette = rainPalette(settings, dark)
-    val surface = palette.surfaceTop.copy(alpha = settings.surfaceOpacity)
-    val raised = palette.surfaceBottom.copy(alpha = settings.surfaceOpacity)
+    val surface = palette.surfaceTop.copy(alpha = settings.backgroundSurfaceOpacity(settings.surfaceOpacity))
+    val raised = palette.surfaceBottom.copy(alpha = settings.backgroundSurfaceOpacity(settings.surfaceOpacity))
     val secondary = lerp(palette.content, palette.surfaceTop, 0.23f)
     return copy(
         background = Color.Transparent, onBackground = palette.content, onBackgroundVariant = secondary,

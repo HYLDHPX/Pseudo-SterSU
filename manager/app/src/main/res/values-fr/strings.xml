@@ -358,7 +358,6 @@
     <string name="module_repos_sort_stars">Étoiles</string>
     <string name="home_manager_identity_warning">SterSU est actif, mais cette application n\&apos;est pas reconnue comme gestionnaire par le noyau. Réinstallez le Manager APK correspondant ou reconstruisez le noyau avec cette signature d\&apos;application.</string>
     <string name="home_manager_build_mismatch_warning">Le pilote actif (%1$d) n\&apos;a pas été créé pour ce gestionnaire SterSU (%2$d). La réinstallation de l’APK seule ne peut pas résoudre le problème. Corrigez et flashez une nouvelle image avec ce gestionnaire, ou utilisez un GKI/LKM construit à partir de la source SterSU actuelle.</string>
-    <string name="about_join_qq_group">点击链接加入群聊【SterSU官方群】</string>
     <string name="profile">Profil d\&apos;application</string>
     <string name="profile_flags">Drapeaux</string>
     <string name="uapi_mismatch">La version uapi du gestionnaire (%1$d) et la version uapi du pilote SterSU (%2$d) ne correspondent pas.</string>

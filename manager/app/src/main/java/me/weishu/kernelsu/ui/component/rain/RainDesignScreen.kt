@@ -271,9 +271,9 @@ fun RainDesignScreen() {
                         RainToggle(stringResource(R.string.rain_surface_interaction), settings.surfaceInteraction) { value ->
                             update { it.copy(surfaceInteraction = value) }
                         }
-                        RainToggle(stringResource(R.string.rain_thunder), settings.thunder) { value ->
-                            update { it.copy(thunder = value) }
-                        }
+                    }
+                    RainToggle(stringResource(R.string.rain_thunder), settings.thunder) { value ->
+                        update { it.copy(thunder = value) }
                     }
                     Text(stringResource(R.string.rain_interaction_note), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)

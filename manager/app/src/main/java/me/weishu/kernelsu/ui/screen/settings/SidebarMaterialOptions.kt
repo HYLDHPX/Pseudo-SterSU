@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -131,7 +130,6 @@ internal fun SidebarMaterialOptions(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall,
         )
-        HorizontalDivider()
         UiPassthroughSwitch(
             title = stringResource(R.string.sidebar_show_dividers),
             checked = config.showDividers,
@@ -142,7 +140,6 @@ internal fun SidebarMaterialOptions(
         }
         Text(stringResource(R.string.sidebar_background_opacity_help),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        HorizontalDivider()
         SidebarDesignChoice(
             title = stringResource(R.string.sidebar_palette_mode),
             options = listOf(stringResource(R.string.sidebar_palette_light), stringResource(R.string.sidebar_palette_dark)),
@@ -150,7 +147,6 @@ internal fun SidebarMaterialOptions(
             onSelected = { onEditingDarkChange(it == 1) },
         )
         Text(stringResource(R.string.sidebar_palette_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        HorizontalDivider()
         SidebarDesignChoice(
             title = stringResource(R.string.sidebar_palette_colors_title),
             options = roles.map { stringResource(it.label) },
@@ -223,7 +219,6 @@ internal fun SidebarMaterialOptions(
             }
         }
         if (material != SidebarMaterial.Flat) {
-            HorizontalDivider()
             Text(stringResource(R.string.sidebar_palette_effects_title), style = MaterialTheme.typography.titleSmall)
             EffectSlider(R.string.sidebar_palette_tint, saved.tintAlpha, 0.75f..1f) { value ->
                 onUpdate(config.copy(palettes = config.palettes.withPalette(material, editingDark, saved.copy(tintAlpha = value))))

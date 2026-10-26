@@ -29,7 +29,6 @@ import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -272,7 +271,6 @@ fun GraphicsRendererScreen() {
                 )
             }
 
-            HorizontalDivider()
             GraphicsRendererDiagnostics(status)
         }
     }
@@ -518,7 +516,6 @@ private fun GraphicsRendererDiagnostics(status: GraphicsRendererStatus) {
             } else {
                 stringResource(R.string.graphics_renderer_persistent_disabled)
             },
-            showDivider = false,
         )
     }
 }
@@ -528,7 +525,6 @@ private fun GraphicsRendererInfoRow(
     label: String,
     value: String,
     monospace: Boolean = false,
-    showDivider: Boolean = true,
 ) {
     Column {
         Row(
@@ -552,7 +548,6 @@ private fun GraphicsRendererInfoRow(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (showDivider) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 

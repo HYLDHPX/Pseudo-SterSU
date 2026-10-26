@@ -462,12 +462,6 @@ private fun HomeCardWallpaperStatusMonitorSample(
             secondaryColor = secondaryColor,
             accentColor = accentColor,
         )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(Color.White.copy(alpha = 0.20f)),
-        )
         HomeCardWallpaperStatusLineSample(
             icon = Icons.Rounded.Lock,
             label = stringResource(R.string.home_seccomp_status),

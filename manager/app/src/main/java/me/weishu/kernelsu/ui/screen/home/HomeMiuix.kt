@@ -113,6 +113,7 @@ import me.weishu.kernelsu.ui.component.pixel.PixelMotto
 import me.weishu.kernelsu.ui.component.pixel.pixelAwareMiuixCardCornerRadius
 import me.weishu.kernelsu.ui.component.snow.SeasonMotto
 import me.weishu.kernelsu.ui.component.rain.isRainInterfaceStyle
+import me.weishu.kernelsu.ui.component.rain.RainHomeMotto
 import me.weishu.kernelsu.ui.component.rain.RainChromeArea
 import me.weishu.kernelsu.ui.component.rain.rainChromeDecoration
 import me.weishu.kernelsu.ui.component.snow.isSnowInterfaceStyle
@@ -232,6 +233,7 @@ fun HomePagerMiuix(
                                 .fillMaxWidth(0.76f)
                                 .widthIn(max = 300.dp),
                         )
+                        RainHomeMotto()
                         val warningMessages = homeWarningMessages(state)
                         if (homeLayoutOverride != null) {
                             HomeCustomLayoutContent(
@@ -1848,15 +1850,6 @@ internal fun SecondaryLinksCard(
                 insideMargin = PaddingValues(horizontal = 18.dp, vertical = 13.dp)
             )
         }
-        if (showSupport && showLearn) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .padding(start = 52.dp, end = 18.dp)
-                    .background(colorScheme.outline.copy(alpha = 0.2f))
-            )
-        }
         if (showLearn) {
             BasicComponent(
                 title = stringResource(R.string.home_learn_kernelsu),
@@ -2057,12 +2050,6 @@ internal fun InfoCard(
                 seccompDotColor = seccompDotColorMiuix(systemInfo.seccompStatus),
                 wallpaperState = statusWallpaperState,
                 wallpaperBitmap = statusWallpaperBitmap,
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(colorScheme.outline.copy(alpha = 0.28f))
             )
             SystemInfoPanelMiuix(
                 systemInfo = systemInfo,

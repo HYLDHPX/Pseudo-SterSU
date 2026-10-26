@@ -286,7 +286,7 @@ internal fun SidebarRailLayout(
                 .sidebarMaterialSurface(
                     colors, material, mode, backdrop,
                     edgeOnRight = config.side == SidebarSide.Left,
-                    opacity = if (rain.active) rain.sidebarOpacity else config.backgroundOpacity,
+                    opacity = if (rain.active) rain.backgroundSurfaceOpacity(rain.sidebarOpacity) else config.backgroundOpacity,
                     showDividers = showDividers,
                 )
                 .rainChromeDecoration(RainChromeArea.Sidebar, edgeOnRight = config.side == SidebarSide.Left)

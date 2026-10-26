@@ -46,7 +46,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -909,7 +908,6 @@ private fun ModuleWallpaperBundleImportPreviewCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             BackupPreviewLine(
                 label = stringResource(R.string.module_wallpaper_bundle_modules),
                 value = preview.moduleCount.toString(),
@@ -1299,7 +1297,6 @@ private fun ModuleWallpaperImportPreviewCard(
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             BackupPreviewLine(
                 label = stringResource(R.string.module_wallpaper_backup_source_module),
                 value = "${preview.sourceModuleName} (${preview.sourceModuleId})",

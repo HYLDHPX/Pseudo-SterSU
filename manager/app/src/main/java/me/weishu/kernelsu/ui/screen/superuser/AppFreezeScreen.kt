@@ -37,7 +37,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -625,7 +624,6 @@ private fun AppFreezeRow(
                 }
             }
             if (!app.frozen && app.protection != null) {
-                HorizontalDivider()
                 Text(
                     text = stringResource(app.protection.descriptionResource()),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),

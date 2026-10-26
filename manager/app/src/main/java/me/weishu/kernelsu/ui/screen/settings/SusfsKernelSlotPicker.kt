@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,7 +67,6 @@ internal fun SusfsKernelSlotPicker(
                 style = MaterialTheme.typography.bodySmall,
             )
             state.result.slots.forEach { slot ->
-                HorizontalDivider()
                 val label = if (slot.slot == KernelBootSlot.Single) {
                     stringResource(R.string.susfs_slots_single)
                 } else {
@@ -101,7 +99,6 @@ internal fun SusfsKernelSlotPicker(
         } else {
             Text(stringResource(R.string.susfs_slots_not_loaded), style = MaterialTheme.typography.bodySmall)
         }
-        HorizontalDivider()
     }
 }
 

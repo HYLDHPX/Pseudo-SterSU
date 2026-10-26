@@ -67,6 +67,7 @@ import me.weishu.kernelsu.ui.util.SidebarHomeLayout
 import me.weishu.kernelsu.ui.util.SidebarHomeCardId
 import me.weishu.kernelsu.ui.util.SidebarHomeCards
 import me.weishu.kernelsu.ui.util.rememberSidebarWidgetConfig
+import me.weishu.kernelsu.ui.component.rain.RainHomeMotto
 import me.weishu.kernelsu.ui.component.statustag.StatusTag
 
 @Composable
@@ -115,6 +116,7 @@ private fun HomePagerMaterialContent(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
+            RainHomeMotto(modifier = Modifier.padding(top = 8.dp))
             if (state.showManagerPrBuildWarning) {
                 WarningCard(stringResource(id = R.string.home_pr_build_warning), level = WarningLevel.Notice)
             } else if (state.showKernelPrBuildWarning) {

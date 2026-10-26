@@ -2,7 +2,6 @@ package me.weishu.kernelsu.ui.screen.module
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,6 +14,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,7 +28,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -35,35 +38,20 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AddPhotoAlternate
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DragIndicator
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import me.weishu.kernelsu.ui.component.material.ExpressiveSwitch
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -79,15 +67,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -100,9 +92,23 @@ import me.weishu.kernelsu.data.model.Module
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.screen.settings.SettingsWallpaperCropDialog
+import me.weishu.kernelsu.ui.screen.settings.AppearanceEditorWorkspace
+import me.weishu.kernelsu.ui.component.miuix.SunMoonSwitchPreference
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
+import me.weishu.kernelsu.ui.theme.immersiveSurfaceColor
+import me.weishu.kernelsu.ui.theme.immersivePageColor
 import me.weishu.kernelsu.ui.util.MediaVisualSettings
 import me.weishu.kernelsu.ui.viewmodel.ModuleViewModel
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card as MiuixCard
+import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
+import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
+import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
+import top.yukonga.miuix.kmp.basic.Slider
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.TextButton as MiuixTextButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.math.roundToInt
 
 private enum class WallpaperImportMode { Add, Replace }
 private enum class WallpaperBatchMode { Selected, SameType, All }
@@ -139,15 +145,18 @@ fun ModuleWallpaperEditorDialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            val dialogWidth = (maxWidth - 32.dp).coerceIn(0.dp, 640.dp)
-            val dialogHeight = (maxHeight - 32.dp).coerceIn(0.dp, 760.dp)
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            val dialogWidth = maxWidth.coerceAtMost(960.dp)
+            val dialogHeight = maxHeight.coerceAtMost(720.dp)
             Surface(
                 modifier = Modifier.width(dialogWidth).height(dialogHeight),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 1f),
+                shape = RoundedCornerShape(24.dp),
+                color = immersiveSurfaceColor(MaterialTheme.colorScheme.surface),
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                tonalElevation = 6.dp,
+                tonalElevation = 0.dp,
             ) {
                 ModuleWallpaperEditorContent(
                     moduleId = request.moduleId,
@@ -279,20 +288,17 @@ private fun ModuleWallpaperEditorContent(
         selectedIndex = collection.selectedIndex.coerceIn(0, collection.entries.lastIndex.coerceAtLeast(0))
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 1f),
+    MiuixScaffold(
+        containerColor = if (inDialog) Color.Transparent else immersivePageColor(MiuixTheme.colorScheme.background),
         contentWindowInsets = if (inDialog) WindowInsets(0, 0, 0, 0) else WindowInsets.safeDrawing,
+        popupHost = {},
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.module_wallpaper_editor_title)) },
-                windowInsets = if (inDialog) WindowInsets(0, 0, 0, 0) else TopAppBarDefaults.windowInsets,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 1f),
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
+            SmallTopAppBar(
+                title = stringResource(R.string.module_wallpaper_editor_title),
+                color = Color.Transparent,
+                defaultWindowInsetsPadding = false,
                 navigationIcon = {
-                    IconButton(onClick = onClose) {
+                    MiuixIconButton(onClick = onClose) {
                         Icon(
                             if (inDialog) Icons.Rounded.Close else Icons.AutoMirrored.Rounded.ArrowBack,
                             stringResource(if (inDialog) R.string.close else R.string.back),
@@ -302,183 +308,174 @@ private fun ModuleWallpaperEditorContent(
             )
         },
     ) { padding ->
-        LazyColumn(
+        BoxWithConstraints(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item {
-                VariantSelector(
-                    variant = variant,
-                    onVariantChange = { variant = it },
-                )
-            }
-            item {
-                ModuleWallpaperRealPreview(
-                    module = module,
-                    displayName = displayName,
-                    displayAuthor = displayAuthor,
-                    displayVersion = displayVersion,
-                    displayDescription = displayDescription,
-                    entry = selectedEntry,
-                    loadState = previewState,
-                    aspectRatio = previewAspectRatio,
-                )
-            }
-            item {
-                PreviewRatioSelector(
-                    selected = previewAspectRatio,
-                    onSelected = { previewAspectRatio = it },
-                )
-            }
-            if (variant == ModuleWallpaperVariant.Night && collection.entries.isEmpty() && snapshot.entries.isNotEmpty()) {
-                item {
-                    OutlinedButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !busy,
-                        onClick = {
-                            scope.launch {
-                                busy = true
-                                val copied = withContext(Dispatchers.IO) {
-                                    duplicateModuleWallpaperSnapshotForTarget(
-                                        context,
-                                        "${moduleId}_night_seed",
-                                        ModuleCardWallpaperSnapshot(snapshot.entries, snapshot.carouselEnabled),
-                                    )
-                                }
-                                copied.onSuccess { duplicate ->
-                                    val next = snapshot.withCollection(
-                                        ModuleWallpaperVariant.Night,
-                                        duplicate.collection(ModuleWallpaperVariant.Day),
-                                    )
-                                    if (replaceModuleCardWallpaperSnapshot(context, moduleId, next)) {
-                                        snapshot = next
-                                    } else {
-                                        releaseModuleWallpaperSnapshot(context, duplicate)
-                                    }
-                                }.onFailure { errorText = resources.getString(R.string.module_wallpaper_save_failed) }
-                                busy = false
-                            }
-                        },
-                    ) {
-                        Icon(Icons.Rounded.ContentCopy, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.module_wallpaper_copy_day_to_night))
+            val previewHeight = (maxHeight * 0.42f).coerceIn(128.dp, 240.dp)
+            AppearanceEditorWorkspace(
+                modifier = Modifier.fillMaxSize(),
+                selector = {
+                    VariantSelector(
+                        variant = variant,
+                        onVariantChange = { variant = it },
+                    )
+                },
+                preview = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ModuleWallpaperRealPreview(
+                            module = module,
+                            displayName = displayName,
+                            displayAuthor = displayAuthor,
+                            displayVersion = displayVersion,
+                            displayDescription = displayDescription,
+                            entry = selectedEntry,
+                            loadState = previewState,
+                            aspectRatio = previewAspectRatio,
+                            variant = variant,
+                            maxHeight = previewHeight,
+                        )
+                        PreviewRatioSelector(
+                            selected = previewAspectRatio,
+                            onSelected = { previewAspectRatio = it },
+                        )
                     }
-                }
-            }
-            item {
-                WallpaperQueue(
-                    entries = collection.entries,
-                    selectedIndex = selectedIndex,
-                    enabled = !busy,
-                    onSelect = { index ->
-                        selectedIndex = index
-                        updateCollection { it.copy(selectedIndex = index) }
-                    },
-                    onMove = { from, to ->
-                        if (from == to) return@WallpaperQueue
-                        val reordered = collection.entries.toMutableList().apply {
-                            add(to, removeAt(from))
-                        }
-                        val nextIndex = when (selectedIndex) {
-                            from -> to
-                            in minOf(from, to)..maxOf(from, to) -> selectedIndex + if (from < to) -1 else 1
-                            else -> selectedIndex
-                        }
-                        selectedIndex = nextIndex
-                        updateCollection { it.copy(entries = reordered, selectedIndex = nextIndex) }
-                    },
-                    onDelete = { index ->
-                        val nextEntries = collection.entries.toMutableList().apply { removeAt(index) }
-                        selectedIndex = selectedIndex.coerceAtMost(nextEntries.lastIndex.coerceAtLeast(0))
-                        updateCollection {
-                            it.copy(
-                                entries = nextEntries,
-                                selectedIndex = selectedIndex,
-                                carouselEnabled = it.carouselEnabled && nextEntries.size > 1,
+                },
+                controls = {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        if (variant == ModuleWallpaperVariant.Night && collection.entries.isEmpty() && snapshot.entries.isNotEmpty()) {
+                            MiuixTextButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                text = stringResource(R.string.module_wallpaper_copy_day_to_night),
+                                enabled = !busy,
+                                onClick = {
+                                    scope.launch {
+                                        busy = true
+                                        val copied = withContext(Dispatchers.IO) {
+                                            duplicateModuleWallpaperSnapshotForTarget(
+                                                context,
+                                                "${moduleId}_night_seed",
+                                                ModuleCardWallpaperSnapshot(snapshot.entries, snapshot.carouselEnabled),
+                                            )
+                                        }
+                                        copied.onSuccess { duplicate ->
+                                            val next = snapshot.withCollection(
+                                                ModuleWallpaperVariant.Night,
+                                                duplicate.collection(ModuleWallpaperVariant.Day),
+                                            )
+                                            if (replaceModuleCardWallpaperSnapshot(context, moduleId, next)) {
+                                                snapshot = next
+                                            } else {
+                                                releaseModuleWallpaperSnapshot(context, duplicate)
+                                            }
+                                        }.onFailure { errorText = resources.getString(R.string.module_wallpaper_save_failed) }
+                                        busy = false
+                                    }
+                                },
                             )
                         }
-                    },
-                )
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Button(
-                        modifier = Modifier.weight(1f),
-                        enabled = !busy && collection.entries.size < MODULE_CARD_WALLPAPER_MAX_COUNT,
-                        onClick = {
-                            importMode = WallpaperImportMode.Add
-                            imagePicker.launch(arrayOf("image/*"))
-                        },
-                    ) {
-                        Icon(Icons.Rounded.AddPhotoAlternate, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.module_wallpaper_add))
+                        WallpaperEditorCard {
+                            WallpaperQueue(
+                                entries = collection.entries,
+                                selectedIndex = selectedIndex,
+                                enabled = !busy,
+                                onSelect = { index ->
+                                    selectedIndex = index
+                                    updateCollection { it.copy(selectedIndex = index) }
+                                },
+                                onMove = { from, to ->
+                                    if (from == to) return@WallpaperQueue
+                                    val reordered = collection.entries.toMutableList().apply {
+                                        add(to, removeAt(from))
+                                    }
+                                    val nextIndex = when (selectedIndex) {
+                                        from -> to
+                                        in minOf(from, to)..maxOf(from, to) -> selectedIndex + if (from < to) -1 else 1
+                                        else -> selectedIndex
+                                    }
+                                    selectedIndex = nextIndex
+                                    updateCollection { it.copy(entries = reordered, selectedIndex = nextIndex) }
+                                },
+                                onDelete = { index ->
+                                    val nextEntries = collection.entries.toMutableList().apply { removeAt(index) }
+                                    selectedIndex = selectedIndex.coerceAtMost(nextEntries.lastIndex.coerceAtLeast(0))
+                                    updateCollection {
+                                        it.copy(
+                                            entries = nextEntries,
+                                            selectedIndex = selectedIndex,
+                                            carouselEnabled = it.carouselEnabled && nextEntries.size > 1,
+                                        )
+                                    }
+                                },
+                            )
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                MiuixTextButton(
+                                    modifier = Modifier.widthIn(min = 100.dp).weight(1f),
+                                    text = stringResource(R.string.module_wallpaper_add),
+                                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                                    enabled = !busy && collection.entries.size < MODULE_CARD_WALLPAPER_MAX_COUNT,
+                                    onClick = {
+                                        importMode = WallpaperImportMode.Add
+                                        imagePicker.launch(arrayOf("image/*"))
+                                    },
+                                )
+                                MiuixTextButton(
+                                    modifier = Modifier.widthIn(min = 100.dp).weight(1f),
+                                    text = stringResource(R.string.module_wallpaper_replace),
+                                    enabled = !busy,
+                                    onClick = {
+                                        importMode = WallpaperImportMode.Replace
+                                        imagePicker.launch(arrayOf("image/*"))
+                                    },
+                                )
+                                MiuixTextButton(
+                                    modifier = Modifier.widthIn(min = 100.dp).weight(1f),
+                                    text = stringResource(R.string.module_wallpaper_crop),
+                                    enabled = selectedEntry != null && !busy,
+                                    onClick = { showCrop = true },
+                                )
+                            }
+                        }
+                        selectedEntry?.let { entry ->
+                            VisualSettingsEditor(
+                                settings = entry.visualSettings,
+                                autoContrast = entry.autoContrast,
+                                onSettingsPreview = { next -> updateSelectedEntry(persist = false) { it.copy(visualSettings = next) } },
+                                onSettingsCommit = { next -> updateSelectedEntry { it.copy(visualSettings = next) } },
+                                onAutoContrastChange = { enabled -> updateSelectedEntry { it.copy(autoContrast = enabled) } },
+                            )
+                        }
+                        if (collection.entries.size > 1) {
+                            CarouselSettings(
+                                collection = collection,
+                                onChange = { next -> commit(snapshot.withCollection(variant, next)) },
+                            )
+                        }
+                        if (allowBatch) {
+                            MiuixTextButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                text = stringResource(R.string.module_wallpaper_batch_apply),
+                                enabled = snapshot.allEntries().isNotEmpty() && moduleUiState.moduleList.size > 1 && !busy,
+                                onClick = { showBatch = true },
+                            )
+                        }
+                        if (busy) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(10.dp))
+                                Text(stringResource(R.string.module_wallpaper_processing))
+                            }
+                        }
                     }
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        enabled = !busy,
-                        onClick = {
-                            importMode = WallpaperImportMode.Replace
-                            imagePicker.launch(arrayOf("image/*"))
-                        },
-                    ) {
-                        Icon(Icons.Rounded.PhotoLibrary, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.module_wallpaper_replace))
-                    }
-                    IconButton(enabled = selectedEntry != null && !busy, onClick = { showCrop = true }) {
-                        Icon(Icons.Rounded.Edit, stringResource(R.string.module_wallpaper_crop))
-                    }
-                }
-            }
-            selectedEntry?.let { entry ->
-                item {
-                    VisualSettingsEditor(
-                        settings = entry.visualSettings,
-                        autoContrast = entry.autoContrast,
-                        onSettingsPreview = { next -> updateSelectedEntry(persist = false) { it.copy(visualSettings = next) } },
-                        onSettingsCommit = { next -> updateSelectedEntry { it.copy(visualSettings = next) } },
-                        onAutoContrastChange = { enabled -> updateSelectedEntry { it.copy(autoContrast = enabled) } },
-                    )
-                }
-            }
-            if (collection.entries.size > 1) {
-                item {
-                    CarouselSettings(
-                        collection = collection,
-                        onChange = { next -> commit(snapshot.withCollection(variant, next)) },
-                    )
-                }
-            }
-            if (allowBatch) item {
-                OutlinedButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = snapshot.allEntries().isNotEmpty() && moduleUiState.moduleList.size > 1 && !busy,
-                    onClick = { showBatch = true },
-                ) {
-                    Icon(Icons.Rounded.ContentCopy, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.module_wallpaper_batch_apply))
-                }
-            }
-            if (busy) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(10.dp))
-                        Text(stringResource(R.string.module_wallpaper_processing))
-                    }
-                }
-            }
+                },
+            )
         }
     }
 
@@ -547,26 +544,59 @@ private fun ModuleWallpaperEditorContent(
 }
 
 @Composable
+private fun WallpaperEditorCard(content: @Composable ColumnScope.() -> Unit) {
+    MiuixCard(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 18.dp,
+        colors = MiuixCardDefaults.defaultColors(
+            color = immersiveSurfaceColor(MiuixTheme.colorScheme.surfaceContainer),
+        ),
+        insideMargin = PaddingValues(16.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+    }
+}
+
+@Composable
+private fun WallpaperChoice(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
+    MiuixTextButton(
+        text = label,
+        onClick = onClick,
+        modifier = modifier
+            .widthIn(min = 84.dp * fontScale)
+            .heightIn(min = 48.dp)
+            .semantics { this.selected = selected },
+        colors = if (selected) ButtonDefaults.textButtonColorsPrimary() else ButtonDefaults.textButtonColors(),
+    )
+}
+
+@Composable
 private fun VariantSelector(
     variant: ModuleWallpaperVariant,
     onVariantChange: (ModuleWallpaperVariant) -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        WallpaperChoice(
+            modifier = Modifier.widthIn(min = 100.dp).weight(1f),
             selected = variant == ModuleWallpaperVariant.Day,
             onClick = { onVariantChange(ModuleWallpaperVariant.Day) },
-            label = { Text(stringResource(R.string.module_wallpaper_day)) },
-            leadingIcon = if (variant == ModuleWallpaperVariant.Day) {
-                { Icon(Icons.Rounded.Check, null, Modifier.size(18.dp)) }
-            } else null,
+            label = stringResource(R.string.module_wallpaper_day),
         )
-        FilterChip(
+        WallpaperChoice(
+            modifier = Modifier.widthIn(min = 100.dp).weight(1f),
             selected = variant == ModuleWallpaperVariant.Night,
             onClick = { onVariantChange(ModuleWallpaperVariant.Night) },
-            label = { Text(stringResource(R.string.module_wallpaper_night)) },
-            leadingIcon = if (variant == ModuleWallpaperVariant.Night) {
-                { Icon(Icons.Rounded.Check, null, Modifier.size(18.dp)) }
-            } else null,
+            label = stringResource(R.string.module_wallpaper_night),
         )
     }
 }
@@ -578,13 +608,17 @@ private fun PreviewRatioSelector(selected: Float, onSelected: (Float) -> Unit) {
         MODULE_CARD_WALLPAPER_ASPECT_RATIO to R.string.module_wallpaper_preview_standard,
         1.25f to R.string.module_wallpaper_preview_expanded,
     )
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         options.forEach { (ratio, label) ->
-            FilterChip(
-                modifier = Modifier.weight(1f),
+            WallpaperChoice(
+                modifier = Modifier.widthIn(min = 84.dp).weight(1f),
                 selected = selected == ratio,
                 onClick = { onSelected(ratio) },
-                label = { Text(stringResource(label), maxLines = 1) },
+                label = stringResource(label),
             )
         }
     }
@@ -600,55 +634,66 @@ private fun ModuleWallpaperRealPreview(
     entry: ModuleCardWallpaperEntry?,
     loadState: ModuleWallpaperBitmapLoadState,
     aspectRatio: Float,
+    variant: ModuleWallpaperVariant,
+    maxHeight: Dp,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(aspectRatio)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
-    ) {
-        ModuleCardWallpaperBackground(
-            bitmap = loadState.bitmap,
-            entry = entry,
-            contentIsLight = isInDarkTheme(),
-        )
-        if (loadState.loading) CircularProgressIndicator(Modifier.align(Alignment.Center).size(26.dp))
-        if (loadState.failed) {
-            Text(
-                text = stringResource(R.string.module_wallpaper_load_failed),
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.align(Alignment.Center),
-            )
-        }
-        Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+    val night = variant == ModuleWallpaperVariant.Night
+    val surface = if (night) Color(0xFF191A1D) else Color(0xFFF5F6F8)
+    val foreground = if (night) Color(0xFFF3F4F6) else Color(0xFF191A1D)
+    val secondary = if (night) Color(0xFFCACDD4) else Color(0xFF555B65)
+    val fontScale = LocalDensity.current.fontScale
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .widthIn(max = maxHeight * aspectRatio)
+                .fillMaxWidth()
+                .aspectRatio(aspectRatio)
+                .clip(RoundedCornerShape(18.dp))
+                .background(surface),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            ModuleCardWallpaperBackground(
+                bitmap = loadState.bitmap,
+                entry = entry,
+                contentIsLight = night,
+            )
+            if (loadState.loading) CircularProgressIndicator(Modifier.align(Alignment.Center).size(26.dp))
+            if (loadState.failed) {
                 Text(
-                    text = module?.name ?: displayName ?: stringResource(R.string.module_wallpaper_preview_module),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    text = stringResource(R.string.module_wallpaper_load_failed),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.align(Alignment.Center),
                 )
-                Text(
-                    text = module?.let { "${it.version} · ${it.author}" }
-                        ?: listOfNotNull(displayVersion, displayAuthor).joinToString(" · "),
+            }
+            Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(
+                        text = module?.name ?: displayName ?: stringResource(R.string.module_wallpaper_preview_module),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = foreground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (this@BoxWithConstraints.maxHeight >= 80.dp * fontScale) Text(
+                        text = module?.let { "${it.version} · ${it.author}" }
+                            ?: listOfNotNull(displayVersion, displayAuthor).joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = secondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (this@BoxWithConstraints.maxHeight >= 128.dp * fontScale) Text(
+                    text = module?.description ?: displayDescription.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    color = foreground,
+                    maxLines = if (aspectRatio < 1.5f) 3 else 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text(
-                text = module?.description ?: displayDescription.orEmpty(),
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = if (aspectRatio < 1.5f) 3 else 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
     }
 }
@@ -664,12 +709,13 @@ private fun WallpaperQueue(
 ) {
     if (entries.isEmpty()) {
         Box(
-            modifier = Modifier.fillMaxWidth().height(92.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = stringResource(R.string.module_wallpaper_empty_queue),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
         return
@@ -734,7 +780,7 @@ private fun WallpaperQueue(
                     IconButton(
                         enabled = enabled,
                         onClick = { onDelete(index) },
-                        modifier = Modifier.align(Alignment.TopEnd).size(34.dp),
+                        modifier = Modifier.align(Alignment.TopEnd).size(48.dp),
                     ) {
                         Icon(Icons.Rounded.DeleteOutline, stringResource(R.string.module_wallpaper_delete_one))
                     }
@@ -757,7 +803,7 @@ private fun VisualSettingsEditor(
     onSettingsCommit: (MediaVisualSettings) -> Unit,
     onAutoContrastChange: (Boolean) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    WallpaperEditorCard {
         Text(stringResource(R.string.module_wallpaper_visual_title), style = MaterialTheme.typography.titleMedium)
         SettingsSlider(
             label = stringResource(R.string.module_wallpaper_brightness),
@@ -801,13 +847,11 @@ private fun VisualSettingsEditor(
             onPreview = { onSettingsPreview(settings.copy(opacity = it)) },
             onCommit = { onSettingsCommit(settings.copy(opacity = it)) },
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(stringResource(R.string.module_wallpaper_auto_contrast), modifier = Modifier.weight(1f))
-            ExpressiveSwitch(checked = autoContrast, onCheckedChange = onAutoContrastChange)
-        }
+        SunMoonSwitchPreference(
+            title = stringResource(R.string.module_wallpaper_auto_contrast),
+            checked = autoContrast,
+            onCheckedChange = onAutoContrastChange,
+        )
     }
 }
 
@@ -849,38 +893,38 @@ private fun CarouselSettings(
     var intervalSeconds by remember(collection.intervalMillis) {
         mutableFloatStateOf(collection.intervalMillis / 1000f)
     }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    WallpaperEditorCard {
         Text(stringResource(R.string.module_wallpaper_carousel_settings), style = MaterialTheme.typography.titleMedium)
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.module_wallpaper_carousel_enable), modifier = Modifier.weight(1f))
-            ExpressiveSwitch(
-                checked = collection.carouselEnabled,
-                onCheckedChange = { onChange(collection.copy(carouselEnabled = it)) },
+        SunMoonSwitchPreference(
+            title = stringResource(R.string.module_wallpaper_carousel_enable),
+            checked = collection.carouselEnabled,
+            onCheckedChange = { onChange(collection.copy(carouselEnabled = it)) },
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            WallpaperChoice(
+                selected = collection.carouselEnabled && collection.carouselOrder == ModuleWallpaperCarouselOrder.Sequential,
+                onClick = { onChange(collection.copy(carouselEnabled = true, carouselOrder = ModuleWallpaperCarouselOrder.Sequential)) },
+                label = stringResource(R.string.module_wallpaper_order_sequential),
             )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = collection.carouselOrder == ModuleWallpaperCarouselOrder.Sequential,
-                onClick = { onChange(collection.copy(carouselOrder = ModuleWallpaperCarouselOrder.Sequential)) },
-                label = { Text(stringResource(R.string.module_wallpaper_order_sequential)) },
+            WallpaperChoice(
+                selected = collection.carouselEnabled && collection.carouselOrder == ModuleWallpaperCarouselOrder.Random,
+                onClick = { onChange(collection.copy(carouselEnabled = true, carouselOrder = ModuleWallpaperCarouselOrder.Random)) },
+                label = stringResource(R.string.module_wallpaper_order_random),
             )
-            FilterChip(
-                selected = collection.carouselOrder == ModuleWallpaperCarouselOrder.Random,
-                onClick = { onChange(collection.copy(carouselOrder = ModuleWallpaperCarouselOrder.Random)) },
-                label = { Text(stringResource(R.string.module_wallpaper_order_random)) },
-            )
-            FilterChip(
+            WallpaperChoice(
                 selected = !collection.carouselEnabled,
                 onClick = { onChange(collection.copy(carouselEnabled = false)) },
-                label = { Text(stringResource(R.string.module_wallpaper_order_fixed)) },
+                label = stringResource(R.string.module_wallpaper_order_fixed),
             )
         }
         Text(stringResource(R.string.module_wallpaper_interval_seconds, intervalSeconds.toInt()))
         Slider(
             value = intervalSeconds,
             valueRange = 3f..60f,
-            steps = 56,
-            onValueChange = { intervalSeconds = it },
+            onValueChange = { intervalSeconds = it.roundToInt().toFloat() },
             onValueChangeFinished = {
                 onChange(collection.copy(intervalMillis = intervalSeconds.toLong() * 1000L))
             },
@@ -909,21 +953,24 @@ private fun ModuleWallpaperBatchDialog(
         title = { Text(stringResource(R.string.module_wallpaper_batch_apply)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    WallpaperChoice(
                         selected = mode == WallpaperBatchMode.Selected,
                         onClick = { mode = WallpaperBatchMode.Selected },
-                        label = { Text(stringResource(R.string.module_wallpaper_batch_selected)) },
+                        label = stringResource(R.string.module_wallpaper_batch_selected),
                     )
-                    FilterChip(
+                    WallpaperChoice(
                         selected = mode == WallpaperBatchMode.SameType,
                         onClick = { mode = WallpaperBatchMode.SameType },
-                        label = { Text(stringResource(R.string.module_wallpaper_batch_same_type)) },
+                        label = stringResource(R.string.module_wallpaper_batch_same_type),
                     )
-                    FilterChip(
+                    WallpaperChoice(
                         selected = mode == WallpaperBatchMode.All,
                         onClick = { mode = WallpaperBatchMode.All },
-                        label = { Text(stringResource(R.string.module_wallpaper_batch_all)) },
+                        label = stringResource(R.string.module_wallpaper_batch_all),
                     )
                 }
                 if (mode == WallpaperBatchMode.Selected) {

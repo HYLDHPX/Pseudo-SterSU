@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import me.weishu.kernelsu.ui.component.passthrough.MaterialText as Text
@@ -95,7 +94,7 @@ fun AboutScreenMaterial(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                     ),
                 ) {
-                    state.links.forEachIndexed { index, linkInfo ->
+                    state.links.forEach { linkInfo ->
                         ListItem(
                             modifier = Modifier.clickable {
                                 actions.onOpenLink(linkInfo.url)
@@ -105,9 +104,6 @@ fun AboutScreenMaterial(
                                 { Text(summary) }
                             },
                         )
-                        if (index < state.links.lastIndex) {
-                            HorizontalDivider()
-                        }
                     }
                 }
                 Spacer(

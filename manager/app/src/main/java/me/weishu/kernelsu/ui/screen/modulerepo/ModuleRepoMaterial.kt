@@ -56,7 +56,6 @@ import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import me.weishu.kernelsu.ui.component.material.ExpressiveTopAppBar as LargeFlexibleTopAppBar
@@ -440,7 +439,6 @@ private fun RepoModuleList(
                     }
 
                     RepoBadges(module.metamodule, module.isScript, installState)
-                    HorizontalDivider(thickness = Dp.Hairline)
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Row(

@@ -1485,7 +1485,7 @@ fun importThemeStorePackage(
             ) {
                 parseComponentStyleContent(appContext, config, tempAssetsDir).also { content ->
                     pendingComponentImageUris = content.switchStyle
-                        ?.let { listOfNotNull(it.imageUri, it.imageOnUri).distinct() }
+                        ?.let { listOfNotNull(it.imageUri, it.imageOnUri, it.thumbOffImageUri, it.thumbOnImageUri).distinct() }
                         .orEmpty()
                 }
             } else {
@@ -2623,6 +2623,12 @@ private fun ZipOutputStream.writeComponentStyles(
             val imageOnAsset = if (style.source == CustomSwitchSource.Image) {
                 writeSwitchImage(style.imageOnUri, style.imageOnSha256, "component_switch_image_on")
             } else null
+            val thumbOffImageAsset = writeSwitchImage(
+                style.thumbOffImageUri, style.thumbOffImageSha256, "component_switch_thumb_off_image",
+            )
+            val thumbOnImageAsset = writeSwitchImage(
+                style.thumbOnImageUri, style.thumbOnImageSha256, "component_switch_thumb_on_image",
+            )
             if (style.source == CustomSwitchSource.Image && imageAsset == null && imageOnAsset == null) {
                 warnings += ThemeStorePackageWarning(
                     assetId = "component_switch_images",
@@ -2636,7 +2642,11 @@ private fun ZipOutputStream.writeComponentStyles(
                     .put("imageAsset", imageAsset?.toJson())
                     .put("imageUri", null)
                     .put("imageOnAsset", imageOnAsset?.toJson())
-                    .put("imageOnUri", null),
+                    .put("imageOnUri", null)
+                    .put("thumbOffImageAsset", thumbOffImageAsset?.toJson())
+                    .put("thumbOffImageUri", null)
+                    .put("thumbOnImageAsset", thumbOnImageAsset?.toJson())
+                    .put("thumbOnImageUri", null),
             )
         }
     }
@@ -2655,52 +2665,44 @@ private fun parseComponentStyleContent(
             owner.optJSONObject("style") ?: error("Switch style data is missing"),
             allowLocalImageUri = false,
         )
-        if (packaged.source == CustomSwitchSource.Image) {
-            val store = ComponentStyleStore(context)
-            fun persistAsset(key: String) = owner.optJSONObject(key)?.let { asset ->
+        val store = ComponentStyleStore(context)
+        val persistedUris = mutableListOf<String>()
+        try {
+            fun persistAsset(key: String, expectedHash: String?) = owner.optJSONObject(key)?.let { asset ->
                 val imageFile = safeComponentAssetFile(assetsDir, asset.optString("path"))
-                store.persistSwitchImage(Uri.fromFile(imageFile)) to asset
-            }
-            val off = persistAsset("imageAsset")
-            val on = persistAsset("imageOnAsset")
-            require(off != null || on != null) { "Image-based switch style is missing its state images" }
-            try {
-                off?.let { (stored, _) ->
-                    require(
-                        packaged.imageSha256.isNullOrBlank() ||
-                            packaged.imageSha256.equals(stored.sha256, ignoreCase = true)
-                    ) { "Switch style off image hash does not match" }
+                val stored = store.persistSwitchImage(Uri.fromFile(imageFile))
+                persistedUris += stored.uriString
+                require(expectedHash.equals(stored.sha256, ignoreCase = true)) {
+                    "Switch style image hash does not match"
                 }
-                on?.let { (stored, _) ->
-                    require(
-                        packaged.imageOnSha256.isNullOrBlank() ||
-                            packaged.imageOnSha256.equals(stored.sha256, ignoreCase = true)
-                    ) { "Switch style on image hash does not match" }
-                }
-                packaged.copy(
-                    imageUri = off?.first?.uriString,
-                    imageSha256 = off?.first?.sha256,
-                    imageMimeType = off?.second?.optString("mimeType")?.takeIf(String::isNotBlank)
-                        ?: off?.first?.mimeType,
-                    imageOnUri = on?.first?.uriString,
-                    imageOnSha256 = on?.first?.sha256,
-                    imageOnMimeType = on?.second?.optString("mimeType")?.takeIf(String::isNotBlank)
-                        ?: on?.first?.mimeType,
-                ).normalized()
-            } catch (error: Throwable) {
-                listOfNotNull(off?.first?.uriString, on?.first?.uriString)
-                    .forEach(store::discardSwitchImageIfUnreferenced)
-                throw error
+                stored to asset
             }
-        } else {
+            val off = persistAsset("imageAsset", packaged.imageSha256)
+            val on = persistAsset("imageOnAsset", packaged.imageOnSha256)
+            val thumbOff = persistAsset("thumbOffImageAsset", packaged.thumbOffImageSha256)
+            val thumbOn = persistAsset("thumbOnImageAsset", packaged.thumbOnImageSha256)
+            if (packaged.source == CustomSwitchSource.Image) {
+                require(off != null || on != null) { "Image-based switch style is missing its state images" }
+            }
             packaged.copy(
-                imageUri = null,
-                imageSha256 = null,
-                imageMimeType = null,
-                imageOnUri = null,
-                imageOnSha256 = null,
-                imageOnMimeType = null,
+                imageUri = off?.first?.uriString,
+                imageSha256 = off?.first?.sha256,
+                imageMimeType = off?.second?.optString("mimeType")?.takeIf(String::isNotBlank)
+                    ?: off?.first?.mimeType,
+                imageOnUri = on?.first?.uriString,
+                imageOnSha256 = on?.first?.sha256,
+                imageOnMimeType = on?.second?.optString("mimeType")?.takeIf(String::isNotBlank)
+                    ?: on?.first?.mimeType,
+                thumbOffImageUri = thumbOff?.first?.uriString,
+                thumbOffImageSha256 = thumbOff?.first?.sha256,
+                thumbOffImageMimeType = thumbOff?.first?.mimeType,
+                thumbOnImageUri = thumbOn?.first?.uriString,
+                thumbOnImageSha256 = thumbOn?.first?.sha256,
+                thumbOnImageMimeType = thumbOn?.first?.mimeType,
             ).normalized()
+        } catch (error: Throwable) {
+            persistedUris.distinct().forEach(store::discardSwitchImageIfUnreferenced)
+            throw error
         }
     }
     require(switchStyle != null) { "Component style data is empty" }
@@ -3301,6 +3303,20 @@ private fun validateComponentStyleConfig(config: JSONObject) {
                 "Pixel switch style contains an unexpected image"
             }
         }
+        listOf("thumbOffImage" to "thumb_off_image", "thumbOnImage" to "thumb_on_image").forEach { (ownerKey, styleKey) ->
+            require(styleJson.optString("${styleKey}_uri").length <= MAX_COMPONENT_PACKAGE_URI_LENGTH) {
+                "Switch button image URI is too long"
+            }
+            require(owner.optString("${ownerKey}Uri").length <= MAX_COMPONENT_PACKAGE_URI_LENGTH) {
+                "Switch button image URI is too long"
+            }
+            val hasImage = owner.optJSONObject("${ownerKey}Asset") != null || owner.optString("${ownerKey}Uri").isNotBlank()
+            val hash = styleJson.optString("${styleKey}_sha256")
+            require(!hasImage || COMPONENT_PACKAGE_SHA256.matches(hash)) {
+                "Switch button image hash is invalid"
+            }
+            require(hasImage || hash.isBlank()) { "Switch button image asset is missing" }
+        }
     }
 }
 
@@ -3364,23 +3380,23 @@ internal fun validateEmbeddedThemeStoreAssets(config: JSONObject, tempAssetsDir:
         )
     }
     val switchOwner = config.optJSONObject("components")?.optJSONObject("switchStyle")
-    validateOwner(switchOwner, "imageAsset", "imageOnAsset")
+    validateOwner(switchOwner, "imageAsset", "imageOnAsset", "thumbOffImageAsset", "thumbOnImageAsset")
     switchOwner?.let { owner ->
         val style = owner.optJSONObject("style") ?: return@let
-        if (CustomSwitchSource.fromValue(style.optString("source")) == CustomSwitchSource.Image) {
-            fun validateSwitchImage(assetKey: String, hashKey: String) {
-                val asset = owner.optJSONObject(assetKey) ?: return
-                val imageFile = safeComponentAssetFile(tempAssetsDir, asset.optString("path"))
-                require(imageFile.length() in 1..MAX_COMPONENT_IMAGE_BYTES) {
-                    "Component switch image is too large"
-                }
-                require(fileSha256(imageFile).equals(style.optString(hashKey), ignoreCase = true)) {
-                    "Switch style image hash does not match"
-                }
+        fun validateSwitchImage(assetKey: String, hashKey: String) {
+            val asset = owner.optJSONObject(assetKey) ?: return
+            val imageFile = safeComponentAssetFile(tempAssetsDir, asset.optString("path"))
+            require(imageFile.length() in 1..MAX_COMPONENT_IMAGE_BYTES) {
+                "Component switch image is too large"
             }
-            validateSwitchImage("imageAsset", "image_sha256")
-            validateSwitchImage("imageOnAsset", "image_on_sha256")
+            require(fileSha256(imageFile).equals(style.optString(hashKey), ignoreCase = true)) {
+                "Switch style image hash does not match"
+            }
         }
+        validateSwitchImage("imageAsset", "image_sha256")
+        validateSwitchImage("imageOnAsset", "image_on_sha256")
+        validateSwitchImage("thumbOffImageAsset", "thumb_off_image_sha256")
+        validateSwitchImage("thumbOnImageAsset", "thumb_on_image_sha256")
     }
     config.optJSONObject("author")
         ?.optJSONObject("avatar")
@@ -3447,6 +3463,8 @@ private fun validateEmbeddedThemeStoreMedia(
         config.optJSONObject("components")?.optJSONObject("switchStyle"),
         "imageAsset",
         "imageOnAsset",
+        "thumbOffImageAsset",
+        "thumbOnImageAsset",
     )
 }
 
@@ -3500,6 +3518,8 @@ internal fun sanitizeThemeStoreConfigForCloud(config: JSONObject) {
         config.optJSONObject("components")?.optJSONObject("switchStyle"),
         "imageAsset" to "imageUri",
         "imageOnAsset" to "imageOnUri",
+        "thumbOffImageAsset" to "thumbOffImageUri",
+        "thumbOnImageAsset" to "thumbOnImageUri",
     )
     config.optJSONObject("components")
         ?.optJSONObject("switchStyle")
@@ -3507,6 +3527,8 @@ internal fun sanitizeThemeStoreConfigForCloud(config: JSONObject) {
         ?.apply {
             put("image_uri", null)
             put("image_on_uri", null)
+            put("thumb_off_image_uri", null)
+            put("thumb_on_image_uri", null)
         }
 }
 
@@ -3555,6 +3577,8 @@ internal fun validateThemeStoreConfigForCloud(config: JSONObject) {
         config.optJSONObject("components")?.optJSONObject("switchStyle"),
         "imageUri",
         "imageOnUri",
+        "thumbOffImageUri",
+        "thumbOnImageUri",
     )
     require(
         config.optJSONObject("components")
@@ -3570,6 +3594,12 @@ internal fun validateThemeStoreConfigForCloud(config: JSONObject) {
             ?.optString("image_on_uri")
             .isNullOrBlank()
     ) { "Cloud theme package contains a device-specific image_on_uri" }
+    val switchStyle = config.optJSONObject("components")?.optJSONObject("switchStyle")?.optJSONObject("style")
+    listOf("thumb_off_image_uri", "thumb_on_image_uri").forEach { key ->
+        require(switchStyle?.optString(key).isNullOrBlank()) {
+            "Cloud theme package contains a device-specific $key"
+        }
+    }
 }
 
 private fun writeThemeStoreAssetDirectory(
@@ -3679,6 +3709,9 @@ private fun findThemeStorePreviewCover(
         readThemeStorePreviewImage(owner, "asset", tempAssetsDir)
             ?: readThemeStorePreviewImage(owner, "nightAsset", tempAssetsDir)
             ?: readThemeStorePreviewImage(owner, "imageAsset", tempAssetsDir)
+            ?: readThemeStorePreviewImage(owner, "imageOnAsset", tempAssetsDir)
+            ?: readThemeStorePreviewImage(owner, "thumbOffImageAsset", tempAssetsDir)
+            ?: readThemeStorePreviewImage(owner, "thumbOnImageAsset", tempAssetsDir)
     }
 }
 
@@ -3760,6 +3793,18 @@ private fun collectLegacyThemeStoreUriWarnings(
         "component_switch_image_on",
         "imageOnAsset",
         "imageOnUri",
+    )
+    checkOwner(
+        config.optJSONObject("components")?.optJSONObject("switchStyle"),
+        "component_switch_thumb_off_image",
+        "thumbOffImageAsset",
+        "thumbOffImageUri",
+    )
+    checkOwner(
+        config.optJSONObject("components")?.optJSONObject("switchStyle"),
+        "component_switch_thumb_on_image",
+        "thumbOnImageAsset",
+        "thumbOnImageUri",
     )
 }
 

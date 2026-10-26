@@ -66,7 +66,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -381,7 +380,6 @@ private fun StudioWorkspaceHeader(
     ) {
         Column {
             ProjectStatusStrip(state)
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             StudioTabs(selected = selected, onSelected = onSelected)
         }
     }
@@ -578,7 +576,6 @@ private fun FilePane(
                     Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.ai_module_studio_add_file))
                 }
             }
-            HorizontalDivider()
             LazyColumn(contentPadding = PaddingValues(vertical = 6.dp)) {
                 items(files, key = AiModuleStudioFile::path) { file ->
                     FileRow(file, selectedPath == file.path) { onSelectFile(file.path) }
@@ -676,7 +673,6 @@ private fun EditorPane(
                 if (maxWidth < 560.dp) {
                     Column {
                         EditorFileHeader(selected = selected, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         EditorToolbar(
                             canUndo = state.canUndo,
                             canRedo = state.canRedo,
@@ -728,7 +724,6 @@ private fun EditorPane(
                     )
                 }
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             if (selected == null) {
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -1045,7 +1040,7 @@ private fun ProjectOverviewPanel(
                     )
                 }
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+            Spacer(Modifier.height(20.dp))
             ProjectMetadataRow(
                 label = stringResource(R.string.ai_module_studio_version),
                 value = "${metadata.version.ifBlank { "-" }} (${metadata.versionCode.ifBlank { "-" }})",
@@ -1428,7 +1423,6 @@ private fun AssistantContextPanel(
                     Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.ai_module_studio_reload_api))
                 }
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Row(
                 modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1576,8 +1570,6 @@ private fun AssistantResponsePane(
             }
             if (state.aiGenerating) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            } else {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
             if (state.aiResponse.isBlank()) {
                 Box(

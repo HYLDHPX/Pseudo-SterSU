@@ -39,7 +39,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import me.weishu.kernelsu.ui.component.passthrough.MaterialIcon as Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -725,7 +724,6 @@ private fun RescueStatusCard(status: RescueStatus) {
                 )
             }
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         ApkeMetricGrid(
             items = listOf(
                 ApkeMetricItem(
@@ -801,10 +799,7 @@ private fun RescueImagesCard(
         }
         status.images.ifEmpty {
             listOf(RescueImageState(name = "boot", required = true))
-        }.forEachIndexed { index, image ->
-            if (index > 0) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            }
+        }.forEach { image ->
             RescueImageRow(image, onImport)
         }
     }
@@ -994,10 +989,7 @@ private fun RescueDiagnosticsPage(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            status.rescueDisabledModules.forEachIndexed { index, module ->
-                if (index > 0) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                }
+            status.rescueDisabledModules.forEach { module ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,

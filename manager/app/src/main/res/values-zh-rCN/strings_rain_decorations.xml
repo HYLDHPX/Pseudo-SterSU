@@ -20,8 +20,8 @@
     <string name="rain_through_ui">雨滴穿过界面</string>
     <string name="rain_foreground_opacity">前景雨滴浓度</string>
     <string name="rain_surface_interaction">卡片与侧栏雨滴联动</string>
-    <string name="rain_thunder">雷雨场景远雷微光</string>
-    <string name="rain_interaction_note">近景雨滴经过界面，在卡片与侧栏的实际交汇处泛起细小涟漪。雷光仅在雷雨场景中缓慢局部亮起。效果跟随动画与壁纸叠雨开关，不拦截触控。</string>
+    <string name="rain_thunder">雷雨场景闪电</string>
+    <string name="rain_interaction_note">关闭雨滴穿过界面后，面板会减轻遮挡，保留背景雨，文字、图片和图标不变透明。闪电独立控制，呈现分叉雷光与云层余辉。效果跟随动画与壁纸叠雨开关，不拦截触控。</string>
     <string name="rain_card_edge_strength">卡片边缘强度</string>
     <string name="rain_card_interior_strength">卡片内部强度</string>
     <string name="rain_top_bar_strength">顶部栏装饰强度</string>

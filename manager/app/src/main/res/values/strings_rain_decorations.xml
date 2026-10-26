@@ -20,8 +20,8 @@
     <string name="rain_through_ui">Rain across the interface</string>
     <string name="rain_foreground_opacity">Foreground rain strength</string>
     <string name="rain_surface_interaction">Card and sidebar rain impacts</string>
-    <string name="rain_thunder">Distant thunder in thunderstorms</string>
-    <string name="rain_interaction_note">Near rain passes over the interface and creates small ripples where it crosses cards and sidebars. Distant thunder uses a slow, local glow in the thunderstorm scene. Effects follow the animation and wallpaper-rain switches and never intercept touch.</string>
+    <string name="rain_thunder">Lightning in thunderstorms</string>
+    <string name="rain_interaction_note">Turning off rain across the interface keeps background rain visible through lighter panels, without fading text, images or icons. Lightning has its own switch, with branching bolts and a cloud afterglow. Effects follow the animation and wallpaper-rain switches and never intercept touch.</string>
     <string name="rain_card_edge_strength">Card edges</string>
     <string name="rain_card_interior_strength">Card interiors</string>
     <string name="rain_top_bar_strength">Top bar</string>
